@@ -1,16 +1,24 @@
-# This is a sample Python script.
+import logging
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+from EMInfraImporter import EMInfraImporter
+from PostGISConnector import PostGISConnector
+from RequestHandler import RequestHandler
+from RequesterFactory import RequesterFactory
+from SettingsManager import SettingsManager
+from Syncer import Syncer
 
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
-
-
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('PyCharm')
+    logging.basicConfig(level=logging.INFO)
+    connector = PostGISConnector(host="127.0.0.1", user="postgres", password="admin", port="5432",
+                                      database="awvinfra")
+    settings_manager = SettingsManager(settings_path='C:\\resources\\settings_AwvinfraPostGISSyncer.json')
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+
+
+    requester = RequesterFactory.create_requester(settings=settings_manager.settings, auth_type='JWT', env='prd')
+    request_handler = RequestHandler(requester)
+
+    eminfra_importer = EMInfraImporter(request_handler)
+    syncer = Syncer(connector=connector, request_handler=request_handler, eminfra_importer=eminfra_importer, settings=settings_manager.settings)
+
+    syncer.start_syncing()
