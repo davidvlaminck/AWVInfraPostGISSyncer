@@ -8,24 +8,26 @@ class EMInfraImporter:
     def __init__(self, request_handler: RequestHandler):
         self.request_handler = request_handler
         self.request_handler.requester.first_part_url += 'eminfra/'
-        self.cursor = ''
+        self.pagingcursor = ''
 
     def get_events_from_page(self, page_num: int, page_size: int = 1):
         url = f"feedproxy/feed/assets/{page_num}/{page_size}"
         return self.request_handler.get_jsondict(url)
 
     def get_objects_from_oslo_search_endpoint(self, url_part: str, filter_string: str = '{}', size: int = 100,
-                                              only_next_page: bool = False) -> [dict]:
-        url = f"core/api/otl/{url_part}/search"
+                                              only_next_page: bool = False, expansions_string: str = '{}') -> [dict]:
+        url = f"core/api/otl/{url_part}/search?expand=contactInfo"
         body_fixed_part = '{"size": ' + f'{size}' + ''
         if filter_string != '{}':
             body_fixed_part += ', "filters": ' + filter_string
+        if expansions_string != '{}':
+            body_fixed_part += ', "expansions": ' + expansions_string
 
         json_list = []
         while True:
             body = body_fixed_part
-            if self.cursor != '':
-                body += ', "fromCursor": ' + f'"{self.cursor}"'
+            if self.pagingcursor != '':
+                body += ', "fromCursor": ' + f'"{self.pagingcursor}"'
             body += '}'
             json_data = json.loads(body)
 
@@ -36,12 +38,12 @@ class EMInfraImporter:
             keys = response.headers.keys()
             json_list.extend(dict_obj['@graph'])
             if 'em-paging-next-cursor' in keys:
-                self.cursor = response.headers['em-paging-next-cursor']
+                self.pagingcursor = response.headers['em-paging-next-cursor']
             else:
-                self.cursor = ''
+                self.pagingcursor = ''
             if only_next_page:
                 return json_list
-            if self.cursor == '':
+            if self.pagingcursor == '':
                 return json_list
 
     def get_assets_from_webservice_by_naam(self, naam: str) -> [dict]:
@@ -60,7 +62,8 @@ class EMInfraImporter:
         return self.get_objects_from_oslo_search_endpoint(url_part='assets', filter_string=filter_string)
 
     def import_all_agents_from_webservice(self) -> [dict]:
-        return self.get_objects_from_oslo_search_endpoint(url_part='agents')
+        expansions_string = '{"fields": ["contactInfo"]}'
+        return self.get_objects_from_oslo_search_endpoint(url_part='agents', expansions_string=expansions_string)
 
     def import_agents_from_webservice_page_by_page(self, page_size: int) -> [dict]:
         return self.get_objects_from_oslo_search_endpoint(url_part='agents', size=page_size, only_next_page=True)

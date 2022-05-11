@@ -50,7 +50,7 @@ class Syncer:
             # main sync loop for getting all assets/agents/relations
             params = self.connector.get_params()
             otltype = params['otltype']
-            cursor = params['cursor']
+            pagingcursor = params['pagingcursor']
             page_size = params['pagesize']
 
             if otltype == -1:
@@ -59,12 +59,10 @@ class Syncer:
                 break
 
             # TODO
-            tx_context = self.connector.start_transaction()
-            self.eminfra_importer.cursor = cursor
+            self.eminfra_importer.cursor = pagingcursor
             if otltype == 1:
                 agents = self.eminfra_importer.import_agents_from_webservice_page_by_page(page_size)
-                agentsyncer = AgentSyncer(emInfraImporter=self.eminfra_importer, neo4J_connector=self.connector)
-                agentsyncer.tx_context = tx_context
+                agentsyncer = AgentSyncer(emInfraImporter=self.eminfra_importer, postGIS_connector=self.connector)
                 agentsyncer.update_agents(agents)
             elif otltype == 2:
                 assets = self.eminfra_importer.import_assets_from_webservice_page_by_page(page_size)
@@ -97,16 +95,16 @@ class Syncer:
                 end = time.time()
                 logging.info(f'time for 100 betrokkenerelations: {round(end - start, 2)}')
 
-            cursor = self.eminfra_importer.cursor
-            if cursor == '':
+            pagingcursor = self.eminfra_importer.pagingcursor
+            if pagingcursor == '':
                 otltype += 1
             self.connector.save_props_to_params(
                 {'otltype': otltype,
-                 'cursor': cursor})
+                 'pagingcursor': pagingcursor})
             if otltype >= 5:
                 self.connector.save_props_to_params(
                     {'freshstart': False})
-            self.connector.commit_transaction(tx_context)
+            self.connector.connection.commit()
 
     def save_last_feedevent_to_params(self, page_size: int):
         start_num = 1

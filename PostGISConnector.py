@@ -12,9 +12,9 @@ class PostGISConnector:
         self.connection.autocommit = False
         self.db = database
 
-    def set_up_tables(self):
+    def set_up_tables(self, file_path='setup_tables_querys.txt'):
         cursor = self.connection.cursor()
-        with open('setup_tables_querys.txt') as setup_queries:
+        with open(file_path) as setup_queries:
             queries = setup_queries.readlines()
             query = ' '.join(queries)
             cursor.execute(query)
@@ -60,31 +60,18 @@ class PostGISConnector:
             return None
 
     def save_props_to_params(self, params: dict):
-        keys = ', '.join(params.keys())
-        values = ''
+        query = f'UPDATE public.params SET '
         for key, value in params.items():
             if key == 'pagingcursor':
-                values += "'" + value + "', "
+                query += key + "='" + value + "', "
             else:
-                values += str(value) + ', '
-        values = values[:-2]
-        query = f'INSERT INTO public.params ({keys}) VALUES ({values});'
+                query += key + '=' + str(value) + ', '
+        query = query[:-2]
 
         cursor = self.connection.cursor()
         cursor.execute(query)
         self.connection.commit()
         cursor.close()
-
-    def get_page_by_get_or_create_params(self):
-        with self.driver.session(database=self.db) as session:
-            params = session.run("MATCH (p:Params) RETURN p").single()
-            if params is None:
-                self.set_default_constraints_and_indices(session)
-                params = session.run(
-                    "CREATE (p:Params {page:-1, event_id:-1, pagesize:100, freshstart:True, otltype:-1, cursor:''}) RETURN p").single()
-            return params[0]
-
-
 
     @staticmethod
     def update_params(tx, page_num: int, event_id: int):
@@ -132,5 +119,3 @@ class PostGISConnector:
     def set_default_constraints_and_indices(self, session):
         session.run("CREATE CONSTRAINT Asset_uuid IF NOT EXISTS FOR (n:Asset) REQUIRE n.uuid IS UNIQUE")
         session.run("CREATE CONSTRAINT Agent_uuid IF NOT EXISTS FOR (n:Agent) REQUIRE n.uuid IS UNIQUE")
-
-

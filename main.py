@@ -13,8 +13,6 @@ if __name__ == '__main__':
                                       database="awvinfra")
     settings_manager = SettingsManager(settings_path='C:\\resources\\settings_AwvinfraPostGISSyncer.json')
 
-
-
     requester = RequesterFactory.create_requester(settings=settings_manager.settings, auth_type='JWT', env='prd')
     request_handler = RequestHandler(requester)
 
