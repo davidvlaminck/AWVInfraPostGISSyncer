@@ -2,7 +2,6 @@ from unittest import TestCase
 
 from psycopg2 import connect
 
-from AgentSyncer import AgentSyncer
 from AssetTypeSyncer import AssetTypeSyncer
 from EMInfraImporter import EMInfraImporter
 from PostGISConnector import PostGISConnector
