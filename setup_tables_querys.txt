@@ -16,7 +16,7 @@ DROP TABLE IF EXISTS public.params;
 CREATE TABLE IF NOT EXISTS public.params
 (
     page integer,
-    event_id bigint,
+    event_uuid text,
     pagesize integer,
     freshstart boolean,
     otltype integer,
@@ -26,8 +26,8 @@ CREATE TABLE IF NOT EXISTS public.params
 ALTER TABLE IF EXISTS public.params
     OWNER to postgres;
 
-INSERT INTO public.params(page, event_id, pagesize, freshstart, otltype, pagingcursor)
-VALUES (-1, -1, 100, TRUE, -1, '');
+INSERT INTO public.params(page, event_uuid, pagesize, freshstart, otltype, pagingcursor)
+VALUES (-1, '', 100, TRUE, -1, '');
 
 DROP TABLE IF EXISTS public.assets;
 CREATE TABLE IF NOT EXISTS public.assets
@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS public.assettypes
     label text COLLATE pg_catalog."default" NOT NULL,
     uri text COLLATE pg_catalog."default" NOT NULL,
     definitie text COLLATE pg_catalog."default",
+    actief boolean NOT NULL,
     CONSTRAINT assettypes_pkey PRIMARY KEY (uuid)
 );
 

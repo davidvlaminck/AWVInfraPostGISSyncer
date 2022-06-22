@@ -7,7 +7,7 @@ from PostGISConnector import PostGISConnector
 class AgentSyncer:
     def __init__(self, postGIS_connector: PostGISConnector, emInfraImporter: EMInfraImporter):
         self.postGIS_connector = postGIS_connector
-        self.emInfraImporter = emInfraImporter
+        self.eminfra_importer = emInfraImporter
 
     def sync_agents(self):
         self.update_all_agents()
@@ -18,7 +18,7 @@ class AgentSyncer:
         self.update_agents(agent_dicts=agents)
 
     def get_all_agents(self) -> []:
-        return self.emInfraImporter.import_all_agents_from_webservice()
+        return self.eminfra_importer.import_all_agents_from_webservice()
 
     def update_agents(self, agent_dicts: [dict]):
         if len(agent_dicts) == 0:
