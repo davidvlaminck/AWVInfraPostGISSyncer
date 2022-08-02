@@ -9,7 +9,8 @@ from ZoekParameterPayload import ZoekParameterPayload
 
 class EMInfraImporterTests(TestCase):
     def test_get_objects_from_non_oslo_endpoint_using_assettypes(self):
-        settings_manager = SettingsManager(settings_path='C:\\resources\\settings_AwvinfraPostGISSyncer.json')
+        settings_manager = SettingsManager(
+            settings_path='/home/davidlinux/Documents/AWV/resources/settings_AwvinfraPostGISSyncer.json')
 
         requester = RequesterFactory.create_requester(settings=settings_manager.settings, auth_type='JWT', env='prd')
         request_handler = RequestHandler(requester)
@@ -21,7 +22,8 @@ class EMInfraImporterTests(TestCase):
         self.assertTrue(len(actieve_types) > 0)
 
     def test_import_all_assettypes(self):
-        settings_manager = SettingsManager(settings_path='C:\\resources\\settings_AwvinfraPostGISSyncer.json')
+        settings_manager = SettingsManager(
+            settings_path='/home/davidlinux/Documents/AWV/resources/settings_AwvinfraPostGISSyncer.json')
 
         requester = RequesterFactory.create_requester(settings=settings_manager.settings, auth_type='JWT', env='prd')
         request_handler = RequestHandler(requester)

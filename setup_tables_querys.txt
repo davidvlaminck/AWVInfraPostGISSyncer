@@ -9,9 +9,6 @@ CREATE TABLE public.agents
     PRIMARY KEY (uuid)
 );
 
-ALTER TABLE IF EXISTS public.agents
-    OWNER to postgres;
-
 DROP TABLE IF EXISTS public.params;
 CREATE TABLE IF NOT EXISTS public.params
 (
@@ -22,9 +19,6 @@ CREATE TABLE IF NOT EXISTS public.params
     otltype integer,
     pagingcursor text COLLATE pg_catalog."default"
 );
-
-ALTER TABLE IF EXISTS public.params
-    OWNER to postgres;
 
 INSERT INTO public.params(page, event_uuid, pagesize, freshstart, otltype, pagingcursor)
 VALUES (-1, '', 100, TRUE, -1, '');
@@ -48,9 +42,6 @@ CREATE TABLE IF NOT EXISTS public.assets
     CONSTRAINT assets_pkey PRIMARY KEY (uuid)
 );
 
-ALTER TABLE IF EXISTS public.assets
-    OWNER to postgres;
-
 -- Table: public.assettypes
 
 DROP TABLE IF EXISTS public.assettypes;
@@ -64,9 +55,6 @@ CREATE TABLE IF NOT EXISTS public.assettypes
     actief boolean NOT NULL,
     CONSTRAINT assettypes_pkey PRIMARY KEY (uuid)
 );
-
-ALTER TABLE IF EXISTS public.assettypes
-    OWNER to postgres;
 
 ALTER TABLE IF EXISTS public.assets
     ADD CONSTRAINT assets_assettype_fkey

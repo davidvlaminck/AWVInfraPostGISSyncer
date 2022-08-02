@@ -12,7 +12,13 @@ from SettingsManager import SettingsManager
 
 class AssetTypesSyncerTests(TestCase):
     def setup(self):
-        conn = connect(database="postgres", user='postgres', password='admin', host='127.0.0.1', port='5432')
+        settings_manager = SettingsManager(
+            settings_path='/home/davidlinux/Documents/AWV/resources/settings_AwvinfraPostGISSyncer.json')
+        unittest_db_settings = settings_manager.settings['databases']['unittest']
+
+        conn = connect(host=unittest_db_settings['host'], port=unittest_db_settings['port'],
+                       user=unittest_db_settings['user'], password=unittest_db_settings['password'],
+                       database="postgres")
         conn.autocommit = True
 
         cursor = conn.cursor()
@@ -21,9 +27,10 @@ class AssetTypesSyncerTests(TestCase):
 
         conn.close()
 
-        self.connector = PostGISConnector(host="127.0.0.1", user="postgres", password="admin", port="5432", database="unittests")
+        self.connector = PostGISConnector(host=unittest_db_settings['host'], port=unittest_db_settings['port'],
+                                          user=unittest_db_settings['user'], password=unittest_db_settings['password'],
+                                          database="unittests")
         self.connector.set_up_tables('../setup_tables_querys.txt')
-        settings_manager = SettingsManager(settings_path='C:\\resources\\settings_AwvinfraPostGISSyncer.json')
 
         requester = RequesterFactory.create_requester(settings=settings_manager.settings, auth_type='JWT', env='prd')
         request_handler = RequestHandler(requester)

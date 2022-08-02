@@ -25,6 +25,20 @@
             "key_path" : "C:\\resources\\datamanager_dev_private.json"
         }
     ],
+    "databases" : {
+         "prd" : {
+             "host": "",
+             "port": "",
+             "user": "",
+             "password": ""
+         },
+        "unittest" : {
+             "host": "localhost",
+             "port": "5432",
+             "user": "unittest",
+             "password": "unittest"
+         }
+    },
      "time" : {
          "start" : "06:00:00",
          "end" : "23:50:00"
