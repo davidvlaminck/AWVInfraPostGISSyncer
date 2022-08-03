@@ -1,0 +1,2 @@
+class AssetTypeMissingError(Exception):
+    pass

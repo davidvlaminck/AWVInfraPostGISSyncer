@@ -51,11 +51,11 @@ class AssetTypesSyncerTests(TestCase):
         cursor = self.connector.connection.cursor()
         cursor.execute(create_assettype_query)
 
-        with self.subTest('name check the first agent created'):
+        with self.subTest('name check the first assettype created'):
             cursor.execute(select_assettype_query.replace('{uuid}', '51a08ba4-6657-43a8-b45a-bcde1af7c0c8'))
             result = cursor.fetchone()[0]
             self.assertEqual('TLC-FI poort', result)
-        with self.subTest('number of agents before update'):
+        with self.subTest('number of assettypes before update'):
             cursor.execute(count_assettype_query)
             result = cursor.fetchone()[0]
             self.assertEqual(1, result)
