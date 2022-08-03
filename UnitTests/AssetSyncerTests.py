@@ -32,7 +32,7 @@ class AssetSyncerTests(TestCase):
         self.connector = PostGISConnector(host=unittest_db_settings['host'], port=unittest_db_settings['port'],
                                           user=unittest_db_settings['user'], password=unittest_db_settings['password'],
                                           database="unittests")
-        self.connector.set_up_tables('../setup_tables_querys.txt')
+        self.connector.set_up_tables('../setup_tables_querys.sql')
 
         requester = RequesterFactory.create_requester(settings=settings_manager.settings, auth_type='JWT', env='prd')
         request_handler = RequestHandler(requester)

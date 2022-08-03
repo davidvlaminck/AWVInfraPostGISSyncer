@@ -12,7 +12,7 @@ class PostGISConnector:
         self.connection.autocommit = False
         self.db = database
 
-    def set_up_tables(self, file_path='setup_tables_querys.txt'):
+    def set_up_tables(self, file_path='setup_tables_querys.sql'):
         cursor = self.connection.cursor()
         with open(file_path) as setup_queries:
             queries = setup_queries.readlines()

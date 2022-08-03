@@ -150,4 +150,8 @@ class EMInfraImporter:
                     return
                 zoek_payload.from_ += zoek_payload.size
 
+    def import_all_bestekken_from_webservice(self):
+        zoekparams = ZoekParameterPayload()
+        yield self.get_objects_from_non_oslo_endpoint(url_part='bestekrefs/search', zoek_payload=zoekparams)
+
 

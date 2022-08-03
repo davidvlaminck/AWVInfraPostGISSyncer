@@ -64,8 +64,19 @@ ALTER TABLE IF EXISTS public.assets
     ON DELETE NO ACTION
     NOT VALID;
 
--- INSERT INTO public.assets(uuid, actief, assettype)
--- VALUES ('00000453-56ce-4f8b-af44-960df526cb30', true, '00000453-56ce-4f8b-af44-960df526cb30');
+-- Table: public.bestekken
+
+DROP TABLE IF EXISTS public.bestekken;
+CREATE TABLE IF NOT EXISTS public.bestekken
+(
+    uuid uuid NOT NULL,
+    eDeltaDossiernummer text COLLATE pg_catalog."default" NOT NULL,
+    eDeltaBesteknummer text COLLATE pg_catalog."default" NOT NULL,
+    aannemerNaam text COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT bestekken_pkey PRIMARY KEY (uuid)
+);
+
+
 
 -- psycopg2.errors.ForeignKeyViolation: insert or update on table "assets" violates foreign key constraint "assets_assettype_fkey"
 -- DETAIL:  Key (assettype)=(00000453-56ce-4f8b-af44-960df526cb30) is not present in table "assettypes".
