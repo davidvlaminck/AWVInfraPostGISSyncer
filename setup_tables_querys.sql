@@ -76,6 +76,35 @@ CREATE TABLE IF NOT EXISTS public.bestekken
     CONSTRAINT bestekken_pkey PRIMARY KEY (uuid)
 );
 
+DROP TABLE IF EXISTS public.bestekkoppelingen;
+CREATE TABLE IF NOT EXISTS public.bestekkoppelingen
+(
+    assetUuid uuid NOT NULL,
+    bestekUuid uuid NOT NULL,
+    startDatum TIMESTAMP WITH TIME ZONE NOT NULL,
+    eindDatum TIMESTAMP WITH TIME ZONE,
+    koppelingStatus text COLLATE pg_catalog."default" NOT NULL
+);
+
+CREATE INDEX koppelingen_bestekUuid_idx ON bestekkoppelingen (bestekUuid);
+CREATE INDEX koppelingen_assetUuid_idx ON bestekkoppelingen (assetUuid);
+
+ALTER TABLE IF EXISTS public.bestekkoppelingen
+    ADD CONSTRAINT bestekkoppelingen_bestekken_fkey
+    FOREIGN KEY (bestekUuid)
+    REFERENCES public.bestekken (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+ALTER TABLE IF EXISTS public.bestekkoppelingen
+    ADD CONSTRAINT bestekkoppelingen_assets_fkey
+    FOREIGN KEY (assetUuid)
+    REFERENCES public.assets (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
 
 
 -- psycopg2.errors.ForeignKeyViolation: insert or update on table "assets" violates foreign key constraint "assets_assettype_fkey"

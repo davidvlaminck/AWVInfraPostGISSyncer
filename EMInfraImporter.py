@@ -115,43 +115,58 @@ class EMInfraImporter:
 
     def import_all_assettypes_from_webservice(self):
         zoekparams = ZoekParameterPayload()
-        yield self.get_objects_from_non_oslo_endpoint(url_part='onderdeeltypes/search', zoek_payload=zoekparams)
-        yield self.get_objects_from_non_oslo_endpoint(url_part='installatietypes/search', zoek_payload=zoekparams)
+        yield from self.get_objects_from_non_oslo_endpoint(url_part='onderdeeltypes/search', zoek_payload=zoekparams)
+        zoekparams = ZoekParameterPayload()
+        yield from self.get_objects_from_non_oslo_endpoint(url_part='installatietypes/search', zoek_payload=zoekparams)
 
-    def get_objects_from_non_oslo_endpoint(self, url_part: str, zoek_payload: ZoekParameterPayload = None) -> Generator[dict]:
+    def get_objects_from_non_oslo_endpoint(self, url_part: str, zoek_payload: ZoekParameterPayload = None,
+                                           request_type: str = None) -> Generator[list]:
         url = f"core/api/{url_part}"
-        current_count = 0
 
-        while True:
-            if zoek_payload.pagingMode == 'CURSOR' and self.pagingcursor != '':
-                zoek_payload.fromCursor = self.pagingcursor
-
-            json_data = zoek_payload.fill_dict()
-
-            response = self.request_handler.perform_post_request(url=url, json_data=json_data)
-
+        if request_type == 'GET':
+            print (f'getting koppelingen using {url_part}')
+            response = self.request_handler.perform_get_request(url=url)
             decoded_string = response.content.decode("utf-8")
             dict_obj = json.loads(decoded_string)
-            keys = response.headers.keys()
+            print(f"data has {len(dict_obj['data'])} number of objects")
+            for dataobject in dict_obj['data']:
+                print(f"yielding a dataobject: {dataobject}")
+                yield dataobject
 
-            yield dict_obj['data']
+        else:
+            current_count = 0
+            while True:
+                if zoek_payload.pagingMode == 'CURSOR' and self.pagingcursor != '':
+                    zoek_payload.fromCursor = self.pagingcursor
 
-            if zoek_payload.pagingMode == 'CURSOR':
-                if 'em-paging-next-cursor' in keys:
-                    self.pagingcursor = response.headers['em-paging-next-cursor']
-                else:
-                    self.pagingcursor = ''
+                json_data = zoek_payload.fill_dict()
+                response = self.request_handler.perform_post_request(url=url, json_data=json_data)
 
-                if self.pagingcursor == '':
-                    return
-            elif zoek_payload.pagingMode == 'OFFSET':
-                current_count += len(dict_obj['data'])
-                if current_count == dict_obj['totalCount']:
-                    return
-                zoek_payload.from_ += zoek_payload.size
+                decoded_string = response.content.decode("utf-8")
+                dict_obj = json.loads(decoded_string)
+                keys = response.headers.keys()
+
+                yield from dict_obj['data']
+
+                if zoek_payload.pagingMode == 'CURSOR':
+                    if 'em-paging-next-cursor' in keys:
+                        self.pagingcursor = response.headers['em-paging-next-cursor']
+                    else:
+                        self.pagingcursor = ''
+
+                    if self.pagingcursor == '':
+                        return
+                elif zoek_payload.pagingMode == 'OFFSET':
+                    current_count += len(dict_obj['data'])
+                    if current_count == dict_obj['totalCount']:
+                        return
+                    zoek_payload.from_ += zoek_payload.size
 
     def import_all_bestekken_from_webservice(self):
         zoekparams = ZoekParameterPayload()
-        yield self.get_objects_from_non_oslo_endpoint(url_part='bestekrefs/search', zoek_payload=zoekparams)
+        yield from self.get_objects_from_non_oslo_endpoint(url_part='bestekrefs/search', zoek_payload=zoekparams)
 
-
+    def import_all_bestekkoppelingen_from_webservice_by_asset_uuids(self, asset_uuids: [str]) -> Generator[list]:
+        for asset_uuid in asset_uuids:
+            yield from (self.get_objects_from_non_oslo_endpoint(url_part=f'installaties/{asset_uuid}/kenmerken/ee2e627e-bb79-47aa-956a-ea167d20acbd/bestekken',
+                                                               request_type='GET'))
