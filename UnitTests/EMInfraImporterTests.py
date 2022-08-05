@@ -37,7 +37,6 @@ class EMInfraImporterTests(TestCase):
         koppelingen = list(bestekkoppelingen_syncer.get_all_bestekkoppelingen_by_asset_uuids(["0000da03-06f3-4a22-a609-d82358c62273"]))
         self.assertEqual(3, len(koppelingen))
 
-
     def test_import_all_assettypes(self):
         settings_manager = SettingsManager(
             settings_path='/home/davidlinux/Documents/AWV/resources/settings_AwvinfraPostGISSyncer.json')
