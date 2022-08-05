@@ -1,6 +1,7 @@
 import datetime
 from unittest import TestCase
 
+import psycopg2
 from psycopg2 import connect, tz
 from AssetSyncer import AssetSyncer
 from AssetTypeSyncer import AssetTypeSyncer
@@ -155,12 +156,159 @@ class BestekKoppelingenSyncerTests(TestCase):
             self.assertEqual(3, result)
 
     def test_sync_bestekkoppelingen_without_existing_asset(self):
-        return NotImplementedError
+        self.setup()
+
+        self.set_up_data_bestekken()
+
+        bestekkoppelingen = [{
+            "startDatum": "2021-01-14T00:00:00.000+01:00",
+            "eindDatum": "2025-01-06T23:59:59.000+01:00",
+            "bestekRef": {
+                "uuid": "97f240c4-d788-427d-8215-d1880023cc08",
+                "awvId": "75132a25-cfc0-3a33-a250-a3647ede8914",
+                "eDeltaDossiernummer": "VWT-CEW-2020-009-2",
+                "eDeltaBesteknummer": "VWT-CEW-2020-009",
+                "type": "PERCEEL",
+                "aannemerNaam": "Etablissements Paque, Yvan",
+                "aannemerReferentie": "0412815271",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "https://apps.mow.vlaanderen.be/eminfra/core/api/bestekrefs/97f240c4-d788-427d-8215-d1880023cc08"
+                    }
+                ]
+            },
+            "status": "ACTIEF"
+        },
+            {
+                "startDatum": "2011-06-01T00:00:00.000+02:00",
+                "bestekRef": {
+                    "uuid": "c8392f7a-db33-47f1-881f-81431dd9d13c",
+                    "nummer": "AWV-EM",
+                    "awvId": "cfd0a50e-8e79-3ad4-95c4-f9ce909819dd",
+                    "eDeltaDossiernummer": "INTERN-112",
+                    "eDeltaBesteknummer": "AWV-EW Limburg",
+                    "lot": "LIMBURG",
+                    "type": "INTERN",
+                    "aannemerNaam": "Permanentie sectie EW AWV Limburg",
+                    "aannemerReferentie": "1MD8GYA",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "https://apps.mow.vlaanderen.be/eminfra/core/api/bestekrefs/c8392f7a-db33-47f1-881f-81431dd9d13c"
+                        }
+                    ]
+                },
+                "status": "ACTIEF"
+            },
+            {
+                "startDatum": "2017-01-14T00:00:00.000+01:00",
+                "eindDatum": "2021-01-13T23:59:59.000+01:00",
+                "bestekRef": {
+                    "uuid": "89d95cfa-0bf7-4ccb-af7f-cf9ba9d52da6",
+                    "nummer": "1M3D8N/15/02",
+                    "awvId": "380b6373-3e27-3e3e-a150-76a9ae0704e1",
+                    "eDeltaDossiernummer": "INTERN-1937",
+                    "eDeltaBesteknummer": "1M3D8N/15/02",
+                    "lot": "P2 : WL",
+                    "type": "INTERN",
+                    "aannemerNaam": "Yvan Paque SA",
+                    "aannemerReferentie": "0412815271",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "https://apps.mow.vlaanderen.be/eminfra/core/api/bestekrefs/89d95cfa-0bf7-4ccb-af7f-cf9ba9d52da6"
+                        }
+                    ]
+                },
+                "status": "INACTIEF"
+            }
+        ]
+        with self.assertRaises(psycopg2.Error) as exc:
+            self.bestekkoppelingen_syncer.update_bestekkoppelingen_by_asset_uuids(
+                asset_uuids=['0000da03-06f3-4a22-a609-d82358c62273'],
+                bestek_koppelingen_dicts=bestekkoppelingen)
+        self.assertEqual(exc.exception.pgerror.split('\n')[0],
+            'ERROR:  insert or update on table "bestekkoppelingen" violates foreign key constraint "bestekkoppelingen_assets_fkey"')
 
     def test_sync_bestekkoppelingen_without_existing_bestek(self):
-        return NotImplementedError
+        self.setup()
 
-    def set_up_data(self):
+        self.set_up_data_assettypes()
+        self.set_up_data_assets()
+
+        bestekkoppelingen = [{
+            "startDatum": "2021-01-14T00:00:00.000+01:00",
+            "eindDatum": "2025-01-06T23:59:59.000+01:00",
+            "bestekRef": {
+                "uuid": "97f240c4-d788-427d-8215-d1880023cc08",
+                "awvId": "75132a25-cfc0-3a33-a250-a3647ede8914",
+                "eDeltaDossiernummer": "VWT-CEW-2020-009-2",
+                "eDeltaBesteknummer": "VWT-CEW-2020-009",
+                "type": "PERCEEL",
+                "aannemerNaam": "Etablissements Paque, Yvan",
+                "aannemerReferentie": "0412815271",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "https://apps.mow.vlaanderen.be/eminfra/core/api/bestekrefs/97f240c4-d788-427d-8215-d1880023cc08"
+                    }
+                ]
+            },
+            "status": "ACTIEF"
+        },
+            {
+                "startDatum": "2011-06-01T00:00:00.000+02:00",
+                "bestekRef": {
+                    "uuid": "c8392f7a-db33-47f1-881f-81431dd9d13c",
+                    "nummer": "AWV-EM",
+                    "awvId": "cfd0a50e-8e79-3ad4-95c4-f9ce909819dd",
+                    "eDeltaDossiernummer": "INTERN-112",
+                    "eDeltaBesteknummer": "AWV-EW Limburg",
+                    "lot": "LIMBURG",
+                    "type": "INTERN",
+                    "aannemerNaam": "Permanentie sectie EW AWV Limburg",
+                    "aannemerReferentie": "1MD8GYA",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "https://apps.mow.vlaanderen.be/eminfra/core/api/bestekrefs/c8392f7a-db33-47f1-881f-81431dd9d13c"
+                        }
+                    ]
+                },
+                "status": "ACTIEF"
+            },
+            {
+                "startDatum": "2017-01-14T00:00:00.000+01:00",
+                "eindDatum": "2021-01-13T23:59:59.000+01:00",
+                "bestekRef": {
+                    "uuid": "89d95cfa-0bf7-4ccb-af7f-cf9ba9d52da6",
+                    "nummer": "1M3D8N/15/02",
+                    "awvId": "380b6373-3e27-3e3e-a150-76a9ae0704e1",
+                    "eDeltaDossiernummer": "INTERN-1937",
+                    "eDeltaBesteknummer": "1M3D8N/15/02",
+                    "lot": "P2 : WL",
+                    "type": "INTERN",
+                    "aannemerNaam": "Yvan Paque SA",
+                    "aannemerReferentie": "0412815271",
+                    "links": [
+                        {
+                            "rel": "self",
+                            "href": "https://apps.mow.vlaanderen.be/eminfra/core/api/bestekrefs/89d95cfa-0bf7-4ccb-af7f-cf9ba9d52da6"
+                        }
+                    ]
+                },
+                "status": "INACTIEF"
+            }
+        ]
+        with self.assertRaises(psycopg2.Error) as exc:
+            self.bestekkoppelingen_syncer.update_bestekkoppelingen_by_asset_uuids(
+                asset_uuids=['0000da03-06f3-4a22-a609-d82358c62273'],
+                bestek_koppelingen_dicts=bestekkoppelingen)
+        self.assertEqual(exc.exception.pgerror.split('\n')[0],
+                         'ERROR:  insert or update on table "bestekkoppelingen" violates foreign key constraint "bestekkoppelingen_bestekken_fkey"')
+
+    def set_up_data_assettypes(self):
         self.assettypes_syncer.update_assettypes([{
             "_type": "installatietype",
             "uuid": "4dfad588-277c-480f-8cdc-0889cfaf9c78",
@@ -173,6 +321,8 @@ class BestekKoppelingenSyncerTests(TestCase):
             "actief": True,
             "definitie": "lichtmast wegverlichting"
         }])
+
+    def set_up_data_assets(self):
         self.assets_syncer.update_assets([{
             "@type": "https://lgc.data.wegenenverkeer.be/ns/installatie#VPLMast",
             "@id": "https://data.awvvlaanderen.be/id/asset/0000da03-06f3-4a22-a609-d82358c62273-bGdjOmluc3RhbGxhdGllI1ZQTE1hc3Q",
@@ -269,6 +419,8 @@ class BestekKoppelingenSyncerTests(TestCase):
                 "tz:DtcToezichtGroep.referentie": "AWV_EW_LB"
             }
         }])
+
+    def set_up_data_bestekken(self):
         self.bestekken_syncer.update_bestekken([{
             "uuid": "97f240c4-d788-427d-8215-d1880023cc08",
             "awvId": "75132a25-cfc0-3a33-a250-a3647ede8914",
@@ -340,3 +492,8 @@ class BestekKoppelingenSyncerTests(TestCase):
                 }
             ]
         }])
+
+    def set_up_data(self):
+        self.set_up_data_assettypes()
+        self.set_up_data_assets()
+        self.set_up_data_bestekken()
