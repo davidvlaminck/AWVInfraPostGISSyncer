@@ -4,6 +4,7 @@ import traceback
 from datetime import datetime
 
 from AgentSyncer import AgentSyncer
+from BestekSyncer import BestekSyncer
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
 from EventProcessors.RelatieProcessor import RelatieProcessor
@@ -35,7 +36,7 @@ class Syncer:
                 self.connector.set_up_tables()
                 params = self.connector.get_params()
 
-            if params['freshstart']:
+            if params['fresh_start']:
                 self.perform_fresh_start_sync(params)
             else:
                 self.perform_syncing()
@@ -47,30 +48,41 @@ class Syncer:
             self.save_last_feedevent_to_params(page_size)
 
         while True:
-            # main sync loop for getting all assets/agents/relations
+            # main sync loop for a fresh start
             params = self.connector.get_params()
-            otltype = params['otltype']
+            sync_step = params['sync_step']
             pagingcursor = params['pagingcursor']
             page_size = params['pagesize']
 
-            if otltype == -1:
-                otltype = 1
-            if otltype >= 5:
+            if sync_step == -1:
+                sync_step = 1
+            if sync_step >= 5:
                 break
 
-            # TODO
-            self.eminfra_importer.cursor = pagingcursor
-            if otltype == 1:
-                agents = self.eminfra_importer.import_agents_from_webservice_page_by_page(page_size)
-                agentsyncer = AgentSyncer(emInfraImporter=self.eminfra_importer, postGIS_connector=self.connector)
-                agentsyncer.update_agents(agents)
-            elif otltype == 2:
+            if sync_step == 1:
+                start = time.time()
+                agent_syncer = AgentSyncer(emInfraImporter=self.eminfra_importer, postGIS_connector=self.connector)
+                agent_syncer.sync_agents(pagingcursor=pagingcursor, page_size=page_size)
+                end = time.time()
+                logging.info(f'time for all agents: {round(end - start, 2)}')
+            elif sync_step == 2:
+                start = time.time()
+                bestek_syncer = BestekSyncer(em_infra_importer=self.eminfra_importer, postGIS_connector=self.connector)
+                bestek_syncer.sync_bestekken(pagingcursor=pagingcursor, page_size=page_size)
+                end = time.time()
+                logging.info(f'time for all bestekken: {round(end - start, 2)}')
+            else:
+                raise NotImplementedError
+
+            if False:
+                pass
+            elif sync_step == 2:
                 assets = self.eminfra_importer.import_assets_from_webservice_page_by_page(page_size)
                 asset_processor = NieuwAssetProcessor()
                 asset_processor.tx_context = tx_context
                 for asset in assets:
                     asset_processor.create_asset_from_jsonLd_dict(asset)
-            elif otltype == 3:
+            elif sync_step == 3:
                 start = time.time()
                 assetrelaties = self.eminfra_importer.import_assetrelaties_from_webservice_page_by_page(page_size)
                 relatie_processor = RelatieProcessor()
@@ -82,7 +94,7 @@ class Syncer:
                         raise AssetRelationNotCreatedError
                 end = time.time()
                 logging.info(f'time for 100 relations: {round(end - start, 2)}')
-            elif otltype == 4:
+            elif sync_step == 4:
                 start = time.time()
                 betrokkenerelaties = self.eminfra_importer.import_betrokkenerelaties_from_webservice_page_by_page(page_size)
                 relatie_processor = RelatieProcessor()
@@ -97,13 +109,13 @@ class Syncer:
 
             pagingcursor = self.eminfra_importer.pagingcursor
             if pagingcursor == '':
-                otltype += 1
+                sync_step += 1
             self.connector.save_props_to_params(
-                {'otltype': otltype,
+                {'sync_step': sync_step,
                  'pagingcursor': pagingcursor})
-            if otltype >= 5:
+            if sync_step >= 10:
                 self.connector.save_props_to_params(
-                    {'freshstart': False})
+                    {'fresh_start': False})
             self.connector.connection.commit()
 
     def save_last_feedevent_to_params(self, page_size: int):
@@ -122,11 +134,10 @@ class Syncer:
 
         # find last event_id
         entries = event_page['entries']
-        event_ids = list(map(lambda x: int(x['content']['value']['event-id']), entries))
-        last_event_id = max(event_ids)
+        last_event_uuid = entries[0]['id']
 
         self.connector.save_props_to_params(
-            {'event_id': last_event_id,
+            {'event_uuid': last_event_uuid,
              'page': current_page_num})
 
     def recur_exp_find_start_page(self, current_num, step, page_size):

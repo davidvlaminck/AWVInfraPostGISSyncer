@@ -1,4 +1,5 @@
 import json
+import logging
 
 from EMInfraImporter import EMInfraImporter
 from PostGISConnector import PostGISConnector
@@ -9,16 +10,16 @@ class BestekSyncer:
         self.postGIS_connector = postGIS_connector
         self.eminfra_importer = em_infra_importer
 
-    def sync_bestekken(self):
-        self.update_all_bestekken()
-        self.postGIS_connector.connection.commit()
+    def sync_bestekken(self, pagingcursor: str = '', page_size: int = 100):
+        self.eminfra_importer.pagingcursor = pagingcursor
+        while True:
+            bestekken = self.eminfra_importer.import_bestekken_from_webservice_page_by_page(page_size=page_size)
 
-    def update_all_bestekken(self):
-        bestekken = self.get_all_bestekken()
-        self.update_bestekken(bestekken_dicts=bestekken)
+            self.update_bestekken(bestekken_dicts=list(bestekken))
+            self.postGIS_connector.save_props_to_params({'pagingcursor': self.eminfra_importer.pagingcursor})
 
-    def get_all_bestekken(self) -> []:
-        return self.eminfra_importer.import_all_bestekken_from_webservice()
+            if self.eminfra_importer.pagingcursor == '':
+                break
 
     def update_bestekken(self, bestekken_dicts: [dict]):
         if len(bestekken_dicts) == 0:
@@ -26,12 +27,15 @@ class BestekSyncer:
 
         values = ''
         for bestek_dict in bestekken_dicts:
-            uuid = bestek_dict['uuid']
-            eDeltaDossiernummer = bestek_dict['eDeltaDossiernummer']
-            eDeltaBesteknummer = bestek_dict['eDeltaBesteknummer']
-            aannemerNaam = bestek_dict['aannemerNaam'].replace("'", "''")
-
-            values += f"('{uuid}','{eDeltaDossiernummer}','{eDeltaBesteknummer}','{aannemerNaam}'),"
+            try:
+                uuid = bestek_dict['uuid']
+                eDeltaDossiernummer = bestek_dict['eDeltaDossiernummer']
+                eDeltaBesteknummer = bestek_dict['eDeltaBesteknummer']
+                aannemerNaam = bestek_dict['aannemerNaam'].replace("'", "''")
+                values += f"('{uuid}','{eDeltaDossiernummer}','{eDeltaBesteknummer}','{aannemerNaam}'),"
+            except KeyError as exc:
+                logging.error(f'Could not create a bestek from the following respoonse:\n{bestek_dict}\nError:{exc}')
+                continue
 
         insert_query = f"""
 WITH s (uuid, eDeltaDossiernummer, eDeltaBesteknummer, aannemerNaam) 

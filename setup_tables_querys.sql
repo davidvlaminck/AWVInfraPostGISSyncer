@@ -15,12 +15,12 @@ CREATE TABLE IF NOT EXISTS public.params
     page integer,
     event_uuid text,
     pagesize integer,
-    freshstart boolean,
-    otltype integer,
+    fresh_start boolean,
+    sync_step integer,
     pagingcursor text COLLATE pg_catalog."default"
 );
 
-INSERT INTO public.params(page, event_uuid, pagesize, freshstart, otltype, pagingcursor)
+INSERT INTO public.params(page, event_uuid, pagesize, fresh_start, sync_step, pagingcursor)
 VALUES (-1, '', 100, TRUE, -1, '');
 
 DROP TABLE IF EXISTS public.assets;

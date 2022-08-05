@@ -68,7 +68,9 @@ class EMInfraImporter:
         return self.get_objects_from_oslo_search_endpoint(url_part='agents', expansions_string=expansions_string)
 
     def import_agents_from_webservice_page_by_page(self, page_size: int) -> [dict]:
-        return self.get_objects_from_oslo_search_endpoint(url_part='agents', size=page_size, only_next_page=True)
+        expansions_string = '{"fields": ["contactInfo"]}'
+        return self.get_objects_from_oslo_search_endpoint(url_part='agents', size=page_size, only_next_page=True,
+                                                          expansions_string=expansions_string)
 
     def import_agents_from_webservice_by_uuids(self, agent_uuids: [str]) -> [dict]:
         agent_list_string = '", "'.join(agent_uuids)
@@ -158,6 +160,11 @@ class EMInfraImporter:
                     if current_count == dict_obj['totalCount']:
                         return
                     zoek_payload.from_ += zoek_payload.size
+
+    def import_bestekken_from_webservice_page_by_page(self, page_size: int) -> [dict]:
+        zoekparams = ZoekParameterPayload()
+        zoekparams.size = page_size
+        yield from self.get_objects_from_non_oslo_endpoint(url_part='bestekrefs/search', zoek_payload=zoekparams)
 
     def import_all_bestekken_from_webservice(self):
         zoekparams = ZoekParameterPayload()

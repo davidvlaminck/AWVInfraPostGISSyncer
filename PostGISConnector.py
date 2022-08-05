@@ -21,48 +21,31 @@ class PostGISConnector:
             self.connection.commit()
         cursor.close()
 
-    def connect(self):
-        try:
-            # Connect to an existing database
-
-            # Create a cursor to perform database operations
-            cursor = self.connection.cursor()
-            # Print PostgreSQL details
-            print("PostgreSQL server information")
-            print(self.connection.get_dsn_parameters(), "\n")
-            # Executing a SQL query
-            cursor.execute("SELECT version();")
-            # Fetch result
-            record = cursor.fetchone()
-            print("You are connected to - ", record, "\n")
-
-        except (Exception, Error) as error:
-            print("Error while connecting to PostgreSQL", error)
-        finally:
-            if (self.connection):
-                cursor.close()
-
     def get_params(self):
+        cursor = self.connection.cursor()
         try:
-            cursor = self.connection.cursor()
-            keys = ['page', 'event_id', 'pagesize', 'freshstart', 'otltype', 'pagingcursor']
+            keys = ['page', 'event_uuid', 'pagesize', 'fresh_start', 'sync_step', 'pagingcursor']
             keys_in_query = ', '.join(keys)
             cursor.execute(f'SELECT {keys_in_query} FROM public.params')
             record = cursor.fetchone()
             params = dict(zip(keys, record))
             cursor.close()
             return params
-        except (Exception, Error) as error:
-            print("Error while connecting to PostgreSQL", error)
-            if self.connection:
+        except Error as error:
+            if '"public.params" does not exist' in error.pgerror:
                 cursor.close()
-                self.connection.commit()
-            return None
+                self.connection.rollback()
+                return None
+            else:
+                print("Error while connecting to PostgreSQL", error)
+                cursor.close()
+                self.connection.rollback()
+                raise error
 
     def save_props_to_params(self, params: dict):
         query = f'UPDATE public.params SET '
         for key, value in params.items():
-            if key == 'pagingcursor':
+            if key in ['pagingcursor','event_uuid']:
                 query += key + "='" + value + "', "
             else:
                 query += key + '=' + str(value) + ', '

@@ -9,16 +9,18 @@ class AgentSyncer:
         self.postGIS_connector = postGIS_connector
         self.eminfra_importer = emInfraImporter
 
-    def sync_agents(self):
-        self.update_all_agents()
-        self.postGIS_connector.connection.commit()
+    def sync_agents(self, pagingcursor: str = '', page_size: int = 100):
+        self.eminfra_importer.pagingcursor = pagingcursor
+        while True:
+            agents = self.eminfra_importer.import_agents_from_webservice_page_by_page(page_size=page_size)
+            if len(agents) == 0:
+                break
 
-    def update_all_agents(self):
-        agents = self.get_all_agents()
-        self.update_agents(agent_dicts=agents)
+            self.update_agents(agent_dicts=agents)
+            self.postGIS_connector.save_props_to_params({'pagingcursor': self.eminfra_importer.pagingcursor})
 
-    def get_all_agents(self) -> []:
-        return self.eminfra_importer.import_all_agents_from_webservice()
+            if self.eminfra_importer.pagingcursor == '':
+                break
 
     def update_agents(self, agent_dicts: [dict]):
         if len(agent_dicts) == 0:
@@ -28,10 +30,12 @@ class AgentSyncer:
         for agent_dict in agent_dicts:
             agent_uuid = agent_dict['@id'].split('/')[-1][0:36]
             agent_name = agent_dict['purl:Agent.naam'].replace("'", "''")
-            contact_info = {}
+            contact_info_value = 'NULL'
             if 'purl:Agent.contactinfo' in agent_dict:
                 contact_info = agent_dict['purl:Agent.contactinfo']
-            values += f"('{agent_uuid}','{agent_name}','{json.dumps(contact_info)}'),"
+                contact_info_value = "'" + json.dumps(contact_info).replace("'", "''") + "'"
+
+            values += f"('{agent_uuid}','{agent_name}',{contact_info_value}),"
 
         insert_query = f"""
 WITH s (uuid, naam, contact_info) 
