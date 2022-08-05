@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS public.assettypes
     uri text COLLATE pg_catalog."default" NOT NULL,
     definitie text COLLATE pg_catalog."default",
     actief boolean NOT NULL,
+    bestek boolean,
     CONSTRAINT assettypes_pkey PRIMARY KEY (uuid)
 );
 

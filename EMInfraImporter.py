@@ -124,13 +124,10 @@ class EMInfraImporter:
         url = f"core/api/{url_part}"
 
         if request_type == 'GET':
-            print (f'getting koppelingen using {url_part}')
             response = self.request_handler.perform_get_request(url=url)
             decoded_string = response.content.decode("utf-8")
             dict_obj = json.loads(decoded_string)
-            print(f"data has {len(dict_obj['data'])} number of objects")
             for dataobject in dict_obj['data']:
-                print(f"yielding a dataobject: {dataobject}")
                 yield dataobject
 
         else:
@@ -166,7 +163,19 @@ class EMInfraImporter:
         zoekparams = ZoekParameterPayload()
         yield from self.get_objects_from_non_oslo_endpoint(url_part='bestekrefs/search', zoek_payload=zoekparams)
 
-    def import_all_bestekkoppelingen_from_webservice_by_asset_uuids(self, asset_uuids: [str]) -> Generator[list]:
+    def get_all_bestekkoppelingen_from_webservice_by_asset_uuids(self, asset_uuids: [str]) -> Generator[tuple]:
         for asset_uuid in asset_uuids:
-            yield from (self.get_objects_from_non_oslo_endpoint(url_part=f'installaties/{asset_uuid}/kenmerken/ee2e627e-bb79-47aa-956a-ea167d20acbd/bestekken',
-                                                               request_type='GET'))
+            yield asset_uuid, self.get_objects_from_non_oslo_endpoint(url_part=f'installaties/{asset_uuid}/kenmerken/ee2e627e-bb79-47aa-956a-ea167d20acbd/bestekken',
+                                                          request_type='GET')
+
+    def get_assettypes_with_kenmerk_bestek_by_uuids(self, assettype_uuids):
+        zoekparams = ZoekParameterPayload()
+        zoekparams.add_term(property='kenmerkTypes', value='ee2e627e-bb79-47aa-956a-ea167d20acbd', operator='EQ')
+        zoekparams.add_term(logicalOp='AND', property='id', value=assettype_uuids, operator='IN')
+        yield from self.get_objects_from_non_oslo_endpoint(url_part='onderdeeltypes/search',
+                                                           zoek_payload=zoekparams)
+        zoekparams = ZoekParameterPayload()
+        zoekparams.add_term(property='kenmerkTypes', value='ee2e627e-bb79-47aa-956a-ea167d20acbd', operator='EQ')
+        zoekparams.add_term(logicalOp='AND', property='id', value=assettype_uuids, operator='IN')
+        yield from self.get_objects_from_non_oslo_endpoint(url_part='installatietypes/search',
+                                                           zoek_payload=zoekparams)

@@ -16,9 +16,29 @@ class AssetTypeSyncer:
     def update_all_assettypes(self):
         assettypes = self.get_all_assettypes()
         self.update_assettypes(assettypes_dicts=assettypes)
+        self.update_assettypes_with_bestek()
 
     def get_all_assettypes(self) -> []:
         return self.eminfra_importer.import_all_assettypes_from_webservice()
+
+    def update_assettypes_with_bestek(self):
+        select_query = 'SELECT uuid FROM public.assettypes WHERE bestek is NULL'
+        cursor = self.postGIS_connector.connection.cursor()
+        cursor.execute(select_query)
+        assettypes_to_update = list(map(lambda x: x[0], cursor.fetchall()))
+
+        types_with_bestek_dicts = list(self.eminfra_importer.get_assettypes_with_kenmerk_bestek_by_uuids(assettype_uuids=assettypes_to_update))
+        types_with_bestek = list(map(lambda x: x['uuid'], types_with_bestek_dicts))
+        types_without_bestek = list(set(assettypes_to_update) - set(types_with_bestek))
+
+        if len(types_with_bestek) > 0:
+            update_query = "UPDATE public.assettypes SET bestek = TRUE WHERE uuid IN (VALUES ('" + "'::uuid),('".join(types_with_bestek) + "'::uuid));"
+            cursor.execute(update_query)
+        if len(types_without_bestek) > 0:
+            update_query = "UPDATE public.assettypes SET bestek = FALSE WHERE uuid IN (VALUES ('" + "'::uuid),('".join(types_without_bestek) + "'::uuid));"
+            cursor.execute(update_query)
+
+        self.postGIS_connector.connection.commit()
 
     def update_assettypes(self, assettypes_dicts: [dict]):
         if len(assettypes_dicts) == 0:
@@ -72,3 +92,5 @@ WHERE to_update.uuid = assettypes.uuid;"""
         cursor = self.postGIS_connector.connection.cursor()
         cursor.execute(update_query)
         self.postGIS_connector.connection.commit()
+
+        self.update_assettypes_with_bestek()
