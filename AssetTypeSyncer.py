@@ -9,17 +9,17 @@ class AssetTypeSyncer:
         self.postGIS_connector = postGIS_connector
         self.eminfra_importer = emInfraImporter
 
-    def sync_assettypes(self):
-        self.update_all_assettypes()
-        self.postGIS_connector.connection.commit()
+    def sync_assettypes(self, pagingcursor: str = '', page_size: int = 100):
+        self.eminfra_importer.pagingcursor = pagingcursor
+        while True:
+            asset_types = self.eminfra_importer.import_assettypes_from_webservice_page_by_page(page_size=page_size)
 
-    def update_all_assettypes(self):
-        assettypes = self.get_all_assettypes()
-        self.update_assettypes(assettypes_dicts=assettypes)
-        self.update_assettypes_with_bestek()
+            self.update_assettypes(assettypes_dicts=list(asset_types))
+            self.update_assettypes_with_bestek()
+            self.postGIS_connector.save_props_to_params({'pagingcursor': self.eminfra_importer.pagingcursor})
 
-    def get_all_assettypes(self) -> []:
-        return self.eminfra_importer.import_all_assettypes_from_webservice()
+            if self.eminfra_importer.pagingcursor == '':
+                break
 
     def update_assettypes_with_bestek(self):
         select_query = 'SELECT uuid FROM public.assettypes WHERE bestek is NULL'

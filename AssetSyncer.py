@@ -1,3 +1,6 @@
+import logging
+import time
+
 from EMInfraImporter import EMInfraImporter
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
 from PostGISConnector import PostGISConnector
@@ -8,16 +11,18 @@ class AssetSyncer:
         self.postGIS_connector = postGIS_connector
         self.eminfra_importer = em_infra_importer
 
-    def sync_assets(self):
-        self.update_all_assets()
-        self.postGIS_connector.connection.commit()
+    def sync_assets(self, pagingcursor: str = '', page_size: int = 100):
+        self.eminfra_importer.pagingcursor = pagingcursor
+        while True:
+            start = time.time()
+            assets = self.eminfra_importer.import_assets_from_webservice_page_by_page(page_size=page_size)
+            self.update_assets(assets_dicts=list(assets))
+            self.postGIS_connector.save_props_to_params({'pagingcursor': self.eminfra_importer.pagingcursor})
+            end = time.time()
+            logging.info(f'time for {len(assets)} assets: {round(end - start, 2)}')
 
-    def update_all_assets(self):
-        assets = self.get_all_assets()
-        self.update_assets(assets_dicts=assets)
-
-    def get_all_assets(self) -> []:
-        return self.eminfra_importer.import_all_assets_from_webservice()
+            if self.eminfra_importer.pagingcursor == '':
+                break
 
     def update_assets(self, assets_dicts: [dict]):
         if len(assets_dicts) == 0:
@@ -52,18 +57,21 @@ class AssetSyncer:
             if 'tz:Schadebeheerder.schadebeheerder' in asset_dict:
                 schadebeheerder = asset_dict['tz:Schadebeheerder.schadebeheerder']['tz:DtcBeheerder.referentie']
             schadebeheerder = '00000000-0000-0000-0000-000000000000'
+            schadebeheerder = None
             # TODO implement schadebeheerder mapping
 
             toezichter = None
             if 'tz:Toezicht.toezichter' in asset_dict:
                 toezichter = asset_dict['tz:Toezicht.toezichter']['tz:DtcToezichter.gebruikersnaam']
             toezichter = '00000000-0000-0000-0000-000000000000'
+            toezichter = None
             # TODO implement toezichter mapping
 
             toezichtgroep = None
             if 'tz:Toezicht.toezichtgroep' in asset_dict:
                 toezichtgroep = asset_dict['tz:Toezicht.toezichtgroep']['tz:DtcToezichtGroep.referentie']
             toezichtgroep = '00000000-0000-0000-0000-000000000000'
+            toezichtgroep = None
             # TODO implement toezichtgroep mapping
 
             commentaar = None
@@ -121,6 +129,7 @@ WHERE to_update.uuid = assets.uuid;"""
         self.postGIS_connector.connection.commit()
 
         # TODO parent aanpassen > sql query op databank zelf uitvoeren
+        # beheerobjecten nodig
 
     def create_assettype_mapping(self, assettype_uris: [str]) -> dict:
         unique_uris = set(assettype_uris)

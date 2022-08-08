@@ -1,6 +1,45 @@
-class NieuwAssetProcessor:
-    def __init__(self):
-        self.tx_context = None
+import logging
+import time
+
+from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
+
+
+class NieuwAssetProcessor(SpecificEventProcessor):
+    def __init__(self, cursor, em_infra_importer):
+        super().__init__(cursor, em_infra_importer)
+
+    def process(self, uuids: [str], full_sync: bool = False):
+        asset_dicts = self.em_infra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
+
+        logging.info(f'started creating {len(asset_dicts)} assets')
+        start = time.time()
+        for asset_dict in asset_dicts:
+            self.create_asset_from_jsonLd_dict(asset_dict)
+        end = time.time()
+        logging.info(f'created {len(asset_dicts)} assets in {str(round(end - start, 2))} seconds.')
+
+        if full_sync:
+            self.remove_all_asset_relaties(uuids)
+            self.remove_all_betrokkene_relaties(uuids)
+            assetrelatie_dicts = self.em_infra_importer.import_assetrelaties_from_webservice_by_assetuuids(asset_uuids=uuids)
+            betrokkenerelatie_dicts = self.em_infra_importer.import_betrokkenerelaties_from_webservice_by_assetuuids(
+                asset_uuids=uuids)
+            logging.info(f'started creating {len(assetrelatie_dicts) + len(betrokkenerelatie_dicts)} relations')
+            start = time.time()
+            for assetrelatieDict in assetrelatie_dicts:
+                try:
+                    self.create_assetrelatie_from_jsonLd_dict(assetrelatieDict)
+                except RelationNotCreatedError as ex:
+                    pass  # fix for creating relationships between assets where one of the nodes does not exist yet
+            end = time.time()
+            logging.info(f'created {len(assetrelatie_dicts)} assetrelaties in {str(round(end - start, 2))} seconds.')
+            start = time.time()
+            for betrokkenerelatieDict in betrokkenerelatie_dicts:
+                self.create_betrokkenerelatie_from_jsonLd_dict(betrokkenerelatieDict)
+            end = time.time()
+            logging.info(f'created {len(assetrelatie_dicts)} betrokkenerelaties in {str(round(end - start, 2))} seconds.')
+
+        logging.info('done')
 
     @staticmethod
     def create_asset_by_dict(tx, params: dict, ns: str, assettype: str):

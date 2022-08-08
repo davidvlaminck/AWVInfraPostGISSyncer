@@ -42,63 +42,26 @@ class PostGISConnector:
                 self.connection.rollback()
                 raise error
 
-    def save_props_to_params(self, params: dict):
+    def save_props_to_params(self, params: dict, cursor: psycopg2._psycopg.cursor = None):
         query = f'UPDATE public.params SET '
         for key, value in params.items():
-            if key in ['pagingcursor','event_uuid']:
+            if key in ['pagingcursor', 'event_uuid']:
                 query += key + "='" + value + "', "
             else:
                 query += key + '=' + str(value) + ', '
         query = query[:-2]
 
-        cursor = self.connection.cursor()
+        if cursor is None:
+            cursor = self.connection.cursor()
         cursor.execute(query)
         self.connection.commit()
         cursor.close()
 
-    @staticmethod
-    def update_params(tx, page_num: int, event_id: int):
-        tx.run(f"MATCH (p:Params) SET p.page = {page_num}, p.event_id = {event_id}")
+    def update_params(self, cursor: psycopg2._psycopg.cursor, page_num: int, event_uuid: str):
+        self.save_props_to_params(cursor=cursor, params={'page': page_num, 'event_uuid': event_uuid})
 
     def close(self):
-        self.driver.close()
+        self.connection.close()
 
-    def perform_create_asset(self, params: dict, ns: str, assettype: str):
-        with self.driver.session(database=self.db) as session:
-            tx = session.begin_transaction()
-            self._create_asset_by_dict(tx, params, ns, assettype)
-            tx.commit()
-            tx.close()
-
-    def perform_create_relatie(self, bron_uuid='', doel_uuid='', relatie_type='', params=None):
-        with self.driver.session(database=self.db) as session:
-            session.write_transaction(self._create_relatie_by_dict, bron_uuid=bron_uuid, doel_uuid=doel_uuid,
-                                      relatie_type=relatie_type, params=params)
-
-    @staticmethod
-    def _create_asset_by_dict(tx, params: dict, ns: str, assettype: str):
-        result = tx.run(f"CREATE (a:Asset:{ns}:{assettype} $params) ", params=params)
-        return result
-
-    @staticmethod
-    def _create_relatie_by_dict(tx, bron_uuid='', doel_uuid='', relatie_type='', params=None):
-        query = "MATCH (a:Asset), (b:Asset) " \
-                f"WHERE a.uuid = '{bron_uuid}' " \
-                f"AND b.uuid = '{doel_uuid}' " \
-                f"CREATE (a)-[r:{relatie_type} " \
-                "$params]->(b) " \
-                f"RETURN type(r), r.name"
-        result = tx.run(query, params=params)
-        return result
-
-    def start_transaction(self):
-        return self.driver.session(database=self.db).begin_transaction()
-
-    @staticmethod
-    def commit_transaction(tx_context):
-        tx_context.commit()
-        tx_context.close()
-
-    def set_default_constraints_and_indices(self, session):
-        session.run("CREATE CONSTRAINT Asset_uuid IF NOT EXISTS FOR (n:Asset) REQUIRE n.uuid IS UNIQUE")
-        session.run("CREATE CONSTRAINT Agent_uuid IF NOT EXISTS FOR (n:Agent) REQUIRE n.uuid IS UNIQUE")
+    def commit_transaction(self):
+        self.connection.commit()

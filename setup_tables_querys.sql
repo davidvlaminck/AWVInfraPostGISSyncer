@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS public.agents;
+DROP TABLE IF EXISTS public.agents CASCADE;
 CREATE TABLE public.agents
 (
     uuid uuid NOT NULL,
@@ -9,7 +9,7 @@ CREATE TABLE public.agents
     PRIMARY KEY (uuid)
 );
 
-DROP TABLE IF EXISTS public.params;
+DROP TABLE IF EXISTS public.params CASCADE;
 CREATE TABLE IF NOT EXISTS public.params
 (
     page integer,
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS public.params
 INSERT INTO public.params(page, event_uuid, pagesize, fresh_start, sync_step, pagingcursor)
 VALUES (-1, '', 100, TRUE, -1, '');
 
-DROP TABLE IF EXISTS public.assets;
+DROP TABLE IF EXISTS public.assets CASCADE;
 CREATE TABLE IF NOT EXISTS public.assets
 (
     uuid uuid NOT NULL,
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS public.assets
 
 -- Table: public.assettypes
 
-DROP TABLE IF EXISTS public.assettypes;
+DROP TABLE IF EXISTS public.assettypes CASCADE;
 CREATE TABLE IF NOT EXISTS public.assettypes
 (
     uuid uuid NOT NULL,
@@ -67,7 +67,7 @@ ALTER TABLE IF EXISTS public.assets
 
 -- Table: public.bestekken
 
-DROP TABLE IF EXISTS public.bestekken;
+DROP TABLE IF EXISTS public.bestekken CASCADE;
 CREATE TABLE IF NOT EXISTS public.bestekken
 (
     uuid uuid NOT NULL,
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS public.bestekken
     CONSTRAINT bestekken_pkey PRIMARY KEY (uuid)
 );
 
-DROP TABLE IF EXISTS public.bestekkoppelingen;
+DROP TABLE IF EXISTS public.bestekkoppelingen CASCADE;
 CREATE TABLE IF NOT EXISTS public.bestekkoppelingen
 (
     assetUuid uuid NOT NULL,

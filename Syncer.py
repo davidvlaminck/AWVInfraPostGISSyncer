@@ -4,7 +4,10 @@ import traceback
 from datetime import datetime
 
 from AgentSyncer import AgentSyncer
+from AssetSyncer import AssetSyncer
+from AssetTypeSyncer import AssetTypeSyncer
 from BestekSyncer import BestekSyncer
+from BestekKoppelingSyncer import BestekKoppelingSyncer
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
 from EventProcessors.RelatieProcessor import RelatieProcessor
@@ -56,7 +59,7 @@ class Syncer:
 
             if sync_step == -1:
                 sync_step = 1
-            if sync_step >= 5:
+            if sync_step >= 10:
                 break
 
             if sync_step == 1:
@@ -71,17 +74,39 @@ class Syncer:
                 bestek_syncer.sync_bestekken(pagingcursor=pagingcursor, page_size=page_size)
                 end = time.time()
                 logging.info(f'time for all bestekken: {round(end - start, 2)}')
+            elif sync_step == 3:
+                start = time.time()
+                assettype_syncer = AssetTypeSyncer(emInfraImporter=self.eminfra_importer, postGIS_connector=self.connector)
+                assettype_syncer.sync_assettypes(pagingcursor=pagingcursor, page_size=page_size)
+                end = time.time()
+                logging.info(f'time for all assettypes: {round(end - start, 2)}')
+            elif sync_step == 4:
+                start = time.time()
+                asset_syncer = AssetSyncer(em_infra_importer=self.eminfra_importer, postGIS_connector=self.connector)
+                asset_syncer.sync_assets(pagingcursor=pagingcursor, page_size=page_size)
+                end = time.time()
+                logging.info(f'time for all assets: {round(end - start, 2)}')
+            elif sync_step == 5:
+                start = time.time()
+                bestek_koppeling_syncer = BestekKoppelingSyncer(em_infra_importer=self.eminfra_importer,
+                                                                postGIS_connector=self.connector)
+                bestek_koppeling_syncer.sync_bestekkoppelingen()
+                end = time.time()
+                logging.info(f'time for all bestekkoppelingen: {round(end - start, 2)}')
+
             else:
+                # TODO beheerder
+                # TODO personen
+                # TODO toezichtgroepen
+                # TODO relatietypes
+                # TODO assetrelaties
+                # TODO betrokkenerelaties
+                # TODO specificieke eigenchappen
+                # TODO documenten
                 raise NotImplementedError
 
-            if False:
+            if True:
                 pass
-            elif sync_step == 2:
-                assets = self.eminfra_importer.import_assets_from_webservice_page_by_page(page_size)
-                asset_processor = NieuwAssetProcessor()
-                asset_processor.tx_context = tx_context
-                for asset in assets:
-                    asset_processor.create_asset_from_jsonLd_dict(asset)
             elif sync_step == 3:
                 start = time.time()
                 assetrelaties = self.eminfra_importer.import_assetrelaties_from_webservice_page_by_page(page_size)
@@ -176,11 +201,11 @@ class Syncer:
         sync_allowed_by_time = self.calculate_sync_allowed_by_time()
 
         while sync_allowed_by_time:
-            params = self.connector.get_page_by_get_or_create_params()
+            params = self.connector.get_params()
             current_page = params['page']
-            completed_event_id = params['event_id']
+            completed_event_id = params['event_uuid']
             page_size = params['pagesize']
-            logging.info(f'starting a sync cycle, page: {str(current_page + 1)} event_id: {str(completed_event_id)}')
+            logging.info(f'starting a sync cycle, page: {str(current_page + 1)} event_uuid: {str(completed_event_id)}')
             start = time.time()
 
             eventsparams_to_process = self.events_collector.collect_starting_from_page(current_page, completed_event_id,
@@ -198,10 +223,6 @@ class Syncer:
             self.log_eventparams(eventsparams_to_process.event_dict, round(end - start, 2))
             try:
                 self.events_processor.process_events(eventsparams_to_process)
-            except BetrokkeneRelationNotCreatedError:
-                # agents syncen of na 24h
-                self.events_processor.tx_context.rollback()
-                self.sync_all_agents()
             except Exception as exc:
                 traceback.print_exception(exc)
                 self.events_processor.tx_context.rollback()
@@ -216,7 +237,4 @@ class Syncer:
             if len(v) > 0:
                 logging.info(f'number of events of type {k}: {len(v)}')
 
-    def sync_all_agents(self):
-        agentsyncer = AgentSyncer(emInfraImporter=self.eminfra_importer, neo4J_connector=self.connector)
-        agentsyncer.sync_agents()
 

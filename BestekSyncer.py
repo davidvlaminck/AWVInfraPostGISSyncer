@@ -29,9 +29,13 @@ class BestekSyncer:
         for bestek_dict in bestekken_dicts:
             try:
                 uuid = bestek_dict['uuid']
-                eDeltaDossiernummer = bestek_dict['eDeltaDossiernummer']
-                eDeltaBesteknummer = bestek_dict['eDeltaBesteknummer']
-                aannemerNaam = bestek_dict['aannemerNaam'].replace("'", "''")
+                eDeltaDossiernummer = bestek_dict.get('eDeltaDossiernummer', None)
+                if eDeltaDossiernummer is None and 'nummer' in bestek_dict:
+                    eDeltaDossiernummer = bestek_dict['nummer']
+                eDeltaBesteknummer = bestek_dict.get('eDeltaBesteknummer', None)
+                if eDeltaBesteknummer is None and 'nummer' in bestek_dict:
+                    eDeltaBesteknummer = bestek_dict['nummer']
+                aannemerNaam = bestek_dict['aannemerNaam'].replace("'", "''") # TODO does not always exist
                 values += f"('{uuid}','{eDeltaDossiernummer}','{eDeltaBesteknummer}','{aannemerNaam}'),"
             except KeyError as exc:
                 logging.error(f'Could not create a bestek from the following respoonse:\n{bestek_dict}\nError:{exc}')

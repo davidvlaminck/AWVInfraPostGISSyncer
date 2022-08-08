@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS public.temp_sync_bestekkoppelingen
         fill_table_query = """
 WITH bestek_assets AS (
     SELECT assets.uuid FROM public.assettypes 
-        LEFT JOIN public.assets on assets.assettype = assettypes.uuid
+        INNER JOIN public.assets on assets.assettype = assettypes.uuid
     WHERE bestek = TRUE)
 INSERT INTO public.temp_sync_bestekkoppelingen (assetUuid) 
 SELECT uuid FROM bestek_assets;"""

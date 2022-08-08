@@ -6,8 +6,7 @@ from EventProcessors.CommentaarGewijzigdProcessor import CommentaarGewijzigdProc
 from EventProcessors.EigenschappenGewijzigdProcessor import EigenschappenGewijzigdProcessor
 from EventProcessors.GeometrieOrLocatieGewijzigdProcessor import GeometrieOrLocatieGewijzigdProcessor
 from EventProcessors.NaamGewijzigdProcessor import NaamGewijzigdProcessor
-from EventProcessors.NieuwOnderdeelProcessor import NieuwOnderdeelProcessor
-from EventProcessors.NieuweInstallatieProcessor import NieuweInstallatieProcessor
+from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
 from EventProcessors.SchadebeheerderGewijzigdProcessor import SchadebeheerderGewijzigdProcessor
 from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
 from EventProcessors.ToestandGewijzigdProcessor import ToestandGewijzigdProcessor
@@ -16,45 +15,45 @@ from EventProcessors.ToezichtGewijzigdProcessor import ToezichtGewijzigdProcesso
 
 class EventProcessorFactory:
     @classmethod
-    def CreateEventProcessor(cls, event_type: str, tx_context,
-                             emInfraImporter: EMInfraImporter) -> SpecificEventProcessor:
+    def create_event_processor(cls, event_type: str, cursor,
+                               em_infra_importer: EMInfraImporter) -> SpecificEventProcessor:
         if event_type == 'NIEUWE_INSTALLATIE':
-            return NieuweInstallatieProcessor(tx_context, emInfraImporter)
+            return NieuwAssetProcessor(cursor, em_infra_importer)
         elif event_type == 'NIEUW_ONDERDEEL':
-            return NieuwOnderdeelProcessor(tx_context, emInfraImporter)
+            return NieuwAssetProcessor(cursor, em_infra_importer)
         elif event_type == 'ACTIEF_GEWIJZIGD':
-            return ActiefGewijzigdProcessor(tx_context, emInfraImporter)
+            return ActiefGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'BESTEK_GEWIJZIGD':
-            pass
+            raise NotImplementedError
         elif event_type == 'BETROKKENE_RELATIES_GEWIJZIGD':
-            return BetrokkeneRelatiesGewijzigdProcessor(tx_context, emInfraImporter)
+            return BetrokkeneRelatiesGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'COMMENTAAR_GEWIJZIGD':
-            return CommentaarGewijzigdProcessor(tx_context, emInfraImporter)
+            return CommentaarGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'COMMUNICATIEAANSLUITING_GEWIJZIGD':
-            pass
+            raise NotImplementedError
         elif event_type == 'DOCUMENTEN_GEWIJZIGD':
-            pass
+            raise NotImplementedError
         elif event_type == 'EIGENSCHAPPEN_GEWIJZIGD':
-            return EigenschappenGewijzigdProcessor(tx_context, emInfraImporter)
+            return EigenschappenGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'ELEKTRICITEITSAANSLUITING_GEWIJZIGD':
-            pass
+            raise NotImplementedError
         elif event_type == 'GEOMETRIE_GEWIJZIGD' or event_type == 'LOCATIE_GEWIJZIGD':
-            return GeometrieOrLocatieGewijzigdProcessor(tx_context, emInfraImporter)
+            return GeometrieOrLocatieGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'NAAM_GEWIJZIGD' or event_type == 'NAAMPAD_GEWIJZIGD' or event_type == 'PARENT_GEWIJZIGD':
-            return NaamGewijzigdProcessor(tx_context, emInfraImporter)
+            return NaamGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'POSTIT_GEWIJZIGD':
-            pass
+            raise NotImplementedError
         elif event_type == 'RELATIES_GEWIJZIGD':
-            return AssetRelatiesGewijzigdProcessor(tx_context, emInfraImporter)
+            return AssetRelatiesGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'SCHADEBEHEERDER_GEWIJZIGD':
-            return SchadebeheerderGewijzigdProcessor(tx_context, emInfraImporter)
+            return SchadebeheerderGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'TOEGANG_GEWIJZIGD':
-            pass
+            raise NotImplementedError
         elif event_type == 'TOESTAND_GEWIJZIGD':
-            return ToestandGewijzigdProcessor(tx_context, emInfraImporter)
+            return ToestandGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'TOEZICHT_GEWIJZIGD':
-            return ToezichtGewijzigdProcessor(tx_context, emInfraImporter)
+            return ToezichtGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'VPLAN_GEWIJZIGD':
-            pass
+            raise NotImplementedError
         else:
             raise NotImplementedError
