@@ -35,8 +35,15 @@ class BestekSyncer:
                 eDeltaBesteknummer = bestek_dict.get('eDeltaBesteknummer', None)
                 if eDeltaBesteknummer is None and 'nummer' in bestek_dict:
                     eDeltaBesteknummer = bestek_dict['nummer']
-                aannemerNaam = bestek_dict['aannemerNaam'].replace("'", "''") # TODO does not always exist
-                values += f"('{uuid}','{eDeltaDossiernummer}','{eDeltaBesteknummer}','{aannemerNaam}'),"
+                aannemerNaam = None
+                if 'aannemerNaam' in bestek_dict:
+                    aannemerNaam = bestek_dict['aannemerNaam'].replace("'", "''")
+                values += f"('{uuid}','{eDeltaDossiernummer}','{eDeltaBesteknummer}',"
+                if aannemerNaam is not None:
+                    values += f"'{aannemerNaam}'"
+                else:
+                    values += "NULL"
+                values += "),"
             except KeyError as exc:
                 logging.error(f'Could not create a bestek from the following respoonse:\n{bestek_dict}\nError:{exc}')
                 continue

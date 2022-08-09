@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS public.bestekken
     uuid uuid NOT NULL,
     eDeltaDossiernummer text COLLATE pg_catalog."default" NOT NULL,
     eDeltaBesteknummer text COLLATE pg_catalog."default" NOT NULL,
-    aannemerNaam text COLLATE pg_catalog."default" NOT NULL,
+    aannemerNaam text COLLATE pg_catalog."default",
     CONSTRAINT bestekken_pkey PRIMARY KEY (uuid)
 );
 
