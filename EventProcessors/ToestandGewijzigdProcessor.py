@@ -1,31 +1,52 @@
 import logging
+import time
 
-from EMInfraImporter import EMInfraImporter
-from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
 from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
 
 
 class ToestandGewijzigdProcessor(SpecificEventProcessor):
-    def __init__(self, tx_context, em_infra_importer: EMInfraImporter):
-        super().__init__(tx_context, em_infra_importer)
+    def __init__(self, cursor, em_infra_importer):
+        super().__init__(cursor, em_infra_importer)
 
     def process(self, uuids: [str]):
-        raise NotImplementedError
-        assetDicts = self.em_infra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
+        logging.info(f'started creating assets')
+        start = time.time()
 
-        self.process_dicts(assetDicts)
+        asset_dicts = self.em_infra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
+        values = self.create_values_string_from_dicts(assets_dicts=asset_dicts)
+        self.perform_update_with_values(cursor=self.cursor, values=values)
 
-    def process_dicts(self, assetDicts):
-        logging.info(f'started changing toestand of {len(assetDicts)} assets')
-        for asset_dict in assetDicts:
-            korte_uri = asset_dict['@type'].split('/ns/')[1]
-            ns = korte_uri.split('#')[0]
-            assettype = korte_uri.split('#')[1]
-            if '-' in assettype:
-                assettype = '`' + assettype + '`'
-            self.tx_context.run(f"MATCH (a:{ns}:{assettype} "
-                                "{uuid: $uuid}) SET a.toestand = $toestand",
-                                uuid=asset_dict['AIMObject.assetId']['DtcIdentificator.identificator'][0:36],
-                                toestand=asset_dict['AIMToestand.toestand'].replace(
-                                    'https://wegenenverkeer.data.vlaanderen.be/id/concept/KlAIMToestand/', ''))
-        logging.info('done')
+        end = time.time()
+        logging.info(f'created {len(asset_dicts)} assets in {str(round(end - start, 2))} seconds.')
+
+    @staticmethod
+    def create_values_string_from_dicts(assets_dicts):
+        values = ''
+        for asset_dict in assets_dicts:
+            uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]
+
+            toestand = None
+            if 'AIMToestand.toestand' in asset_dict:
+                toestand = asset_dict['AIMToestand.toestand'].replace(
+                    'https://wegenenverkeer.data.vlaanderen.be/id/concept/KlAIMToestand/', '')
+            values += f"('{uuid}',"
+
+            if toestand is None:
+                values += 'NULL,'
+            else:
+                values += f"'{toestand}'"
+            values = values + '),'
+        return values
+
+    @staticmethod
+    def perform_update_with_values(cursor, values):
+        update_query = f"""
+        WITH s (uuid, toestand)  
+            AS (VALUES {values[:-1]}),
+        to_update AS (
+            SELECT uuid::uuid AS uuid, toestand FROM s)
+        UPDATE assets 
+        SET toestand = to_update.toestand
+        FROM to_update 
+        WHERE to_update.uuid = assets.uuid;"""
+        cursor.execute(update_query)
