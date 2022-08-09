@@ -136,7 +136,7 @@ class AssetSyncerTests(TestCase):
                 "Netwerkpoort.merk": "https://wegenenverkeer.data.vlaanderen.be/id/concept/KlNetwerkMerk/Cisco",
                 "Netwerkpoort.serienummer": "NULL"
             }]
-        self.assets_syncer.update_assets(assets_dicts=assets)
+        self.assets_syncer.update_assets(assets_dicts=assets, cursor=cursor)
 
         with self.subTest('attribute check after the first asset updated'):
             cursor.execute(select_asset_query.replace('{uuid}', '00000453-56ce-4f8b-af44-960df526cb30'))
@@ -214,4 +214,4 @@ class AssetSyncerTests(TestCase):
             }
         }]
         with self.assertRaises(AssetTypeMissingError):
-            self.assets_syncer.update_assets(assets_dicts=assets)
+            self.assets_syncer.update_assets(assets_dicts=assets, cursor=self.connector.connection.cursor())
