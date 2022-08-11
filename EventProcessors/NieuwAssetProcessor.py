@@ -14,7 +14,8 @@ class NieuwAssetProcessor(SpecificEventProcessor):
         start = time.time()
 
         asset_dicts = self.em_infra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
-        values = AssetSyncer.create_values_string_from_dicts(cursor=self.cursor, assets_dicts=asset_dicts, full_sync=False)
+        values = AssetSyncer.create_values_string_from_dicts(cursor=self.cursor, assets_dicts=asset_dicts,
+                                                             full_sync=False)
         AssetSyncer.perform_insert_with_values(cursor=self.cursor, values=values)
 
         end = time.time()
