@@ -9,7 +9,7 @@ class ToestandGewijzigdProcessor(SpecificEventProcessor):
         super().__init__(cursor, em_infra_importer)
 
     def process(self, uuids: [str]):
-        logging.info(f'started creating assets')
+        logging.info(f'started updating toestand')
         start = time.time()
 
         asset_dicts = self.em_infra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
@@ -17,7 +17,7 @@ class ToestandGewijzigdProcessor(SpecificEventProcessor):
         self.perform_update_with_values(cursor=self.cursor, values=values)
 
         end = time.time()
-        logging.info(f'created {len(asset_dicts)} assets in {str(round(end - start, 2))} seconds.')
+        logging.info(f'updated {len(asset_dicts)} assets in {str(round(end - start, 2))} seconds.')
 
     @staticmethod
     def create_values_string_from_dicts(assets_dicts):
