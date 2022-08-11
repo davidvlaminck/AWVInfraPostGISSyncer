@@ -32,7 +32,7 @@ class ToestandGewijzigdProcessor(SpecificEventProcessor):
             values += f"('{uuid}',"
 
             if toestand is None:
-                values += 'NULL,'
+                values += 'NULL'
             else:
                 values += f"'{toestand}'"
             values = values + '),'

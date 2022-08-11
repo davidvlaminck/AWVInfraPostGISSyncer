@@ -31,7 +31,7 @@ class CommentaarGewijzigdProcessor(SpecificEventProcessor):
             values += f"('{uuid}',"
 
             if notitie is None:
-                values += 'NULL,'
+                values += 'NULL'
             else:
                 notitie = notitie.replace("'","''")
                 values += f"'{notitie}'"
