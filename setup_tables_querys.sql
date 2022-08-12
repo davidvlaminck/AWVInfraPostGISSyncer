@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS public.params
     pagesize integer,
     fresh_start boolean,
     sync_step integer,
-    pagingcursor text COLLATE pg_catalog."default"
+    pagingcursor text COLLATE pg_catalog."default",
+    last_update_utc TIMESTAMP WITH TIME ZONE
 );
 
 INSERT INTO public.params(page, event_uuid, pagesize, fresh_start, sync_step, pagingcursor)

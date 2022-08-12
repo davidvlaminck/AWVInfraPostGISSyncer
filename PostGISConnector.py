@@ -47,6 +47,8 @@ class PostGISConnector:
         for key, value in params.items():
             if key in ['pagingcursor', 'event_uuid']:
                 query += key + "='" + value + "', "
+            if key in ['last_update_utc']:
+                query += key + "='" + str(value) + "', "
             else:
                 query += key + '=' + str(value) + ', '
         query = query[:-2]
