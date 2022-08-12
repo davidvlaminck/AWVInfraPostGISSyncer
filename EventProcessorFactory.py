@@ -1,6 +1,7 @@
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.ActiefGewijzigdProcessor import ActiefGewijzigdProcessor
 from EventProcessors.AssetRelatiesGewijzigdProcessor import AssetRelatiesGewijzigdProcessor
+from EventProcessors.BestekGewijzigdProcessor import BestekGewijzigdProcessor
 from EventProcessors.BetrokkeneRelatiesGewijzigdProcessor import BetrokkeneRelatiesGewijzigdProcessor
 from EventProcessors.CommentaarGewijzigdProcessor import CommentaarGewijzigdProcessor
 from EventProcessors.EigenschappenGewijzigdProcessor import EigenschappenGewijzigdProcessor
@@ -24,7 +25,7 @@ class EventProcessorFactory:
         elif event_type == 'ACTIEF_GEWIJZIGD':
             return ActiefGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'BESTEK_GEWIJZIGD':
-            raise NotImplementedError
+            return BestekGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'BETROKKENE_RELATIES_GEWIJZIGD':
             pass
         elif event_type == 'COMMENTAAR_GEWIJZIGD':

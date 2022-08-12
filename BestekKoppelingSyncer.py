@@ -14,25 +14,28 @@ class BestekKoppelingSyncer:
         self.update_all_bestekkoppelingen(batch_size=batch_size)
 
     def update_all_bestekkoppelingen(self, batch_size: int):
+        self.eminfra_importer.pagingcursor = 'setting up sync of bestekkoppelingen'
         # create a temp table that holds all asset_uuid
         self.create_temp_table_for_sync_bestekkoppelingen()
 
         # go through all of the table and flag as sync'd when done, allow for parameter batch size
+        self.eminfra_importer.pagingcursor = 'performing sync of bestekkoppelingen'
         self.loop_using_temp_table_and_sync_koppelingen(batch_size=batch_size)
 
         # delete the temp table
         self.delete_temp_table_for_sync_bestekkoppelingen()
+        self.eminfra_importer.pagingcursor = ''
 
     def get_all_bestekkoppelingen_by_asset_uuids(self, asset_uuids: [str]) -> Generator[tuple]:
         yield from self.eminfra_importer.get_all_bestekkoppelingen_from_webservice_by_asset_uuids(
             asset_uuids=asset_uuids)
 
-    def update_bestekkoppelingen_by_asset_uuids(self, asset_uuids: [str], bestek_koppelingen_dicts_list: [[dict]]) -> None:
+    @staticmethod
+    def update_bestekkoppelingen_by_asset_uuids(cursor, asset_uuids: [str], bestek_koppelingen_dicts_list: [[dict]]) -> None:
         if len(asset_uuids) == 0:
             return
 
         delete_query = "DELETE FROM public.bestekkoppelingen WHERE assetUuid IN (VALUES ('" + "'::uuid),('".join(asset_uuids)+"'::uuid));"
-        cursor = self.postGIS_connector.connection.cursor()
         cursor.execute(delete_query)
 
         for index, asset_uuid in enumerate(asset_uuids):
@@ -68,10 +71,7 @@ INSERT INTO public.bestekkoppelingen (assetUuid, bestekUuid, startDatum, eindDat
 SELECT to_insert.assetUuid, to_insert.bestekUuid, to_insert.startDatum, to_insert.eindDatum, to_insert.koppelingStatus
 FROM to_insert;"""
 
-            cursor = self.postGIS_connector.connection.cursor()
             cursor.execute(insert_query)
-
-        self.postGIS_connector.connection.commit()
 
     def create_temp_table_for_sync_bestekkoppelingen(self):
         create_table_query = """
@@ -121,7 +121,7 @@ SELECT uuid FROM bestek_assets;"""
             for asset_uuid, koppelingen in koppelingen_generator:
                 asset_uuid_list.append(asset_uuid)
                 koppelingen_list.append(list(koppelingen))
-            self.update_bestekkoppelingen_by_asset_uuids(asset_uuids=asset_uuid_list,
+            self.update_bestekkoppelingen_by_asset_uuids(cursor=cursor, asset_uuids=asset_uuid_list,
                                                          bestek_koppelingen_dicts_list=koppelingen_list)
 
             update_temp_table_query = "UPDATE public.temp_sync_bestekkoppelingen SET done = TRUE WHERE " \

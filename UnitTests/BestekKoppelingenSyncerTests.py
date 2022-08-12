@@ -26,7 +26,7 @@ class BestekKoppelingenSyncerTests(TestCase):
         conn.autocommit = True
 
         cursor = conn.cursor()
-        cursor.execute('DROP database unittests;')
+        cursor.execute('DROP database IF EXISTS unittests;')
         cursor.execute('CREATE database unittests;')
 
         conn.close()
@@ -136,9 +136,11 @@ class BestekKoppelingenSyncerTests(TestCase):
                 "status": "INACTIEF"
             }
         ]
-        self.bestekkoppelingen_syncer.update_bestekkoppelingen_by_asset_uuids(
+
+        self.bestekkoppelingen_syncer.update_bestekkoppelingen_by_asset_uuids(cursor=cursor,
             asset_uuids=['0000da03-06f3-4a22-a609-d82358c62273'],
             bestek_koppelingen_dicts_list=[bestekkoppelingen])
+        self.connector.connection.commit()
 
         with self.subTest('date check after the first bestekkoppeling updated'):
             cursor.execute(select_bestekkoppeling_query.replace('{assetUuid}', '0000da03-06f3-4a22-a609-d82358c62273')
@@ -224,8 +226,9 @@ class BestekKoppelingenSyncerTests(TestCase):
                 "status": "INACTIEF"
             }
         ]
+        cursor = self.connector.connection.cursor()
         with self.assertRaises(psycopg2.Error) as exc:
-            self.bestekkoppelingen_syncer.update_bestekkoppelingen_by_asset_uuids(
+            self.bestekkoppelingen_syncer.update_bestekkoppelingen_by_asset_uuids(cursor=cursor,
                 asset_uuids=['0000da03-06f3-4a22-a609-d82358c62273'],
                 bestek_koppelingen_dicts_list=[bestekkoppelingen])
         self.assertEqual(exc.exception.pgerror.split('\n')[0],
@@ -235,7 +238,7 @@ class BestekKoppelingenSyncerTests(TestCase):
         self.setup()
 
         self.set_up_data_assettypes()
-        self.set_up_data_assets()
+        self.set_up_data_assets(self.connector.connection.cursor())
 
         bestekkoppelingen = [{
             "startDatum": "2021-01-14T00:00:00.000+01:00",
@@ -301,8 +304,9 @@ class BestekKoppelingenSyncerTests(TestCase):
                 "status": "INACTIEF"
             }
         ]
+        cursor = self.connector.connection.cursor()
         with self.assertRaises(psycopg2.Error) as exc:
-            self.bestekkoppelingen_syncer.update_bestekkoppelingen_by_asset_uuids(
+            self.bestekkoppelingen_syncer.update_bestekkoppelingen_by_asset_uuids(cursor=cursor,
                 asset_uuids=['0000da03-06f3-4a22-a609-d82358c62273'],
                 bestek_koppelingen_dicts_list=[bestekkoppelingen])
         self.assertEqual(exc.exception.pgerror.split('\n')[0],
@@ -313,7 +317,7 @@ class BestekKoppelingenSyncerTests(TestCase):
 
         self.set_up_data_bestekken()
         self.set_up_data_assettypes()
-        self.set_up_data_multiple_assets()
+        self.set_up_data_multiple_assets(cursor=self.connector.connection.cursor())
 
         self.bestekkoppelingen_syncer.sync_bestekkoppelingen(2)
 
@@ -331,8 +335,8 @@ class BestekKoppelingenSyncerTests(TestCase):
             "definitie": "lichtmast wegverlichting"
         }])
 
-    def set_up_data_assets(self):
-        self.assets_syncer.update_assets([{
+    def set_up_data_assets(self, cursor):
+        self.assets_syncer.update_assets(cursor=cursor, assets_dicts=[{
             "@type": "https://lgc.data.wegenenverkeer.be/ns/installatie#VPLMast",
             "@id": "https://data.awvvlaanderen.be/id/asset/0000da03-06f3-4a22-a609-d82358c62273-bGdjOmluc3RhbGxhdGllI1ZQTE1hc3Q",
             "lgc:VPLMast.risicovollePaal": False,
@@ -758,8 +762,8 @@ class BestekKoppelingenSyncerTests(TestCase):
             ]
         }])
 
-    def set_up_data_multiple_assets(self):
-        self.assets_syncer.update_assets([
+    def set_up_data_multiple_assets(self, cursor):
+        self.assets_syncer.update_assets(cursor=cursor, assets_dicts=[
             {
                 "@type": "https://lgc.data.wegenenverkeer.be/ns/installatie#VPLMast",
                 "@id": "https://data.awvvlaanderen.be/id/asset/0000da03-06f3-4a22-a609-d82358c62273-bGdjOmluc3RhbGxhdGllI1ZQTE1hc3Q",
@@ -1134,5 +1138,5 @@ class BestekKoppelingenSyncerTests(TestCase):
 
     def set_up_data(self):
         self.set_up_data_assettypes()
-        self.set_up_data_assets()
+        self.set_up_data_assets(cursor=self.connector.connection.cursor())
         self.set_up_data_bestekken()

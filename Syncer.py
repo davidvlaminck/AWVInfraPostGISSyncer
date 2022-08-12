@@ -95,6 +95,7 @@ class Syncer:
                 logging.info(f'time for all bestekkoppelingen: {round(end - start, 2)}')
 
             else:
+
                 # TODO beheerder
                 # TODO personen
                 # TODO toezichtgroepen
@@ -103,34 +104,9 @@ class Syncer:
                 # TODO betrokkenerelaties
                 # TODO specificieke eigenchappen
                 # TODO documenten
+                # TODO locaties
                 raise NotImplementedError
-
-            if True:
                 pass
-            elif sync_step == 3:
-                start = time.time()
-                assetrelaties = self.eminfra_importer.import_assetrelaties_from_webservice_page_by_page(page_size)
-                relatie_processor = RelatieProcessor()
-                relatie_processor.tx_context = tx_context
-                for assetrelatie in assetrelaties:
-                    try:
-                        relatie_processor.create_assetrelatie_from_jsonLd_dict(assetrelatie)
-                    except AssetRelationNotCreatedError:
-                        raise AssetRelationNotCreatedError
-                end = time.time()
-                logging.info(f'time for 100 relations: {round(end - start, 2)}')
-            elif sync_step == 4:
-                start = time.time()
-                betrokkenerelaties = self.eminfra_importer.import_betrokkenerelaties_from_webservice_page_by_page(page_size)
-                relatie_processor = RelatieProcessor()
-                relatie_processor.tx_context = tx_context
-                for betrokkenerelatie in betrokkenerelaties:
-                    try:
-                        relatie_processor.create_betrokkenerelatie_from_jsonLd_dict(betrokkenerelatie)
-                    except BetrokkeneRelationNotCreatedError:
-                        raise BetrokkeneRelationNotCreatedError
-                end = time.time()
-                logging.info(f'time for 100 betrokkenerelations: {round(end - start, 2)}')
 
             pagingcursor = self.eminfra_importer.pagingcursor
             if pagingcursor == '':
@@ -138,7 +114,7 @@ class Syncer:
             self.connector.save_props_to_params(
                 {'sync_step': sync_step,
                  'pagingcursor': pagingcursor})
-            if sync_step >= 10:
+            if sync_step >= 6:
                 self.connector.save_props_to_params(
                     {'fresh_start': False})
             self.connector.connection.commit()
