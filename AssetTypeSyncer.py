@@ -16,6 +16,8 @@ class AssetTypeSyncer:
 
             self.update_assettypes(assettypes_dicts=list(asset_types))
             self.update_assettypes_with_bestek()
+            self.update_assettypes_with_geometrie()
+            # TODO create views for each assettype with TRUE for geometrie
             self.postGIS_connector.save_props_to_params({'pagingcursor': self.eminfra_importer.pagingcursor})
 
             if self.eminfra_importer.pagingcursor == '':
@@ -36,6 +38,28 @@ class AssetTypeSyncer:
             cursor.execute(update_query)
         if len(types_without_bestek) > 0:
             update_query = "UPDATE public.assettypes SET bestek = FALSE WHERE uuid IN (VALUES ('" + "'::uuid),('".join(types_without_bestek) + "'::uuid));"
+            cursor.execute(update_query)
+
+        self.postGIS_connector.connection.commit()
+
+    def update_assettypes_with_geometrie(self):
+        select_query = 'SELECT uuid FROM public.assettypes WHERE bestek is NULL'
+        cursor = self.postGIS_connector.connection.cursor()
+        cursor.execute(select_query)
+        assettypes_to_update = list(map(lambda x: x[0], cursor.fetchall()))
+
+        types_with_geometrie_dicts = list(
+            self.eminfra_importer.get_assettypes_with_kenmerk_geometrie_by_uuids(assettype_uuids=assettypes_to_update))
+        types_with_geometrie = list(map(lambda x: x['uuid'], types_with_geometrie_dicts))
+        types_without_geometrie = list(set(assettypes_to_update) - set(types_with_geometrie))
+
+        if len(types_with_geometrie) > 0:
+            update_query = "UPDATE public.assettypes SET geometrie = TRUE WHERE uuid IN (VALUES ('" + "'::uuid),('".join(
+                types_with_geometrie) + "'::uuid));"
+            cursor.execute(update_query)
+        if len(types_without_geometrie) > 0:
+            update_query = "UPDATE public.assettypes SET geometrie = FALSE WHERE uuid IN (VALUES ('" + "'::uuid),('".join(
+                types_without_geometrie) + "'::uuid));"
             cursor.execute(update_query)
 
         self.postGIS_connector.connection.commit()

@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS public.assettypes
     definitie text COLLATE pg_catalog."default",
     actief boolean NOT NULL,
     bestek boolean,
+    geometrie boolean,
     CONSTRAINT assettypes_pkey PRIMARY KEY (uuid)
 );
 

@@ -183,14 +183,22 @@ class EMInfraImporter:
             yield asset_uuid, self.get_objects_from_non_oslo_endpoint(url_part=f'installaties/{asset_uuid}/kenmerken/ee2e627e-bb79-47aa-956a-ea167d20acbd/bestekken',
                                                           request_type='GET')
 
-    def get_assettypes_with_kenmerk_bestek_by_uuids(self, assettype_uuids):
+    def get_assettypes_with_kenmerk_and_by_uuids(self, assettype_uuids, kenmerk: str):
         zoek_params = ZoekParameterPayload()
-        zoek_params.add_term(property='kenmerkTypes', value='ee2e627e-bb79-47aa-956a-ea167d20acbd', operator='EQ')
+        zoek_params.add_term(property='kenmerkTypes', value=kenmerk, operator='EQ')
         zoek_params.add_term(logicalOp='AND', property='id', value=assettype_uuids, operator='IN')
         yield from self.get_objects_from_non_oslo_endpoint(url_part='onderdeeltypes/search',
                                                            zoek_payload=zoek_params)
         zoek_params = ZoekParameterPayload()
-        zoek_params.add_term(property='kenmerkTypes', value='ee2e627e-bb79-47aa-956a-ea167d20acbd', operator='EQ')
+        zoek_params.add_term(property='kenmerkTypes', value=kenmerk, operator='EQ')
         zoek_params.add_term(logicalOp='AND', property='id', value=assettype_uuids, operator='IN')
         yield from self.get_objects_from_non_oslo_endpoint(url_part='installatietypes/search',
                                                            zoek_payload=zoek_params)
+
+    def get_assettypes_with_kenmerk_geometrie_by_uuids(self, assettype_uuids):
+        yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
+                                                                 kenmerk='aabe29e0-9303-45f1-839e-159d70ec2859')
+
+    def get_assettypes_with_kenmerk_bestek_by_uuids(self, assettype_uuids):
+        yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
+                                                                 kenmerk='ee2e627e-bb79-47aa-956a-ea167d20acbd')
