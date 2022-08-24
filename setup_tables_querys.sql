@@ -108,6 +108,58 @@ ALTER TABLE IF EXISTS public.bestekkoppelingen
     ON DELETE NO ACTION
     NOT VALID;
 
+DROP TABLE IF EXISTS public.locatie CASCADE;
+CREATE TABLE IF NOT EXISTS public.locatie
+(
+    assetUuid uuid NOT NULL,
+    geometrie text COLLATE pg_catalog."default",
+    omschrijving text COLLATE pg_catalog."default",
+    bron text COLLATE pg_catalog."default",
+    precisie text COLLATE pg_catalog."default",
+    x decimal,
+    y decimal,
+    z decimal,
+    ident8 text COLLATE pg_catalog."default",
+    ident2 text COLLATE pg_catalog."default",
+    referentiepaal_opschrift decimal,
+    referentiepaal_afstand integer,
+    straatnaam text COLLATE pg_catalog."default",
+    gemeente text COLLATE pg_catalog."default",
+    adres_straat text COLLATE pg_catalog."default",
+    adres_nummer text COLLATE pg_catalog."default",
+    adres_bus text COLLATE pg_catalog."default",
+    adres_postcode text COLLATE pg_catalog."default",
+    adres_gemeente text COLLATE pg_catalog."default",
+    adres_provincieq text COLLATE pg_catalog."default"
+);
+
+ALTER TABLE IF EXISTS public.locatie
+    ADD CONSTRAINT assets_locatie_fkey
+    FOREIGN KEY (assetUuid)
+    REFERENCES public.assets (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+DROP TABLE IF EXISTS public.geometrie CASCADE;
+CREATE TABLE IF NOT EXISTS public.geometrie
+(
+    assetUuid uuid NOT NULL,
+    niveau integer NOT NULL,
+    ga_versie text COLLATE pg_catalog."default",
+    nauwkeurigheid text COLLATE pg_catalog."default",
+    bron text COLLATE pg_catalog."default",
+    wkt_string text COLLATE pg_catalog."default",
+    overerving_ids text COLLATE pg_catalog."default"
+);
+
+ALTER TABLE IF EXISTS public.geometrie
+    ADD CONSTRAINT assets_geometrie_fkey
+    FOREIGN KEY (assetUuid)
+    REFERENCES public.assets (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
 
 
 -- psycopg2.errors.ForeignKeyViolation: insert or update on table "assets" violates foreign key constraint "assets_assettype_fkey"
