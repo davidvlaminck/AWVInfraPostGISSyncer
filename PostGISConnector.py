@@ -24,7 +24,7 @@ class PostGISConnector:
     def get_params(self):
         cursor = self.connection.cursor()
         try:
-            keys = ['page', 'event_uuid', 'pagesize', 'fresh_start', 'sync_step', 'pagingcursor']
+            keys = ['page', 'event_uuid', 'pagesize', 'fresh_start', 'sync_step', 'pagingcursor', 'last_update_utc']
             keys_in_query = ', '.join(keys)
             cursor.execute(f'SELECT {keys_in_query} FROM public.params')
             record = cursor.fetchone()
@@ -47,7 +47,7 @@ class PostGISConnector:
         for key, value in params.items():
             if key in ['pagingcursor', 'event_uuid']:
                 query += key + "='" + value + "', "
-            if key in ['last_update_utc']:
+            elif key in ['last_update_utc']:
                 query += key + "='" + str(value) + "', "
             else:
                 query += key + '=' + str(value) + ', '

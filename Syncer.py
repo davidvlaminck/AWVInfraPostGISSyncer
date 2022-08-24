@@ -201,7 +201,7 @@ class Syncer:
                 self.events_processor.process_events(eventsparams_to_process)
             except Exception as exc:
                 traceback.print_exception(exc)
-                self.events_processor.tx_context.rollback()
+                self.events_processor.postgis_connector.connection.rollback()
 
             sync_allowed_by_time = self.calculate_sync_allowed_by_time()
 
