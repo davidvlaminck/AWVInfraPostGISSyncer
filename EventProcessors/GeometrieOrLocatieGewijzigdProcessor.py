@@ -13,18 +13,21 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
         start = time.time()
 
         asset_dicts = self.em_infra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
+
+        self.process_dicts(uuids, asset_dicts)
+
+        end = time.time()
+        logging.info(f'updated {len(asset_dicts)} assets in {str(round(end - start, 2))} seconds.')
+
+    def process_dicts(self, uuids, asset_dicts):
         geometrie_values = self.create_geometrie_values_string_from_dicts(assets_dicts=asset_dicts)
         self.delete_geometrie_records(cursor=self.cursor, uuids=uuids)
         self.perform_geometrie_update_with_values(cursor=self.cursor, values=geometrie_values)
-
         locatie_insert_values, locatie_update_values = self.create_locatie_values_string_from_dicts(cursor=self.cursor,
                                                                                                     uuids=uuids,
                                                                                                     assets_dicts=asset_dicts)
         self.perform_locatie_update_with_values(cursor=self.cursor, insert_values=locatie_insert_values,
                                                 update_values=locatie_update_values)
-
-        end = time.time()
-        logging.info(f'updated {len(asset_dicts)} assets in {str(round(end - start, 2))} seconds.')
 
     @staticmethod
     def create_geometrie_values_string_from_dicts(assets_dicts):
@@ -63,7 +66,7 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
                     overerving = '|'.join(erflaten)
 
                 for value in [gaVersie, nauwkeurigheid, bron, geometrie, overerving]:
-                    if value is None:
+                    if value is None or value == '':
                         values += 'NULL,'
                     else:
                         value = value.replace("'", "''")
@@ -106,7 +109,7 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
             geometrie = asset_dict.get('loc:Locatie.geometrie')
 
             locatie_dict = asset_dict.get('loc:Locatie.puntlocatie')
-            if locatie_dict is not None:
+            if locatie_dict is not None and locatie_dict != '':
                 bron = None
                 if 'loc:DtcPuntlocatie.bron' in locatie_dict:
                     bron = locatie_dict['loc:DtcPuntlocatie.bron'].replace(
@@ -114,12 +117,12 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
                 precisie = None
                 if 'loc:DtcPuntlocatie.precisie' in locatie_dict:
                     precisie = locatie_dict['loc:DtcPuntlocatie.precisie'].replace(
-                        'https://loc.data.wegenenverkeer.be/id/concept/KlLocatiePrecisie', '')
+                        'https://loc.data.wegenenverkeer.be/id/concept/KlLocatiePrecisie/', '')
 
                 ident8 = ident2 = referentiepaal_opschrift = referentiepaal_afstand = straatnaam = weg_gemeente = None
 
                 punt_dict = locatie_dict.get('loc:3Dpunt.puntgeometrie')
-                if punt_dict is not None:
+                if punt_dict is not None and punt_dict != '':
                     x = punt_dict['loc:DtcCoord.lambert72']['loc:DtcCoordLambert72.xcoordinaat']
                     y = punt_dict['loc:DtcCoord.lambert72']['loc:DtcCoordLambert72.ycoordinaat']
                     z = punt_dict['loc:DtcCoord.lambert72']['loc:DtcCoordLambert72.zcoordinaat']
@@ -127,7 +130,7 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
                     x = y = z = None
 
                 adres_dict = locatie_dict.get('loc:DtcPuntlocatie.adres')
-                if adres_dict is not None:
+                if adres_dict is not None and adres_dict != '':
                     straat = adres_dict['loc:DtcAdres.straat']
                     nummer = adres_dict['loc:DtcAdres.nummer']
                     bus = adres_dict['loc:DtcAdres.bus']
@@ -147,34 +150,46 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
                     weg_gemeente = weglocatie_dict['loc:DtcWeglocatie.gemeente']
 
                 for value in [omschrijving, geometrie, bron, precisie]:
-                    if value is None:
+                    if value is None or value == '':
                         values += 'NULL,'
                     else:
                         value = value.replace("'", "''")
                         values += f"'{value}',"
                 for value in [x, y, z]:
-                    if value is None:
+                    if value is None or value == '':
                         values += 'NULL,'
                     else:
                         values += f"{value},"
                 for value in [straat, nummer, bus, postcode, gemeente, provincie, ident8, ident2]:
-                    if value is None:
+                    if value is None or value == '':
                         values += 'NULL,'
                     else:
                         value = value.replace("'", "''")
                         values += f"'{value}',"
                 for value in [referentiepaal_opschrift, referentiepaal_afstand]:
-                    if value is None:
+                    if value is None or value == '':
                         values += 'NULL,'
                     else:
                         values += f"{value},"
                 for value in [straatnaam, weg_gemeente]:
-                    if value is None:
+                    if value is None or value == '':
                         values += 'NULL,'
                     else:
                         value = value.replace("'", "''")
                         values += f"'{value}',"
                 values = values[:-1] + '),'
+                if uuid not in assets_to_update:
+                    insert_values += values
+                else:
+                    update_values += values
+            else:
+                for value in [omschrijving, geometrie]:
+                    if value is None or value == '':
+                        values += 'NULL,'
+                    else:
+                        value = value.replace("'", "''")
+                        values += f"'{value}',"
+                values = values + ' NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),'
                 if uuid not in assets_to_update:
                     insert_values += values
                 else:

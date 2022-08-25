@@ -180,6 +180,10 @@ ALTER TABLE IF EXISTS public.geometrie
     ON DELETE NO ACTION
     NOT VALID;
 
+-- PostGIS
+
+CREATE EXTENSION postgis;
+
 
 -- psycopg2.errors.ForeignKeyViolation: insert or update on table "assets" violates foreign key constraint "assets_assettype_fkey"
 -- DETAIL:  Key (assettype)=(00000453-56ce-4f8b-af44-960df526cb30) is not present in table "assettypes".

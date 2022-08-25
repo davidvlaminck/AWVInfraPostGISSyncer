@@ -13,6 +13,13 @@ class PostGISConnector:
         self.db = database
 
     def set_up_tables(self, file_path='setup_tables_querys.sql'):
+        
+        # create drop views query's with:
+        drop_views_query = """
+        SELECT 'DROP VIEW ' || table_name || ' CASCADE;'
+        FROM information_schema.views
+        WHERE table_schema NOT IN ('pg_catalog', 'information_schema') AND table_name !~ '^pg_';"""
+        
         cursor = self.connection.cursor()
         with open(file_path) as setup_queries:
             queries = setup_queries.readlines()
