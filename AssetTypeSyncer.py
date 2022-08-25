@@ -1,5 +1,3 @@
-import json
-
 from EMInfraImporter import EMInfraImporter
 from PostGISConnector import PostGISConnector
 
