@@ -15,7 +15,7 @@ class AssetTypeSyncer:
             self.update_assettypes(assettypes_dicts=list(asset_types))
             self.update_assettypes_with_bestek()
             self.update_assettypes_with_geometrie()
-            # TODO create views for each assettype with TRUE for geometrie
+            self.create_views_for_assettypes_with_geometrie()
             self.postGIS_connector.save_props_to_params({'pagingcursor': self.eminfra_importer.pagingcursor})
 
             if self.eminfra_importer.pagingcursor == '':
@@ -41,7 +41,7 @@ class AssetTypeSyncer:
         self.postGIS_connector.connection.commit()
 
     def update_assettypes_with_geometrie(self):
-        select_query = 'SELECT uuid FROM public.assettypes WHERE bestek is NULL'
+        select_query = 'SELECT uuid FROM public.assettypes WHERE geometrie is NULL'
         cursor = self.postGIS_connector.connection.cursor()
         cursor.execute(select_query)
         assettypes_to_update = list(map(lambda x: x[0], cursor.fetchall()))
@@ -116,3 +116,22 @@ WHERE to_update.uuid = assettypes.uuid;"""
         self.postGIS_connector.connection.commit()
 
         self.update_assettypes_with_bestek()
+
+    def create_views_for_assettypes_with_geometrie(self):
+        cursor = self.postGIS_connector.connection.cursor()
+        get_assettypes_with_geometrie_query = """SELECT uuid, uri FROM assettypes WHERE geometrie IS NOT NULL;"""
+        cursor.execute(get_assettypes_with_geometrie_query)
+        assettype_with_geometrie = cursor.fetchall()
+        for assettype_record in assettype_with_geometrie:
+            type_uuid = assettype_record[0]
+            type_uri = assettype_record[1]
+            view_name = type_uri.split('/ns/')[1].replace('#', '_')
+
+            create_view_query = f"""
+            CREATE VIEW {view_name} AS
+                SELECT geometrie.*, assets.toestand, assets.actief, assets.naam, ST_GeomFromText(wkt_string, 31370) AS geometry 
+                FROM geometrie 
+                    LEFT JOIN assets ON geometrie.assetuuid = assets.uuid 
+                    LEFT JOIN assettypes ON assets.assettype = assettypes.uuid
+                WHERE assettypes.uuid = '{type_uuid}';"""
+            cursor.execute(create_view_query)
