@@ -4,6 +4,7 @@ import time
 import psycopg2
 
 from EMInfraImporter import EMInfraImporter
+from EventProcessors.GeometrieOrLocatieGewijzigdProcessor import GeometrieOrLocatieGewijzigdProcessor
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
 from PostGISConnector import PostGISConnector
 
@@ -17,10 +18,19 @@ class AssetSyncer:
         self.eminfra_importer.pagingcursor = pagingcursor
         while True:
             start = time.time()
+
             asset_dicts = self.eminfra_importer.import_assets_from_webservice_page_by_page(page_size=page_size)
             cursor = self.postGIS_connector.connection.cursor()
             self.update_assets(cursor=cursor, assets_dicts=list(asset_dicts))
+
+            uuids = list(map(lambda d: d['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36],
+                             asset_dicts))
+            geometrie_processor = GeometrieOrLocatieGewijzigdProcessor(cursor=cursor,
+                                                                       em_infra_importer=self.eminfra_importer)
+            geometrie_processor.process_dicts(uuids=uuids, asset_dicts=asset_dicts)
+
             self.postGIS_connector.save_props_to_params({'pagingcursor': self.eminfra_importer.pagingcursor})
+
             end = time.time()
             logging.info(f'time for {len(asset_dicts)} assets: {round(end - start, 2)}')
 
@@ -136,7 +146,7 @@ FROM to_insert;"""
 
             values += f"('{uuid}','{assettype}',{actief},"
             for attribute in [toestand, naampad, naam, schadebeheerder, toezichter, toezichtgroep, commentaar]:
-                if attribute is None:
+                if attribute is None or attribute == '':
                     values += 'NULL,'
                 else:
                     values += f"'{attribute}',"
