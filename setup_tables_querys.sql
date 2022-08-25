@@ -43,8 +43,6 @@ CREATE TABLE IF NOT EXISTS public.assets
     CONSTRAINT assets_pkey PRIMARY KEY (uuid)
 );
 
--- Table: public.assettypes
-
 DROP TABLE IF EXISTS public.assettypes CASCADE;
 CREATE TABLE IF NOT EXISTS public.assettypes
 (
