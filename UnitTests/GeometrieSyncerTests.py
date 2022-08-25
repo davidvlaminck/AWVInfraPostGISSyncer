@@ -83,7 +83,8 @@ class GeometrieSyncerTests(TestCase):
 
         self.processor.em_infra_importer.import_assets_from_webservice_by_uuids = self.return_new_asset_dicts
 
-        self.processor.process(['00000453-56ce-4f8b-af44-960df526cb30', '00088892-53a8-4dfc-a2c9-875cab2d7e11'])
+        self.processor.process(['00000453-56ce-4f8b-af44-960df526cb30', '00088892-53a8-4dfc-a2c9-875cab2d7e11',
+                                '5dbca334-9ce8-4ebe-80c3-01c01dd1844f'])
 
         with self.subTest('geometrie wkt check for the first asset'):
             cursor.execute(select_geometrie_wkt_query
@@ -100,7 +101,7 @@ class GeometrieSyncerTests(TestCase):
         with self.subTest('number of geometrie records after update'):
             cursor.execute(count_geometrie_query)
             result = cursor.fetchone()[0]
-            self.assertEqual(4, result)
+            self.assertEqual(3, result)
         with self.subTest('locatie omschrijving check for the first asset'):
             cursor.execute(select_locatie_omschrijving_query.replace('{uuid}', '5dbca334-9ce8-4ebe-80c3-01c01dd1844f'))
             result = cursor.fetchone()[0]

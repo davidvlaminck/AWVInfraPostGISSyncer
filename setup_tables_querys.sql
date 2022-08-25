@@ -1,3 +1,5 @@
+-- Table: public.agents
+
 DROP TABLE IF EXISTS public.agents CASCADE;
 CREATE TABLE public.agents
 (
@@ -8,6 +10,8 @@ CREATE TABLE public.agents
     contact_info json,
     PRIMARY KEY (uuid)
 );
+
+-- Table: public.params
 
 DROP TABLE IF EXISTS public.params CASCADE;
 CREATE TABLE IF NOT EXISTS public.params
@@ -23,6 +27,8 @@ CREATE TABLE IF NOT EXISTS public.params
 
 INSERT INTO public.params(page, event_uuid, pagesize, fresh_start, sync_step, pagingcursor)
 VALUES (-1, '', 100, TRUE, -1, '');
+
+-- Table: public.assets
 
 DROP TABLE IF EXISTS public.assets CASCADE;
 CREATE TABLE IF NOT EXISTS public.assets
@@ -42,6 +48,8 @@ CREATE TABLE IF NOT EXISTS public.assets
     commentaar text COLLATE pg_catalog."default",
     CONSTRAINT assets_pkey PRIMARY KEY (uuid)
 );
+
+-- Table: public.assettypes
 
 DROP TABLE IF EXISTS public.assettypes CASCADE;
 CREATE TABLE IF NOT EXISTS public.assettypes
@@ -77,6 +85,8 @@ CREATE TABLE IF NOT EXISTS public.bestekken
     CONSTRAINT bestekken_pkey PRIMARY KEY (uuid)
 );
 
+-- Table: public.bestekkoppelingen
+
 DROP TABLE IF EXISTS public.bestekkoppelingen CASCADE;
 CREATE TABLE IF NOT EXISTS public.bestekkoppelingen
 (
@@ -106,6 +116,8 @@ ALTER TABLE IF EXISTS public.bestekkoppelingen
     ON DELETE NO ACTION
     NOT VALID;
 
+-- Table: public.locatie
+
 DROP TABLE IF EXISTS public.locatie CASCADE;
 CREATE TABLE IF NOT EXISTS public.locatie
 (
@@ -128,7 +140,7 @@ CREATE TABLE IF NOT EXISTS public.locatie
     adres_bus text COLLATE pg_catalog."default",
     adres_postcode text COLLATE pg_catalog."default",
     adres_gemeente text COLLATE pg_catalog."default",
-    adres_provincieq text COLLATE pg_catalog."default"
+    adres_provincie text COLLATE pg_catalog."default"
 );
 
 ALTER TABLE IF EXISTS public.locatie
@@ -138,6 +150,15 @@ ALTER TABLE IF EXISTS public.locatie
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
+
+CREATE UNIQUE INDEX locatie_assetUuid
+ON public.locatie (assetUuid);
+
+ALTER TABLE locatie
+ADD CONSTRAINT unique_locatie_assetUuid
+UNIQUE USING INDEX locatie_assetUuid;
+
+-- Table: public.geometrie
 
 DROP TABLE IF EXISTS public.geometrie CASCADE;
 CREATE TABLE IF NOT EXISTS public.geometrie
