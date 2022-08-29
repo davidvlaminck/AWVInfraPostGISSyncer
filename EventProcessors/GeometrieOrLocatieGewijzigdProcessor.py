@@ -9,7 +9,7 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
         super().__init__(cursor, em_infra_importer)
 
     def process(self, uuids: [str]):
-        logging.info(f'started changing geometrie and locatie')
+        logging.info(f'started updating geometrie and locatie')
         start = time.time()
 
         asset_dicts = self.em_infra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
