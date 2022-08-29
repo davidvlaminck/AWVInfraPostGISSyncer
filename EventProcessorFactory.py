@@ -1,17 +1,12 @@
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.ActiefGewijzigdProcessor import ActiefGewijzigdProcessor
-from EventProcessors.AssetRelatiesGewijzigdProcessor import AssetRelatiesGewijzigdProcessor
 from EventProcessors.BestekGewijzigdProcessor import BestekGewijzigdProcessor
-from EventProcessors.BetrokkeneRelatiesGewijzigdProcessor import BetrokkeneRelatiesGewijzigdProcessor
 from EventProcessors.CommentaarGewijzigdProcessor import CommentaarGewijzigdProcessor
-from EventProcessors.EigenschappenGewijzigdProcessor import EigenschappenGewijzigdProcessor
 from EventProcessors.GeometrieOrLocatieGewijzigdProcessor import GeometrieOrLocatieGewijzigdProcessor
 from EventProcessors.NaamGewijzigdProcessor import NaamGewijzigdProcessor
 from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
-from EventProcessors.SchadebeheerderGewijzigdProcessor import SchadebeheerderGewijzigdProcessor
 from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
 from EventProcessors.ToestandGewijzigdProcessor import ToestandGewijzigdProcessor
-from EventProcessors.ToezichtGewijzigdProcessor import ToezichtGewijzigdProcessor
 
 
 class EventProcessorFactory:
@@ -39,7 +34,7 @@ class EventProcessorFactory:
         elif event_type == 'ELEKTRICITEITSAANSLUITING_GEWIJZIGD':
             pass
         elif event_type == 'GEOMETRIE_GEWIJZIGD' or event_type == 'LOCATIE_GEWIJZIGD':
-            pass
+            return GeometrieOrLocatieGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'NAAM_GEWIJZIGD' or event_type == 'NAAMPAD_GEWIJZIGD' or event_type == 'PARENT_GEWIJZIGD':
             return NaamGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'POSTIT_GEWIJZIGD':

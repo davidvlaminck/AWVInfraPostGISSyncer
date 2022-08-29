@@ -1,11 +1,19 @@
 class ZoekParameterPayload:
-    size: int = 100
-    from_: int = None
-    fromCursor: str = None
-    pagingMode: str = "OFFSET"
-    expansions: dict = {}
-    settings: dict = {}
-    selection: dict = {}
+    def __init__(self, size: int = 100, from_: int = None, fromCursor: str | None = None, pagingMode: str = "OFFSET",
+                 expansions: dict | None = None, settings: dict | None = None, selection: dict | None = None):
+        if expansions is None:
+            expansions = {}
+        if settings is None:
+            settings = {}
+        if selection is None:
+            selection = {}
+        self.size = size
+        self.from_ = from_
+        self.fromCursor = fromCursor
+        self.pagingMode = pagingMode
+        self.expansions = expansions
+        self.settings = settings
+        self.selection = selection
 
     def add_term(self, logicalOp: str = 'AND', property: str = '', value=None, operator: str = '', negate: bool = None):
         if 'expressions' not in self.selection:
@@ -40,6 +48,5 @@ class ZoekParameterPayload:
         d['expansions'] = self.expansions
         d['settings'] = self.settings
         d['selection'] = self.selection
-
 
         return d

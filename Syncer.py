@@ -51,73 +51,77 @@ class Syncer:
             self.save_last_feedevent_to_params(page_size)
 
         while True:
-            # main sync loop for a fresh start
-            params = self.connector.get_params()
-            sync_step = params['sync_step']
-            pagingcursor = params['pagingcursor']
-            page_size = params['pagesize']
+            try:
+                # main sync loop for a fresh start
+                params = self.connector.get_params()
+                sync_step = params['sync_step']
+                pagingcursor = params['pagingcursor']
+                page_size = params['pagesize']
 
-            if sync_step == -1:
-                sync_step = 1
-            if sync_step >= 10:
-                break
+                if sync_step == -1:
+                    sync_step = 1
+                if sync_step >= 10:
+                    break
 
-            if sync_step == 1:
-                start = time.time()
-                agent_syncer = AgentSyncer(emInfraImporter=self.eminfra_importer, postGIS_connector=self.connector)
-                agent_syncer.sync_agents(pagingcursor=pagingcursor, page_size=page_size)
-                end = time.time()
-                logging.info(f'time for all agents: {round(end - start, 2)}')
-            elif sync_step == 2:
-                start = time.time()
-                bestek_syncer = BestekSyncer(em_infra_importer=self.eminfra_importer, postGIS_connector=self.connector)
-                bestek_syncer.sync_bestekken(pagingcursor=pagingcursor, page_size=page_size)
-                end = time.time()
-                logging.info(f'time for all bestekken: {round(end - start, 2)}')
-            elif sync_step == 3:
-                start = time.time()
-                assettype_syncer = AssetTypeSyncer(emInfraImporter=self.eminfra_importer, postGIS_connector=self.connector)
-                assettype_syncer.sync_assettypes(pagingcursor=pagingcursor, page_size=page_size)
-                end = time.time()
-                logging.info(f'time for all assettypes: {round(end - start, 2)}')
-            elif sync_step == 4:
-                start = time.time()
-                asset_syncer = AssetSyncer(em_infra_importer=self.eminfra_importer, postGIS_connector=self.connector)
-                asset_syncer.sync_assets(pagingcursor=pagingcursor, page_size=page_size)
-                end = time.time()
-                logging.info(f'time for all assets: {round(end - start, 2)}')
-            elif sync_step == 5:
-                start = time.time()
-                bestek_koppeling_syncer = BestekKoppelingSyncer(em_infra_importer=self.eminfra_importer,
-                                                                postGIS_connector=self.connector)
-                bestek_koppeling_syncer.sync_bestekkoppelingen()
-                end = time.time()
-                logging.info(f'time for all bestekkoppelingen: {round(end - start, 2)}')
+                if sync_step == 1:
+                    start = time.time()
+                    agent_syncer = AgentSyncer(emInfraImporter=self.eminfra_importer, postGIS_connector=self.connector)
+                    agent_syncer.sync_agents(pagingcursor=pagingcursor, page_size=page_size)
+                    end = time.time()
+                    logging.info(f'time for all agents: {round(end - start, 2)}')
+                elif sync_step == 2:
+                    start = time.time()
+                    bestek_syncer = BestekSyncer(em_infra_importer=self.eminfra_importer, postGIS_connector=self.connector)
+                    bestek_syncer.sync_bestekken(pagingcursor=pagingcursor, page_size=page_size)
+                    end = time.time()
+                    logging.info(f'time for all bestekken: {round(end - start, 2)}')
+                elif sync_step == 3:
+                    start = time.time()
+                    assettype_syncer = AssetTypeSyncer(emInfraImporter=self.eminfra_importer, postGIS_connector=self.connector)
+                    assettype_syncer.sync_assettypes(pagingcursor=pagingcursor, page_size=page_size)
+                    end = time.time()
+                    logging.info(f'time for all assettypes: {round(end - start, 2)}')
+                elif sync_step == 4:
+                    start = time.time()
+                    asset_syncer = AssetSyncer(em_infra_importer=self.eminfra_importer, postGIS_connector=self.connector)
+                    asset_syncer.sync_assets(pagingcursor=pagingcursor, page_size=page_size)
+                    end = time.time()
+                    logging.info(f'time for all assets: {round(end - start, 2)}')
+                elif sync_step == 5:
+                    start = time.time()
+                    bestek_koppeling_syncer = BestekKoppelingSyncer(em_infra_importer=self.eminfra_importer,
+                                                                    postGIS_connector=self.connector)
+                    bestek_koppeling_syncer.sync_bestekkoppelingen()
+                    end = time.time()
+                    logging.info(f'time for all bestekkoppelingen: {round(end - start, 2)}')
 
-            else:
+                else:
 
-                # TODO beheerder
-                # TODO personen
-                # TODO toezichtgroepen
-                # TODO relatietypes
-                # TODO assetrelaties
-                # TODO betrokkenerelaties
-                # TODO specificieke eigenchappen
-                # TODO documenten
-                # TODO locaties
-                raise NotImplementedError
-                pass
+                    # TODO beheerder
+                    # TODO personen
+                    # TODO toezichtgroepen
+                    # TODO relatietypes
+                    # TODO assetrelaties
+                    # TODO betrokkenerelaties
+                    # TODO specificieke eigenchappen
+                    # TODO documenten
+                    # raise NotImplementedError
+                    pass
 
-            pagingcursor = self.eminfra_importer.pagingcursor
-            if pagingcursor == '':
-                sync_step += 1
-            self.connector.save_props_to_params(
-                {'sync_step': sync_step,
-                 'pagingcursor': pagingcursor})
-            if sync_step >= 6:
+                pagingcursor = self.eminfra_importer.pagingcursor
+                if pagingcursor == '':
+                    sync_step += 1
                 self.connector.save_props_to_params(
-                    {'fresh_start': False})
-            self.connector.connection.commit()
+                    {'sync_step': sync_step,
+                     'pagingcursor': pagingcursor})
+                if sync_step >= 6:
+                    self.connector.save_props_to_params(
+                        {'fresh_start': False})
+                self.connector.connection.commit()
+            except ConnectionError as err:
+                print(err)
+                logging.info("failed connection, retrying in 1 minute")
+                time.sleep(60)
 
     def save_last_feedevent_to_params(self, page_size: int):
         start_num = 1

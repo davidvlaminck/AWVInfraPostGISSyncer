@@ -10,9 +10,9 @@ class AssetTypeSyncer:
     def sync_assettypes(self, pagingcursor: str = '', page_size: int = 100):
         self.eminfra_importer.pagingcursor = pagingcursor
         while True:
-            asset_types = self.eminfra_importer.import_assettypes_from_webservice_page_by_page(page_size=page_size)
+            asset_types = list(self.eminfra_importer.import_assettypes_from_webservice_page_by_page(page_size=page_size))
 
-            self.update_assettypes(assettypes_dicts=list(asset_types))
+            self.update_assettypes(assettypes_dicts=asset_types)
             self.update_assettypes_with_bestek()
             self.update_assettypes_with_geometrie()
             self.create_views_for_assettypes_with_geometrie()
@@ -113,9 +113,8 @@ WHERE to_update.uuid = assettypes.uuid;"""
 
         cursor = self.postGIS_connector.connection.cursor()
         cursor.execute(update_query)
-        self.postGIS_connector.connection.commit()
 
-        self.update_assettypes_with_bestek()
+        self.postGIS_connector.connection.commit()
 
     def create_views_for_assettypes_with_geometrie(self):
         cursor = self.postGIS_connector.connection.cursor()
@@ -125,13 +124,14 @@ WHERE to_update.uuid = assettypes.uuid;"""
         for assettype_record in assettype_with_geometrie:
             type_uuid = assettype_record[0]
             type_uri = assettype_record[1]
-            view_name = type_uri.split('/ns/')[1].replace('#', '_')
+            view_name = type_uri.split('/ns/')[1].replace('#', '_').replace('.', '_').replace('-', '_')
 
             create_view_query = f"""
-            CREATE VIEW {view_name} AS
+            DROP VIEW IF EXISTS public.{view_name} CASCADE;
+            CREATE VIEW public.{view_name} AS
                 SELECT geometrie.*, assets.toestand, assets.actief, assets.naam, ST_GeomFromText(wkt_string, 31370) AS geometry 
-                FROM geometrie 
-                    LEFT JOIN assets ON geometrie.assetuuid = assets.uuid 
-                    LEFT JOIN assettypes ON assets.assettype = assettypes.uuid
+                FROM public.geometrie 
+                    LEFT JOIN public.assets ON geometrie.assetuuid = assets.uuid 
+                    LEFT JOIN public.assettypes ON assets.assettype = assettypes.uuid
                 WHERE assettypes.uuid = '{type_uuid}';"""
             cursor.execute(create_view_query)
