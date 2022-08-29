@@ -133,5 +133,5 @@ WHERE to_update.uuid = assettypes.uuid;"""
                 FROM public.geometrie 
                     LEFT JOIN public.assets ON geometrie.assetuuid = assets.uuid 
                     LEFT JOIN public.assettypes ON assets.assettype = assettypes.uuid
-                WHERE assettypes.uuid = '{type_uuid}';"""
+                WHERE assettypes.uuid = '{type_uuid}' and assets.actief = TRUE;"""
             cursor.execute(create_view_query)
