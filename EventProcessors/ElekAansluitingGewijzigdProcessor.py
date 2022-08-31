@@ -27,6 +27,8 @@ class ElekAansluitingGewijzigdProcessor(SpecificEventProcessor):
     def update_aansluiting_by_asset_uuid(self, cursor, asset_uuid, aansluiting_dict):
         delete_query = f"DELETE FROM public.elek_aansluitingen WHERE assetUuid = '{asset_uuid}'"
         cursor.execute(delete_query)
+        if 'elektriciteitsAansluitingRef' not in aansluiting_dict[0]:
+            return
         single_aansluiting_dict = aansluiting_dict[0]['elektriciteitsAansluitingRef']
         ean = single_aansluiting_dict['ean']
         aansluitnummer = single_aansluiting_dict['aansluitnummer']
