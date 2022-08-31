@@ -55,7 +55,7 @@ class AssetSyncer:
         end = time.time()
         logging.info(f'updated elek aansluiting of {len(asset_dicts)} assets in {str(round(end - start, 2))} seconds.')
 
-    def update_location_geometry_of_synced_assets(self,uuids, asset_dicts, cursor):
+    def update_location_geometry_of_synced_assets(self, uuids, asset_dicts, cursor):
         start = time.time()
         geometry_processor = GeometrieOrLocatieGewijzigdProcessor(cursor=cursor,
                                                                   em_infra_importer=self.eminfra_importer)
