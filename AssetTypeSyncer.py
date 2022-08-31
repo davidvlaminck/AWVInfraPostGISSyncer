@@ -15,6 +15,7 @@ class AssetTypeSyncer:
             self.update_assettypes(assettypes_dicts=asset_types)
             self.update_assettypes_with_bestek()
             self.update_assettypes_with_geometrie()
+            self.update_assettypes_with_elek_aansluiting()
             self.create_views_for_assettypes_with_geometrie()
             self.postGIS_connector.save_props_to_params({'pagingcursor': self.eminfra_importer.pagingcursor})
 
@@ -58,6 +59,28 @@ class AssetTypeSyncer:
         if len(types_without_geometrie) > 0:
             update_query = "UPDATE public.assettypes SET geometrie = FALSE WHERE uuid IN (VALUES ('" + "'::uuid),('".join(
                 types_without_geometrie) + "'::uuid));"
+            cursor.execute(update_query)
+
+        self.postGIS_connector.connection.commit()
+
+    def update_assettypes_with_elek_aansluiting(self):
+        select_query = 'SELECT uuid FROM public.assettypes WHERE elek_aansluiting is NULL'
+        cursor = self.postGIS_connector.connection.cursor()
+        cursor.execute(select_query)
+        assettypes_to_update = list(map(lambda x: x[0], cursor.fetchall()))
+
+        types_with_elek_aansluiting_dicts = list(
+            self.eminfra_importer.get_assettypes_with_kenmerk_elek_aansluiting_by_uuids(assettype_uuids=assettypes_to_update))
+        types_with_elek_aansluiting = list(map(lambda x: x['uuid'], types_with_elek_aansluiting_dicts))
+        types_without_elek_aansluiting = list(set(assettypes_to_update) - set(types_with_elek_aansluiting))
+
+        if len(types_with_elek_aansluiting) > 0:
+            update_query = "UPDATE public.assettypes SET elek_aansluiting = TRUE WHERE uuid IN (VALUES ('" + \
+                           "'::uuid),('".join(types_with_elek_aansluiting) + "'::uuid));"
+            cursor.execute(update_query)
+        if len(types_without_elek_aansluiting) > 0:
+            update_query = "UPDATE public.assettypes SET elek_aansluiting = FALSE WHERE uuid IN (VALUES ('" + \
+                           "'::uuid),('".join(types_without_elek_aansluiting) + "'::uuid));"
             cursor.execute(update_query)
 
         self.postGIS_connector.connection.commit()

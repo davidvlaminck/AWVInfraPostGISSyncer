@@ -4,6 +4,7 @@ import time
 import psycopg2
 
 from EMInfraImporter import EMInfraImporter
+from EventProcessors.ElekAansluitingGewijzigdProcessor import ElekAansluitingGewijzigdProcessor
 from EventProcessors.GeometrieOrLocatieGewijzigdProcessor import GeometrieOrLocatieGewijzigdProcessor
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
 from PostGISConnector import PostGISConnector
@@ -22,20 +23,46 @@ class AssetSyncer:
             asset_dicts = self.eminfra_importer.import_assets_from_webservice_page_by_page(page_size=page_size)
             cursor = self.postGIS_connector.connection.cursor()
             self.update_assets(cursor=cursor, assets_dicts=list(asset_dicts))
+            logging.info(f'created/updated {page_size} assets')
 
-            uuids = list(map(lambda d: d['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36],
-                             asset_dicts))
-            geometrie_processor = GeometrieOrLocatieGewijzigdProcessor(cursor=cursor,
-                                                                       em_infra_importer=self.eminfra_importer)
-            geometrie_processor.process_dicts(uuids=uuids, asset_dicts=asset_dicts)
+            uuids = list(map(lambda d: d['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36], asset_dicts))
+
+            self.update_location_geometry_of_synced_assets(uuids, asset_dicts, cursor)
+
+            self.update_elek_aansluiting_of_synced_assets(asset_dicts, cursor, uuids)
 
             self.postGIS_connector.save_props_to_params({'pagingcursor': self.eminfra_importer.pagingcursor})
 
             end = time.time()
-            logging.info(f'time for {len(asset_dicts)} assets: {round(end - start, 2)}')
+            logging.info(f'total time for {len(asset_dicts)} assets: {round(end - start, 2)}')
 
             if self.eminfra_importer.pagingcursor == '':
                 break
+
+    def update_elek_aansluiting_of_synced_assets(self, asset_dicts, cursor, uuids):
+        start = time.time()
+        joined_uuids = "','".join(uuids)
+        select_assets_for_elek_aansluiting_query = f"""SELECT assets.uuid 
+            FROM assets 
+                LEFT JOIN assettypes ON assets.assettype = assettypes.uuid
+            WHERE assets.uuid IN ('{joined_uuids}')
+            AND bestek = TRUE;"""
+        cursor.execute(select_assets_for_elek_aansluiting_query)
+        assets_for_elek_aansluiting = list(map(lambda x: x[0], cursor.fetchall()))
+        elek_aansluiting_processor = ElekAansluitingGewijzigdProcessor(cursor=cursor,
+                                                                       em_infra_importer=self.eminfra_importer)
+        elek_aansluiting_processor.process(uuids=assets_for_elek_aansluiting)
+        end = time.time()
+        logging.info(f'updated elek aansluiting of {len(asset_dicts)} assets in {str(round(end - start, 2))} seconds.')
+
+    def update_location_geometry_of_synced_assets(self,uuids, asset_dicts, cursor):
+        start = time.time()
+        geometry_processor = GeometrieOrLocatieGewijzigdProcessor(cursor=cursor,
+                                                                  em_infra_importer=self.eminfra_importer)
+        geometry_processor.process_dicts(uuids=uuids, asset_dicts=asset_dicts)
+        end = time.time()
+        logging.info(f'updated location/geometry of {len(asset_dicts)} assets in {str(round(end - start, 2))} seconds.')
+        return uuids
 
     def update_assets(self, cursor: psycopg2._psycopg.cursor, assets_dicts: [dict]):
         if len(assets_dicts) == 0:

@@ -43,8 +43,6 @@ CREATE TABLE IF NOT EXISTS public.assets
     schadebeheerder uuid,
     toezichter uuid,
     toezichtgroep uuid,
-    elekAansluiting text COLLATE pg_catalog."default",
-    EAN text COLLATE pg_catalog."default",
     commentaar text COLLATE pg_catalog."default",
     CONSTRAINT assets_pkey PRIMARY KEY (uuid)
 );
@@ -62,6 +60,7 @@ CREATE TABLE IF NOT EXISTS public.assettypes
     actief boolean NOT NULL,
     bestek boolean,
     geometrie boolean,
+    elek_aansluiting boolean,
     CONSTRAINT assettypes_pkey PRIMARY KEY (uuid)
 );
 
@@ -174,6 +173,24 @@ CREATE TABLE IF NOT EXISTS public.geometrie
 
 ALTER TABLE IF EXISTS public.geometrie
     ADD CONSTRAINT assets_geometrie_fkey
+    FOREIGN KEY (assetUuid)
+    REFERENCES public.assets (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+-- Table: public.elek_aansluitingen
+
+DROP TABLE IF EXISTS public.elek_aansluitingen CASCADE;
+CREATE TABLE IF NOT EXISTS public.elek_aansluitingen
+(
+    assetUuid uuid NOT NULL,
+    EAN text COLLATE pg_catalog."default",
+    aansluiting text COLLATE pg_catalog."default"
+);
+
+ALTER TABLE IF EXISTS public.elek_aansluitingen
+    ADD CONSTRAINT assets_elek_aansluitingen_fkey
     FOREIGN KEY (assetUuid)
     REFERENCES public.assets (uuid) MATCH SIMPLE
     ON UPDATE NO ACTION

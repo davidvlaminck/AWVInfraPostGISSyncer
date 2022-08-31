@@ -123,8 +123,11 @@ class EMInfraImporter:
             response = self.request_handler.perform_get_request(url=url)
             decoded_string = response.content.decode("utf-8")
             dict_obj = json.loads(decoded_string)
-            for dataobject in dict_obj['data']:
-                yield dataobject
+            if 'data' in dict_obj:
+                for dataobject in dict_obj['data']:
+                    yield dataobject
+            else:
+                yield dict_obj
 
         else:
             current_count = 0
@@ -178,10 +181,15 @@ class EMInfraImporter:
         zoek_params = ZoekParameterPayload()
         yield from self.get_objects_from_non_oslo_endpoint(url_part='bestekrefs/search', zoek_payload=zoek_params)
 
+    def get_all_elek_aansluitingen_from_webservice_by_asset_uuids(self, asset_uuids: [str]) -> Generator[tuple]:
+        for asset_uuid in asset_uuids:
+            yield asset_uuid, self.get_objects_from_non_oslo_endpoint(url_part=f'installaties/{asset_uuid}/kenmerken/87dff279-4162-4031-ba30-fb7ffd9c014b',
+                                                                      request_type='GET')
+
     def get_all_bestekkoppelingen_from_webservice_by_asset_uuids(self, asset_uuids: [str]) -> Generator[tuple]:
         for asset_uuid in asset_uuids:
             yield asset_uuid, self.get_objects_from_non_oslo_endpoint(url_part=f'installaties/{asset_uuid}/kenmerken/ee2e627e-bb79-47aa-956a-ea167d20acbd/bestekken',
-                                                          request_type='GET')
+                                                                      request_type='GET')
 
     def get_assettypes_with_kenmerk_and_by_uuids(self, assettype_uuids, kenmerk: str):
         zoek_params = ZoekParameterPayload()
@@ -202,3 +210,7 @@ class EMInfraImporter:
     def get_assettypes_with_kenmerk_bestek_by_uuids(self, assettype_uuids):
         yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
                                                                  kenmerk='ee2e627e-bb79-47aa-956a-ea167d20acbd')
+
+    def get_assettypes_with_kenmerk_elek_aansluiting_by_uuids(self, assettype_uuids):
+        yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
+                                                                 kenmerk='87dff279-4162-4031-ba30-fb7ffd9c014b')
