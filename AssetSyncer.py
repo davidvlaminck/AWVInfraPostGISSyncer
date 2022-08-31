@@ -46,7 +46,7 @@ class AssetSyncer:
             FROM assets 
                 LEFT JOIN assettypes ON assets.assettype = assettypes.uuid
             WHERE assets.uuid IN ('{joined_uuids}')
-            AND bestek = TRUE;"""
+            AND elek_aansluiting = TRUE;"""
         cursor.execute(select_assets_for_elek_aansluiting_query)
         assets_for_elek_aansluiting = list(map(lambda x: x[0], cursor.fetchall()))
         elek_aansluiting_processor = ElekAansluitingGewijzigdProcessor(cursor=cursor,
