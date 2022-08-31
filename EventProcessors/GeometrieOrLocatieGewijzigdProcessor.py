@@ -76,17 +76,18 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
 
     @staticmethod
     def perform_geometrie_update_with_values(cursor, values):
-        insert_query = f"""
-        WITH s (assetUuid, niveau, ga_versie, nauwkeurigheid, bron, wkt_string, overerving_ids) 
-            AS (VALUES {values[:-1]}),
-        to_insert AS (
-            SELECT assetUuid::uuid AS assetUuid, niveau::integer, ga_versie, nauwkeurigheid, bron, wkt_string, overerving_ids
-            FROM s)        
-        INSERT INTO public.geometrie (assetUuid, niveau, ga_versie, nauwkeurigheid, bron, wkt_string, overerving_ids) 
-        SELECT to_insert.assetUuid, to_insert.niveau, to_insert.ga_versie, to_insert.nauwkeurigheid, 
-            to_insert.bron, to_insert.wkt_string, to_insert.overerving_ids
-        FROM to_insert;"""
-        cursor.execute(insert_query)
+        if values != '':
+            insert_query = f"""
+            WITH s (assetUuid, niveau, ga_versie, nauwkeurigheid, bron, wkt_string, overerving_ids) 
+                AS (VALUES {values[:-1]}),
+            to_insert AS (
+                SELECT assetUuid::uuid AS assetUuid, niveau::integer, ga_versie, nauwkeurigheid, bron, wkt_string, overerving_ids
+                FROM s)        
+            INSERT INTO public.geometrie (assetUuid, niveau, ga_versie, nauwkeurigheid, bron, wkt_string, overerving_ids) 
+            SELECT to_insert.assetUuid, to_insert.niveau, to_insert.ga_versie, to_insert.nauwkeurigheid, 
+                to_insert.bron, to_insert.wkt_string, to_insert.overerving_ids
+            FROM to_insert;"""
+            cursor.execute(insert_query)
 
     @staticmethod
     def create_locatie_values_string_from_dicts(cursor, uuids: [str], assets_dicts: [dict]):
