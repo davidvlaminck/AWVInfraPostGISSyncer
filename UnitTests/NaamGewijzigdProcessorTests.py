@@ -42,7 +42,7 @@ class NaamGewijzigdProcessorTests(TestCase):
                                                 em_infra_importer=self.eminfra_importer)
         self.assettypes_syncer = AssetTypeSyncer(postGIS_connector=self.connector,
                                                  emInfraImporter=self.eminfra_importer)
-        self.assets_syncer = AssetSyncer(postGIS_connector=self.connector, em_infra_importer=self.eminfra_importer)
+        self.assets_syncer = AssetSyncer(postgis_connector=self.connector, em_infra_importer=self.eminfra_importer)
 
     def test_update_naam(self):
         self.set_up_assets()

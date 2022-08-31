@@ -42,7 +42,7 @@ class BestekKoppelingenSyncerTests(TestCase):
 
         self.assettypes_syncer = AssetTypeSyncer(postGIS_connector=self.connector,
                                                  emInfraImporter=self.eminfra_importer)
-        self.assets_syncer = AssetSyncer(postGIS_connector=self.connector,
+        self.assets_syncer = AssetSyncer(postgis_connector=self.connector,
                                          em_infra_importer=self.eminfra_importer)
         self.bestekken_syncer = BestekSyncer(postGIS_connector=self.connector,
                                              em_infra_importer=self.eminfra_importer)

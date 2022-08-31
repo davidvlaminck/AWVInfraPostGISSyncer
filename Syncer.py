@@ -83,7 +83,7 @@ class Syncer:
                     logging.info(f'time for all assettypes: {round(end - start, 2)}')
                 elif sync_step == 4:
                     start = time.time()
-                    asset_syncer = AssetSyncer(em_infra_importer=self.eminfra_importer, postGIS_connector=self.connector)
+                    asset_syncer = AssetSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector)
                     asset_syncer.sync_assets(pagingcursor=pagingcursor, page_size=page_size)
                     end = time.time()
                     logging.info(f'time for all assets: {round(end - start, 2)}')

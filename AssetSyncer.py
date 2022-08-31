@@ -11,8 +11,8 @@ from PostGISConnector import PostGISConnector
 
 
 class AssetSyncer:
-    def __init__(self, postGIS_connector: PostGISConnector, em_infra_importer: EMInfraImporter):
-        self.postGIS_connector = postGIS_connector
+    def __init__(self, postgis_connector: PostGISConnector, em_infra_importer: EMInfraImporter):
+        self.postGIS_connector = postgis_connector
         self.eminfra_importer = em_infra_importer
 
     def sync_assets(self, pagingcursor: str = '', page_size: int = 100):
