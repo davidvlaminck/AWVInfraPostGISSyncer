@@ -23,7 +23,8 @@ class AssetSyncer:
             asset_dicts = self.eminfra_importer.import_assets_from_webservice_page_by_page(page_size=page_size)
             cursor = self.postGIS_connector.connection.cursor()
             self.update_assets(cursor=cursor, assets_dicts=list(asset_dicts))
-            logging.info(f'created/updated {page_size} assets')
+            logging.info(f'creating/updating {page_size} assets')
+            current_pagingcursor = self.eminfra_importer.pagingcursor
 
             uuids = list(map(lambda d: d['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36], asset_dicts))
 
@@ -31,12 +32,12 @@ class AssetSyncer:
 
             self.update_elek_aansluiting_of_synced_assets(asset_dicts, cursor, uuids)
 
-            self.postGIS_connector.save_props_to_params({'pagingcursor': self.eminfra_importer.pagingcursor})
+            self.postGIS_connector.save_props_to_params({'pagingcursor': current_pagingcursor})
 
             end = time.time()
             logging.info(f'total time for {len(asset_dicts)} assets: {round(end - start, 2)}')
 
-            if self.eminfra_importer.pagingcursor == '':
+            if current_pagingcursor == '':
                 break
 
     def update_elek_aansluiting_of_synced_assets(self, asset_dicts, cursor, uuids):
@@ -53,7 +54,7 @@ class AssetSyncer:
                                                                        em_infra_importer=self.eminfra_importer)
         elek_aansluiting_processor.process(uuids=assets_for_elek_aansluiting)
         end = time.time()
-        logging.info(f'updated elek aansluiting of {len(asset_dicts)} assets in {str(round(end - start, 2))} seconds.')
+        logging.info(f'updated elek aansluiting of {len(assets_for_elek_aansluiting)} assets in {str(round(end - start, 2))} seconds.')
 
     def update_location_geometry_of_synced_assets(self, uuids, asset_dicts, cursor):
         start = time.time()

@@ -12,7 +12,7 @@ if __name__ == '__main__':
 
     settings_manager = SettingsManager(
         settings_path='/home/davidlinux/Documents/AWV/resources/settings_AwvinfraPostGISSyncer.json')
-    db_settings = settings_manager.settings['databases']['unittest']
+    db_settings = settings_manager.settings['databases']['tei']
 
     connector = PostGISConnector(host=db_settings['host'], port=db_settings['port'],
                                  user=db_settings['user'], password=db_settings['password'],

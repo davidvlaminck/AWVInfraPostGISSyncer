@@ -12,8 +12,6 @@ class ElekAansluitingGewijzigdProcessor(SpecificEventProcessor):
         logging.info(f'started updating elek aansluiting')
         start = time.time()
 
-        asset_dicts = self.em_infra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
-
         aansluitingen_generator = self.em_infra_importer.get_all_elek_aansluitingen_from_webservice_by_asset_uuids(
             asset_uuids=uuids)
         for asset_uuid, aansluiting_dict in aansluitingen_generator:
@@ -22,7 +20,7 @@ class ElekAansluitingGewijzigdProcessor(SpecificEventProcessor):
                                                   aansluiting_dict=list(aansluiting_dict))
 
         end = time.time()
-        logging.info(f'updated {len(asset_dicts)} assets in {str(round(end - start, 2))} seconds.')
+        logging.info(f'updated elek aansluting for up to {len(uuids)} assets in {str(round(end - start, 2))} seconds.')
 
     def update_aansluiting_by_asset_uuid(self, cursor, asset_uuid, aansluiting_dict):
         delete_query = f"DELETE FROM public.elek_aansluitingen WHERE assetUuid = '{asset_uuid}'"
