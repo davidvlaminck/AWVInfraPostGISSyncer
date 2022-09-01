@@ -197,5 +197,26 @@ ALTER TABLE IF EXISTS public.elek_aansluitingen
     ON DELETE NO ACTION
     NOT VALID;
 
+-- Table: public.toezichtgroepen
+
+DROP TABLE IF EXISTS public.toezichtgroepen CASCADE;
+CREATE TABLE IF NOT EXISTS public.toezichtgroepen
+(
+    uuid uuid NOT NULL,
+    naam text COLLATE pg_catalog."default",
+    typeGroep text COLLATE pg_catalog."default",
+    referentie text COLLATE pg_catalog."default",
+    actief boolean NOT NULL,
+    CONSTRAINT toezichtgroepen_pkey PRIMARY KEY (uuid)
+);
+
+ALTER TABLE IF EXISTS public.assets
+    ADD CONSTRAINT toezichtgroepen_assets_fkey
+    FOREIGN KEY (toezichtgroep)
+    REFERENCES public.toezichtgroepen (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
 -- psycopg2.errors.ForeignKeyViolation: insert or update on table "assets" violates foreign key constraint "assets_assettype_fkey"
 -- DETAIL:  Key (assettype)=(00000453-56ce-4f8b-af44-960df526cb30) is not present in table "assettypes".
