@@ -23,16 +23,21 @@ class ElekAansluitingGewijzigdProcessor(SpecificEventProcessor):
         logging.info(f'updated elek aansluting for up to {len(uuids)} assets in {str(round(end - start, 2))} seconds.')
 
     def update_aansluiting_by_asset_uuid(self, cursor, asset_uuid, aansluiting_dict):
-        delete_query = f"DELETE FROM public.elek_aansluitingen WHERE assetUuid = '{asset_uuid}'"
+        delete_query = f"DELETE FROM public.elek_aansluitingen WHERE assetUuid = '{asset_uuid}';"
         cursor.execute(delete_query)
         if 'elektriciteitsAansluitingRef' not in aansluiting_dict[0]:
             return
         single_aansluiting_dict = aansluiting_dict[0]['elektriciteitsAansluitingRef']
-        ean = single_aansluiting_dict['ean']
-        aansluitnummer = single_aansluiting_dict['aansluitnummer']
+        ean = single_aansluiting_dict.get('ean', None)
+        aansluitnummer = single_aansluiting_dict.get('aansluitnummer', None)
         insert_query = f"""INSERT INTO elek_aansluitingen (assetUuid, EAN, aansluiting) 
-        VALUES ('{asset_uuid}','{ean}','{aansluitnummer}')"""
-        cursor.execute(insert_query)
+        VALUES ('{asset_uuid}'"""
+        for value in [ean, aansluitnummer]:
+            if value is None:
+                insert_query += ",NULL"
+            else:
+                insert_query += f",'{value}'"
+        cursor.execute(insert_query + ");")
 
     @staticmethod
     def create_geometrie_values_string_from_dicts(assets_dicts):
