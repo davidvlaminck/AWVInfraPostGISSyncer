@@ -141,7 +141,7 @@ WHERE to_update.uuid = assettypes.uuid;"""
 
     def create_views_for_assettypes_with_geometrie(self):
         cursor = self.postGIS_connector.connection.cursor()
-        get_assettypes_with_geometrie_query = """SELECT uuid, uri FROM assettypes WHERE geometrie IS NOT NULL;"""
+        get_assettypes_with_geometrie_query = """SELECT uuid, uri FROM assettypes WHERE geometrie = TRUE;"""
         cursor.execute(get_assettypes_with_geometrie_query)
         assettype_with_geometrie = cursor.fetchall()
         for assettype_record in assettype_with_geometrie:
