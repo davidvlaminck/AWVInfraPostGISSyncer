@@ -36,7 +36,8 @@ class ToezichtgroepSyncerTests(TestCase):
         request_handler = RequestHandler(requester)
         self.eminfra_importer = EMInfraImporter(request_handler)
 
-        self.toezichtgroepen_syncer = ToezichtgroepSyncer(postGIS_connector=self.connector, emInfraImporter=self.eminfra_importer)
+        self.toezichtgroepen_syncer = ToezichtgroepSyncer(postGIS_connector=self.connector,
+                                                          emInfraImporter=self.eminfra_importer)
 
     def test_update_toezichtgroepen(self):
         self.setup()
@@ -57,30 +58,91 @@ class ToezichtgroepSyncerTests(TestCase):
             result = cursor.fetchone()[0]
             self.assertEqual(1, result)
 
-        toezichtgroepen = [{'@type': 'http://purl.org/dc/terms/toezichtgroep',
-                   '@id': 'https://data.awvvlaanderen.be/id/asset/005162f7-1d84-4558-b911-1f09a2e26640-cHVybDpBZ2VudA',
-                   'purl:toezichtgroep.contactinfo': [
-                       {'schema:ContactPoint.telefoon': '+3233666824', 'schema:ContactPoint.email': 'lvp@trafiroad.be'}],
-                   'purl:toezichtgroep.naam': 'Ludovic Van Pée'},
-                  {'@type': 'http://purl.org/dc/terms/toezichtgroep',
-                   '@id': 'https://data.awvvlaanderen.be/id/asset/0081576c-a62d-4b33-a884-597532cfdd77-cHVybDpBZ2VudA',
-                   'purl:toezichtgroep.naam': 'Frederic Crabbe', 'purl:toezichtgroep.contactinfo': [
-                      {'schema:ContactPoint.email': 'frederic.crabbe@mow.vlaanderen.be',
-                       'schema:ContactPoint.telefoon': '+3250248103',
-                       'schema:ContactPoint.adres': {'DtcAdres.straatnaam': 'CEL SCHADE WVL'}}]},
-                  {'@type': 'http://purl.org/dc/terms/toezichtgroep',
-                   '@id': 'https://data.awvvlaanderen.be/id/asset/d2d0b44c-f8ba-4780-a3e7-664988a6db66',
-                   'purl:toezichtgroep.naam': 'unit test changed'}]
+        toezichtgroepen = [{
+            "uuid": "f07b553b-a5eb-4140-a51e-3738e51cbaa9",
+            "_type": "intern",
+            "naam": "unit test changed",
+            "referentie": "test",
+            "actiefInterval": {
+                "van": "2021-06-10"
+            },
+            "contactFiche": {
+                "emailVoorkeur": False,
+                "faxVoorkeur": False,
+                "telefoons": [
+                    {
+                        "nummer": "+32476286163"
+                    }
+                ],
+                "emails": [
+                    {
+                        "adres": "facility@vlaanderen.be"
+                    },
+                    {
+                        "adres": "vlabelcontrole@vlaanderen.be"
+                    }
+                ],
+                "adressen": [
+                    {
+                        "straat": "Vaartstraat",
+                        "nummer": "16",
+                        "postcode": "9300",
+                        "gemeente": "Aalst",
+                        "provincie": "Oost-Vlaanderen"
+                    }
+                ]
+            }
+        },
+            {
+                "uuid": "c5b6b204-917b-4399-abb4-528496b32806",
+                "_type": "extern",
+                "naam": "LokaalBestuur",
+                "referentie": "LokaalBestuur",
+                "omschrijving": "Een niet nader gedefinieerd lokaal bestuur zoals een politiezone of gemeente",
+                "actiefInterval": {
+                    "van": "2021-04-23"
+                },
+                "contactFiche": {
+                    "emailVoorkeur": False,
+                    "faxVoorkeur": False
+                }
+            },
+            {
+                "uuid": "a6319533-5824-4ad4-bf41-401d1c355d2e",
+                "_type": "intern",
+                "naam": "RIS",
+                "referentie": "RIS",
+                "actiefInterval": {
+                    "van": "2020-11-13"
+                },
+                "contactFiche": {
+                    "emailVoorkeur": False,
+                    "faxVoorkeur": False,
+                    "telefoons": [
+                        {
+                            "nummer": "+3292539471"
+                        }
+                    ],
+                    "emails": [
+                        {
+                            "adres": "ris.evergem@vlaamsewaterweg.be"
+                        }
+                    ],
+                    "adressen": [
+                        {}
+                    ]
+                }
+            }]
         self.toezichtgroepen_syncer.update_toezichtgroepen(toezichtgroep_dicts=toezichtgroepen)
 
         with self.subTest('name check after the first toezichtgroep updated'):
-            cursor.execute(select_toezichtgroep_query.replace('{uuid}', 'd2d0b44c-f8ba-4780-a3e7-664988a6db66'))
+            cursor.execute(select_toezichtgroep_query.replace('{uuid}', 'f07b553b-a5eb-4140-a51e-3738e51cbaa9'))
             result = cursor.fetchone()[0]
             self.assertEqual('unit test changed', result)
         with self.subTest('name check after new toezichtgroepen created'):
-            cursor.execute(select_toezichtgroep_query.replace('{uuid}', '005162f7-1d84-4558-b911-1f09a2e26640'))
+            cursor.execute(select_toezichtgroep_query.replace('{uuid}', 'c5b6b204-917b-4399-abb4-528496b32806'))
             result = cursor.fetchone()[0]
-            self.assertEqual('Ludovic Van Pée', result)
+            self.assertEqual('LokaalBestuur', result)
         with self.subTest('number of toezichtgroepen after update'):
             cursor.execute(count_toezichtgroep_query)
             result = cursor.fetchone()[0]

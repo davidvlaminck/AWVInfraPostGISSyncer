@@ -116,8 +116,12 @@ class EMInfraImporter:
         return list({x["@id"]: x for x in relation_list}.values())
 
     def get_objects_from_non_oslo_endpoint(self, url_part: str, zoek_payload: ZoekParameterPayload = None,
-                                           request_type: str = None) -> Generator[list]:
-        url = f"core/api/{url_part}"
+                                           request_type: str = None, identiteit: bool = False) -> Generator[list]:
+        if identiteit:
+            url = f"identiteit/api/{url_part}"
+        else:
+            url = f"core/api/{url_part}"
+
 
         if request_type == 'GET':
             response = self.request_handler.perform_get_request(url=url)
@@ -214,3 +218,8 @@ class EMInfraImporter:
     def get_assettypes_with_kenmerk_elek_aansluiting_by_uuids(self, assettype_uuids):
         yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
                                                                  kenmerk='87dff279-4162-4031-ba30-fb7ffd9c014b')
+
+    def import_toezichtgroepen_from_webservice_page_by_page(self, page_size):
+        zoek_params = ZoekParameterPayload()
+        zoek_params.size = page_size
+        yield from self.get_objects_from_non_oslo_endpoint(url_part='toezichtgroepen/search', zoek_payload=zoek_params, identiteit=True)
