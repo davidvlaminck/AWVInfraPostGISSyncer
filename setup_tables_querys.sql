@@ -65,8 +65,37 @@ CREATE TABLE IF NOT EXISTS public.assettypes
 );
 
 ALTER TABLE IF EXISTS public.assets
-    ADD CONSTRAINT assets_assettype_fkey
+    ADD CONSTRAINT assets_assettypes_fkey
     FOREIGN KEY (assettype)
+    REFERENCES public.assettypes (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+-- Table: public.attributen
+
+DROP TABLE IF EXISTS public.attributen CASCADE;
+CREATE TABLE IF NOT EXISTS public.attributen
+(
+    uuid uuid NOT NULL,
+    assettypeUuid uuid NOT NULL,
+    actief boolean NOT NULL,
+    uri text COLLATE pg_catalog."default",
+    naam text COLLATE pg_catalog."default",
+    label text COLLATE pg_catalog."default",
+    definitie text COLLATE pg_catalog."default",
+    categorie text COLLATE pg_catalog."default",
+    datatypeNaam text COLLATE pg_catalog."default",
+    datatypeType text COLLATE pg_catalog."default",
+    kardinaliteitMin text COLLATE pg_catalog."default",
+    kardinaliteitMax text COLLATE pg_catalog."default",
+    CONSTRAINT attributen_pkey PRIMARY KEY (uuid)
+);
+
+-- edit this
+ALTER TABLE IF EXISTS public.attributen
+    ADD CONSTRAINT assettypes_attributen_fkey
+    FOREIGN KEY (assettypeUuid)
     REFERENCES public.assettypes (uuid) MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
