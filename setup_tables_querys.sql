@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS public.assettypes
     bestek boolean,
     geometrie boolean,
     elek_aansluiting boolean,
+    attributen boolean,
     CONSTRAINT assettypes_pkey PRIMARY KEY (uuid)
 );
 
@@ -78,7 +79,6 @@ DROP TABLE IF EXISTS public.attributen CASCADE;
 CREATE TABLE IF NOT EXISTS public.attributen
 (
     uuid uuid NOT NULL,
-    assettypeUuid uuid NOT NULL,
     actief boolean NOT NULL,
     uri text COLLATE pg_catalog."default",
     naam text COLLATE pg_catalog."default",
@@ -92,14 +92,63 @@ CREATE TABLE IF NOT EXISTS public.attributen
     CONSTRAINT attributen_pkey PRIMARY KEY (uuid)
 );
 
--- edit this
-ALTER TABLE IF EXISTS public.attributen
-    ADD CONSTRAINT assettypes_attributen_fkey
+-- Table: public.attribuutKoppelingen
+
+DROP TABLE IF EXISTS public.attribuutKoppelingen CASCADE;
+CREATE TABLE IF NOT EXISTS public.attribuutKoppelingen
+(
+    assettypeUuid uuid NOT NULL,
+    attribuutUuid uuid NOT NULL,
+    actief boolean NOT NULL
+);
+
+ALTER TABLE IF EXISTS public.attribuutKoppelingen
+    ADD CONSTRAINT assets_attribuutKoppelingen_fkey
     FOREIGN KEY (assettypeUuid)
     REFERENCES public.assettypes (uuid) MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
+
+ALTER TABLE IF EXISTS public.attribuutKoppelingen
+    ADD CONSTRAINT attributen_attribuutKoppelingen_fkey
+    FOREIGN KEY (attribuutUuid)
+    REFERENCES public.attributen (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+CREATE INDEX attribuutKoppelingen_assettypeUuid_idx ON attribuutKoppelingen (assettypeUuid);
+CREATE INDEX attribuutKoppelingen_attribuutUuid_idx ON attribuutKoppelingen (attribuutUuid);
+
+-- Table: public.attribuutWaarden
+
+DROP TABLE IF EXISTS public.attribuutWaarden CASCADE;
+CREATE TABLE IF NOT EXISTS public.attribuutWaarden
+(
+    assetUuid uuid NOT NULL,
+    attribuutUuid uuid NOT NULL,
+    waarde text COLLATE pg_catalog."default"
+);
+
+ALTER TABLE IF EXISTS public.attribuutWaarden
+    ADD CONSTRAINT assets_attribuutWaarden_fkey
+    FOREIGN KEY (assetUuid)
+    REFERENCES public.assets (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+ALTER TABLE IF EXISTS public.attribuutWaarden
+    ADD CONSTRAINT attributen_attribuutWaarden_fkey
+    FOREIGN KEY (attribuutUuid)
+    REFERENCES public.attributen (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+CREATE INDEX attribuutWaarden_assetUuid_idx ON attribuutWaarden (assetUuid);
+CREATE INDEX attribuutWaarden_attribuutUuid_idx ON attribuutWaarden (attribuutUuid);
 
 -- Table: public.bestekken
 

@@ -7,20 +7,49 @@ class AssetTypeSyncer:
         self.postGIS_connector = postGIS_connector
         self.eminfra_importer = emInfraImporter
 
-    def sync_assettypes(self, pagingcursor: str = '', page_size: int = 100):
+    def sync_assettypes(self, pagingcursor: str = '', page_size: int = 100, force_update_attributen: bool = False):
         self.eminfra_importer.pagingcursor = pagingcursor
         while True:
-            asset_types = list(self.eminfra_importer.import_assettypes_from_webservice_page_by_page(page_size=page_size))
+            asset_types = list(
+                self.eminfra_importer.import_assettypes_from_webservice_page_by_page(page_size=page_size))
 
             self.update_assettypes(assettypes_dicts=asset_types)
             self.update_assettypes_with_bestek()
             self.update_assettypes_with_geometrie()
             self.update_assettypes_with_elek_aansluiting()
+            self.update_assettypes_with_attributen(force_update=force_update_attributen)
             self.create_views_for_assettypes_with_geometrie()
             self.postGIS_connector.save_props_to_params({'pagingcursor': self.eminfra_importer.pagingcursor})
 
             if self.eminfra_importer.pagingcursor == '':
                 break
+
+    def update_assettypes_with_attributen(self, force_update: bool):
+        select_query = 'SELECT uuid, uri FROM public.assettypes WHERE attributen is NULL'
+        cursor = self.postGIS_connector.connection.cursor()
+        cursor.execute(select_query)
+        assettypes_to_update = list(map(lambda x: (x[0], x[1]), cursor.fetchall()))
+
+        for assettype_uuid, uri in assettypes_to_update:
+            voc = 'onderdeel'
+            if 'installatie#' in uri:
+                voc = 'installatie'
+            kenmerken = self.eminfra_importer.get_kenmerken_by_assettype_uuids(assettype_uuid=assettype_uuid, voc=voc)
+            eigenschappenkenmerk = list(filter(lambda x: x.get('standard', False), kenmerken))
+            if eigenschappenkenmerk is not None and len(eigenschappenkenmerk) > 0:
+                attributen = self.eminfra_importer.get_eigenschappen_by_kenmerk_uuid(kenmerk_uuid=eigenschappenkenmerk[0]['kenmerkType']['uuid'])
+                
+                remove_existing_koppelingen_query = f'DELETE FROM attribuutKoppelingen ' \
+                                                    f"WHERE assettypeUuid = '{assettype_uuid}'::uuid;"
+                cursor.execute(remove_existing_koppelingen_query)
+                
+                for attribuut in attributen:
+                    self.sync_attribuut_and_koppeling(assettype_uuid=assettype_uuid, attribuut=attribuut, cursor=cursor, force_update=force_update)
+                    
+            finish_assettype_query = f"UPDATE public.assettypes SET attributen = TRUE WHERE uuid = '{assettype_uuid}'::uuid;"
+            cursor.execute(finish_assettype_query)
+
+            self.postGIS_connector.connection.commit()
 
     def update_assettypes_with_bestek(self):
         select_query = 'SELECT uuid FROM public.assettypes WHERE bestek is NULL'
@@ -28,15 +57,18 @@ class AssetTypeSyncer:
         cursor.execute(select_query)
         assettypes_to_update = list(map(lambda x: x[0], cursor.fetchall()))
 
-        types_with_bestek_dicts = list(self.eminfra_importer.get_assettypes_with_kenmerk_bestek_by_uuids(assettype_uuids=assettypes_to_update))
+        types_with_bestek_dicts = list(
+            self.eminfra_importer.get_assettypes_with_kenmerk_bestek_by_uuids(assettype_uuids=assettypes_to_update))
         types_with_bestek = list(map(lambda x: x['uuid'], types_with_bestek_dicts))
         types_without_bestek = list(set(assettypes_to_update) - set(types_with_bestek))
 
         if len(types_with_bestek) > 0:
-            update_query = "UPDATE public.assettypes SET bestek = TRUE WHERE uuid IN (VALUES ('" + "'::uuid),('".join(types_with_bestek) + "'::uuid));"
+            update_query = "UPDATE public.assettypes SET bestek = TRUE WHERE uuid IN (VALUES ('" + "'::uuid),('".join(
+                types_with_bestek) + "'::uuid));"
             cursor.execute(update_query)
         if len(types_without_bestek) > 0:
-            update_query = "UPDATE public.assettypes SET bestek = FALSE WHERE uuid IN (VALUES ('" + "'::uuid),('".join(types_without_bestek) + "'::uuid));"
+            update_query = "UPDATE public.assettypes SET bestek = FALSE WHERE uuid IN (VALUES ('" + "'::uuid),('".join(
+                types_without_bestek) + "'::uuid));"
             cursor.execute(update_query)
 
         self.postGIS_connector.connection.commit()
@@ -70,7 +102,8 @@ class AssetTypeSyncer:
         assettypes_to_update = list(map(lambda x: x[0], cursor.fetchall()))
 
         types_with_elek_aansluiting_dicts = list(
-            self.eminfra_importer.get_assettypes_with_kenmerk_elek_aansluiting_by_uuids(assettype_uuids=assettypes_to_update))
+            self.eminfra_importer.get_assettypes_with_kenmerk_elek_aansluiting_by_uuids(
+                assettype_uuids=assettypes_to_update))
         types_with_elek_aansluiting = list(map(lambda x: x['uuid'], types_with_elek_aansluiting_dicts))
         types_without_elek_aansluiting = list(set(assettypes_to_update) - set(types_with_elek_aansluiting))
 
@@ -158,3 +191,53 @@ WHERE to_update.uuid = assettypes.uuid;"""
                     LEFT JOIN public.assettypes ON assets.assettype = assettypes.uuid
                 WHERE assettypes.uuid = '{type_uuid}' and assets.actief = TRUE;"""
             cursor.execute(create_view_query)
+
+    def sync_attribuut_and_koppeling(self, assettype_uuid, attribuut, cursor, force_update: bool):
+        attribuut_uuid = attribuut['eigenschap']['uuid']
+        get_attribuut_query = f"""SELECT uuid FROM attributen WHERE uuid = '{attribuut_uuid}'::uuid;"""
+        cursor.execute(get_attribuut_query)
+        attribuut_existing_uuid = cursor.fetchone()
+        if attribuut_existing_uuid is None:
+            self.insert_attribuut(assettype_uuid, attribuut, cursor)
+        elif force_update:
+            self.update_attribuut(assettype_uuid, attribuut, cursor)
+
+        pass
+
+    def insert_attribuut(self, assettype_uuid, attribuut, cursor):
+        eig = attribuut['eigenschap']
+        uuid = eig['uuid']
+        actief = eig['actief']
+        uri = eig['uri']
+        naam = eig['naam'].replace("'", "''")
+        label = eig.get('label', '').replace("'", "''")
+        definitie = eig['definitie'].replace("'", "''")
+        categorie = eig['categorie']
+
+        if 'datatype' in eig['type']:
+            datatypeNaam = eig['type']['datatype']['naam']
+            datatypeType = eig['type']['datatype']['type']['_type']
+        else:
+            datatypeNaam = 'legacy' + eig['type']['_type']
+            datatypeType = 'legacy' + eig['type']['_type']
+        kardinaliteitMin = eig['kardinaliteitMin']
+        kardinaliteitMax = eig.get('kardinaliteitMax', '*')
+        values = f"('{uuid}',{actief},'{uri}','{naam}','{label}','{definitie}','{categorie}','{datatypeNaam}','{datatypeType}','{kardinaliteitMin}','{kardinaliteitMax}')"
+        insert_query = f"""
+WITH s (uuid, actief, uri, naam, label, definitie, categorie, datatypeNaam, datatypeType, kardinaliteitMin, kardinaliteitMax) 
+    AS (VALUES {values}),
+to_insert AS (
+    SELECT uuid::uuid AS uuid, actief, uri, naam, label, definitie, categorie, datatypeNaam, datatypeType, kardinaliteitMin, kardinaliteitMax
+    FROM s)
+INSERT INTO public.attributen (uuid, actief, uri, naam, label, definitie, categorie, datatypeNaam, datatypeType, kardinaliteitMin, kardinaliteitMax)
+SELECT to_insert.uuid, to_insert.actief, to_insert.uri, to_insert.naam, to_insert.label, to_insert.definitie, 
+    to_insert.categorie, to_insert.datatypeNaam, to_insert.datatypeType, to_insert.kardinaliteitMin, to_insert.kardinaliteitMax
+FROM to_insert;"""
+        cursor.execute(insert_query)
+
+        koppeling_actief = attribuut['actief']
+        update_koppeling_query = f"""
+        INSERT INTO public.attribuutKoppelingen (assettypeUuid, attribuutUuid, actief)
+        VALUES ('{assettype_uuid}'::uuid, '{uuid}'::uuid, {koppeling_actief})
+        """
+        cursor.execute(update_koppeling_query)
