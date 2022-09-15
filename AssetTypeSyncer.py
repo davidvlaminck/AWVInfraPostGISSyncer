@@ -200,6 +200,7 @@ WHERE to_update.uuid = assettypes.uuid;"""
         if attribuut_existing_uuid is None:
             self.insert_attribuut(assettype_uuid, attribuut, cursor)
         elif force_update:
+            raise NotImplementedError()
             self.update_attribuut(assettype_uuid, attribuut, cursor)
 
         pass

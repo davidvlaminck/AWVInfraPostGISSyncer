@@ -38,6 +38,9 @@ class AssetTypesSyncerTests(TestCase):
 
         self.assettypes_syncer = AssetTypeSyncer(postGIS_connector=self.connector, emInfraImporter=self.eminfra_importer)
 
+    def test_update_including_attributes(self):
+        raise NotImplementedError()
+
     def test_update_assettypes(self):
         self.setup()
 
