@@ -8,6 +8,7 @@ from AssetSyncer import AssetSyncer
 from AssetTypeSyncer import AssetTypeSyncer
 from BestekSyncer import BestekSyncer
 from BestekKoppelingSyncer import BestekKoppelingSyncer
+from BetrokkeneRelatiesSyncer import BetrokkeneRelatiesSyncer
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
 from EventProcessors.RelatieProcessor import RelatieProcessor
@@ -94,7 +95,13 @@ class Syncer:
                     bestek_koppeling_syncer.sync_bestekkoppelingen()
                     end = time.time()
                     logging.info(f'time for all bestekkoppelingen: {round(end - start, 2)}')
-
+                elif sync_step == 6:
+                    start = time.time()
+                    bestek_koppeling_syncer = BetrokkeneRelatiesSyncer(em_infra_importer=self.eminfra_importer,
+                                                                       post_gis_connector=self.connector)
+                    bestek_koppeling_syncer.sync_betrokkenerelaties()
+                    end = time.time()
+                    logging.info(f'time for all betrokkenerelaties: {round(end - start, 2)}')
                 else:
 
                     # TODO beheerder
@@ -102,8 +109,6 @@ class Syncer:
                     # TODO toezichtgroepen
                     # TODO relatietypes
                     # TODO assetrelaties
-                    # TODO betrokkenerelaties
-                    # TODO specificieke eigenchappen
                     # TODO documenten
                     # raise NotImplementedError
                     pass
@@ -114,7 +119,7 @@ class Syncer:
                 self.connector.save_props_to_params(
                     {'sync_step': sync_step,
                      'pagingcursor': pagingcursor})
-                if sync_step >= 6:
+                if sync_step >= 7:
                     self.connector.save_props_to_params(
                         {'fresh_start': False})
                 self.connector.connection.commit()

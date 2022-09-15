@@ -47,7 +47,7 @@ class BetrokkeneRelatiesGewijzigdProcessor(SpecificEventProcessor):
 
         cursor.execute(insert_query)
 
-        logging.info('done')
+        logging.info('done batch of with betrokkenerelaties')
 
     def remove_all_betrokkene_relaties(self, cursor, asset_uuids):
         if len(asset_uuids) == 0:
