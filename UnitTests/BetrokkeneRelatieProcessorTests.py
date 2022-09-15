@@ -44,7 +44,7 @@ class BetrokkeneRelatieProcessorTests(TestCase):
         self.set_up_assets(cursor)
 
         processor = BetrokkeneRelatiesGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer)
-        processor.em_infra_importer.import_betrokkenerelaties_from_webservice_by_assetuuids = self.return_betrokkenrelaties
+        processor.em_infra_importer.import_betrokkenerelaties_from_webservice_by_assetuuids = self.return_betrokkenerelaties
 
         create_betrokkenerelatie_query = """
         INSERT INTO betrokkeneRelaties (uuid, agentUuid, assetUuid, rol, actief) 
@@ -104,7 +104,7 @@ class BetrokkeneRelatieProcessorTests(TestCase):
         ('00000000-0000-2000-0000-000000000000', 'asset2', '00000000-1000-0000-0000-000000000000', TRUE),
         ('00000000-0000-3000-0000-000000000000', 'asset3', '00000000-1000-0000-0000-000000000000', TRUE)""")
 
-    def return_betrokkenrelaties(self, asset_uuids):
+    def return_betrokkenerelaties(self, asset_uuids):
         return [{
             "uuid": "00000000-0000-0000-1000-000000000000",
             "createdOn": "2021-01-01T00:00:00.000+01:00",
