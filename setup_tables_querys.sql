@@ -296,5 +296,38 @@ ALTER TABLE IF EXISTS public.assets
     ON DELETE NO ACTION
     NOT VALID;
 
+
+-- Table: public.betrokkeneRelaties
+
+DROP TABLE IF EXISTS public.betrokkeneRelaties CASCADE;
+CREATE TABLE IF NOT EXISTS public.betrokkeneRelaties
+(
+    uuid uuid NOT NULL,
+    agentUuid uuid NOT NULL,
+    assetUuid uuid NOT NULL,
+    rol text COLLATE pg_catalog."default",
+    actief boolean NOT NULL,
+    CONSTRAINT betrokkeneRelaties_pkey PRIMARY KEY (uuid)
+);
+
+CREATE INDEX betrokkeneRelaties_agentUuid_idx ON betrokkeneRelaties (agentUuid);
+CREATE INDEX betrokkeneRelaties_assetUuid_idx ON betrokkeneRelaties (assetUuid);
+
+ALTER TABLE IF EXISTS public.betrokkeneRelaties
+    ADD CONSTRAINT betrokkeneRelaties_agents_fkey
+    FOREIGN KEY (agentUuid)
+    REFERENCES public.agents (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+ALTER TABLE IF EXISTS public.betrokkeneRelaties
+    ADD CONSTRAINT betrokkeneRelaties_assets_fkey
+    FOREIGN KEY (assetUuid)
+    REFERENCES public.assets (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
 -- psycopg2.errors.ForeignKeyViolation: insert or update on table "assets" violates foreign key constraint "assets_assettype_fkey"
 -- DETAIL:  Key (assettype)=(00000453-56ce-4f8b-af44-960df526cb30) is not present in table "assettypes".
