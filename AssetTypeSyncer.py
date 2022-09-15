@@ -19,6 +19,7 @@ class AssetTypeSyncer:
             self.update_assettypes_with_elek_aansluiting()
             self.update_assettypes_with_attributen(force_update=force_update_attributen)
             self.create_views_for_assettypes_with_geometrie()
+            self.create_views_for_assettypes_with_attributes()
             self.postGIS_connector.save_props_to_params({'pagingcursor': self.eminfra_importer.pagingcursor})
 
             if self.eminfra_importer.pagingcursor == '':
@@ -186,10 +187,55 @@ WHERE to_update.uuid = assettypes.uuid;"""
             DROP VIEW IF EXISTS public.{view_name} CASCADE;
             CREATE VIEW public.{view_name} AS
                 SELECT geometrie.*, assets.toestand, assets.actief, assets.naam, ST_GeomFromText(wkt_string, 31370) AS geometry 
-                FROM public.geometrie 
-                    LEFT JOIN public.assets ON geometrie.assetuuid = assets.uuid 
+                FROM public.assets 
+                    LEFT JOIN public.geometrie ON geometrie.assetuuid = assets.uuid 
                     LEFT JOIN public.assettypes ON assets.assettype = assettypes.uuid
                 WHERE assettypes.uuid = '{type_uuid}' and assets.actief = TRUE;"""
+            cursor.execute(create_view_query)
+
+    def create_views_for_assettypes_with_attributes(self):
+        cursor = self.postGIS_connector.connection.cursor()
+        get_assettypes_with_geometrie_query = """SELECT uuid, uri, geometrie FROM assettypes;"""
+        cursor.execute(get_assettypes_with_geometrie_query)
+        assettype_with_geometrie = cursor.fetchall()
+        for assettype_record in assettype_with_geometrie:
+            type_uuid = assettype_record[0]
+            type_uri = assettype_record[1]
+            has_geometry = assettype_record[2]
+            view_name = type_uri.split('/ns/')[1].replace('#', '_eig_').replace('.', '_').replace('-', '_')
+
+            get_attributen_query = f"""
+            SELECT attributen.uuid, attributen.naam, attributen.datatypetype 
+            FROM assettypes 
+                LEFT JOIN attribuutkoppelingen ON attribuutkoppelingen.assettypeuuid = assettypes.uuid 
+                LEFT JOIN attributen ON attribuutkoppelingen.attribuutuuid = attributen.uuid 
+            WHERE assettypes.uri = '{type_uri}';"""
+            cursor.execute(get_attributen_query)
+            attributes_of_type = cursor.fetchall()
+            attribute_columns = ''
+            attribute_joins = ''
+
+            for attribute_record in attributes_of_type:
+                attribute_naam = attribute_record[1].replace(' ', '_')
+                attribute_type = attribute_record[2]
+                attribute_columns += f'attribuutwaarden_{attribute_naam}.waarde'
+                if attribute_type in ['number', 'legacynumber']:
+                    attribute_columns += '::numeric'
+                elif attribute_type in ['boolean', 'legacyboolean']:
+                    attribute_columns += '::boolean'
+                elif attribute_type in ['date', 'legacydate']:
+                    attribute_columns += '::date'
+
+                attribute_columns += f' AS {attribute_naam},'
+                attribute_joins += f"LEFT JOIN attribuutwaarden attribuutwaarden_{attribute_naam} ON assets.uuid = attribuutwaarden_{attribute_naam}.assetuuid AND attribuutwaarden_{attribute_naam}.attribuutuuid = '{attribute_record[0]}'"
+            create_view_query = f"""
+            DROP VIEW IF EXISTS public.{view_name} CASCADE;
+            CREATE VIEW public.{view_name} AS
+                SELECT assets.toestand, assets.actief, assets.naam, geometrie.*, ST_GeomFromText(wkt_string, 31370) AS geometry, {attribute_columns[:-1]}
+                FROM assets
+                    LEFT JOIN public.geometrie ON geometrie.assetuuid = assets.uuid 
+                {attribute_joins}    
+                WHERE assettype = '{type_uuid}' and assets.actief = TRUE;"""
             cursor.execute(create_view_query)
 
     def sync_attribuut_and_koppeling(self, assettype_uuid, attribuut, cursor, force_update: bool):

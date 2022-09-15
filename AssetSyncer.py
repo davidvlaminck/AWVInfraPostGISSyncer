@@ -4,6 +4,7 @@ import time
 import psycopg2
 
 from EMInfraImporter import EMInfraImporter
+from EventProcessors.AttributenGewijzigdProcessor import AttributenGewijzigdProcessor
 from EventProcessors.ElekAansluitingGewijzigdProcessor import ElekAansluitingGewijzigdProcessor
 from EventProcessors.GeometrieOrLocatieGewijzigdProcessor import GeometrieOrLocatieGewijzigdProcessor
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
@@ -20,13 +21,17 @@ class AssetSyncer:
         while True:
             start = time.time()
 
-            asset_dicts = self.eminfra_importer.import_assets_from_webservice_page_by_page(page_size=page_size)
+            asset_dicts = list(self.eminfra_importer.import_assets_from_webservice_page_by_page(page_size=page_size))
             cursor = self.postGIS_connector.connection.cursor()
-            self.update_assets(cursor=cursor, assets_dicts=list(asset_dicts))
-            logging.info(f'creating/updating {page_size} assets')
+            logging.info(f'creating/updating {len(asset_dicts)} assets')
             current_pagingcursor = self.eminfra_importer.pagingcursor
 
+            self.update_assets(cursor=cursor, assets_dicts=asset_dicts)
+
             uuids = list(map(lambda d: d['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36], asset_dicts))
+
+            attributen_processor = AttributenGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer)
+            attributen_processor.process_dicts(cursor=cursor, asset_uuids=uuids, asset_dicts=asset_dicts)
 
             self.update_location_geometry_of_synced_assets(uuids, asset_dicts, cursor)
 
