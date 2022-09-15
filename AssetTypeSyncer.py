@@ -249,9 +249,8 @@ WHERE to_update.uuid = assettypes.uuid;"""
             raise NotImplementedError()
             self.update_attribuut(assettype_uuid, attribuut, cursor)
 
-        pass
-
-    def insert_attribuut(self, assettype_uuid, attribuut, cursor):
+    @staticmethod
+    def insert_attribuut(assettype_uuid, attribuut, cursor):
         eig = attribuut['eigenschap']
         uuid = eig['uuid']
         actief = eig['actief']
