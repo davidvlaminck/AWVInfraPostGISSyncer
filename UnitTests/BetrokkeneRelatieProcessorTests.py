@@ -1,12 +1,11 @@
 from unittest import TestCase
+from unittest.mock import MagicMock
 
 from psycopg2 import connect
 
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.BetrokkeneRelatiesGewijzigdProcessor import BetrokkeneRelatiesGewijzigdProcessor
 from PostGISConnector import PostGISConnector
-from RequestHandler import RequestHandler
-from RequesterFactory import RequesterFactory
 from SettingsManager import SettingsManager
 
 
@@ -32,9 +31,7 @@ class BetrokkeneRelatieProcessorTests(TestCase):
                                           database="unittests")
         self.connector.set_up_tables('../setup_tables_querys.sql')
 
-        requester = RequesterFactory.create_requester(settings=settings_manager.settings, auth_type='JWT', env='prd')
-        request_handler = RequestHandler(requester)
-        self.eminfra_importer = EMInfraImporter(request_handler)
+        self.eminfra_importer = EMInfraImporter(MagicMock())
 
     def test_update_betrokkenerelaties(self):
         self.setup()
