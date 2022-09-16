@@ -4,6 +4,7 @@ import traceback
 from datetime import datetime
 
 from AgentSyncer import AgentSyncer
+from AssetRelatiesSyncer import AssetRelatiesSyncer
 from AssetSyncer import AssetSyncer
 from AssetTypeSyncer import AssetTypeSyncer
 from BestekSyncer import BestekSyncer
@@ -21,7 +22,8 @@ from RequestHandler import RequestHandler
 
 
 class Syncer:
-    def __init__(self, connector: PostGISConnector, request_handler: RequestHandler, eminfra_importer: EMInfraImporter, settings=None):
+    def __init__(self, connector: PostGISConnector, request_handler: RequestHandler, eminfra_importer: EMInfraImporter,
+                 settings=None):
         self.connector = connector
         self.request_handler = request_handler
         self.eminfra_importer = eminfra_importer
@@ -73,25 +75,29 @@ class Syncer:
                     logging.info(f'time for all agents: {round(end - start, 2)}')
                 elif sync_step == 2:
                     start = time.time()
-                    bestek_syncer = BestekSyncer(em_infra_importer=self.eminfra_importer, postGIS_connector=self.connector)
+                    bestek_syncer = BestekSyncer(em_infra_importer=self.eminfra_importer,
+                                                 postGIS_connector=self.connector)
                     bestek_syncer.sync_bestekken(pagingcursor=pagingcursor, page_size=page_size)
                     end = time.time()
                     logging.info(f'time for all bestekken: {round(end - start, 2)}')
                 elif sync_step == 3:
                     start = time.time()
-                    assettype_syncer = AssetTypeSyncer(emInfraImporter=self.eminfra_importer, postGIS_connector=self.connector)
+                    assettype_syncer = AssetTypeSyncer(emInfraImporter=self.eminfra_importer,
+                                                       postGIS_connector=self.connector)
                     assettype_syncer.sync_assettypes(pagingcursor=pagingcursor, page_size=page_size)
                     end = time.time()
                     logging.info(f'time for all assettypes: {round(end - start, 2)}')
-                elif sync_step == 3:
+                elif sync_step == 4:
                     start = time.time()
-                    relatietype_syncer = RelatietypeSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector)
+                    relatietype_syncer = RelatietypeSyncer(em_infra_importer=self.eminfra_importer,
+                                                           postgis_connector=self.connector)
                     relatietype_syncer.sync_relatietypes()
                     end = time.time()
                     logging.info(f'time for all relatietypes: {round(end - start, 2)}')
                 elif sync_step == 5:
                     start = time.time()
-                    asset_syncer = AssetSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector)
+                    asset_syncer = AssetSyncer(em_infra_importer=self.eminfra_importer,
+                                               postgis_connector=self.connector)
                     asset_syncer.sync_assets(pagingcursor=pagingcursor, page_size=page_size)
                     end = time.time()
                     logging.info(f'time for all assets: {round(end - start, 2)}')
@@ -104,17 +110,23 @@ class Syncer:
                     logging.info(f'time for all bestekkoppelingen: {round(end - start, 2)}')
                 elif sync_step == 7:
                     start = time.time()
-                    bestek_koppeling_syncer = BetrokkeneRelatiesSyncer(em_infra_importer=self.eminfra_importer,
-                                                                       post_gis_connector=self.connector)
-                    bestek_koppeling_syncer.sync_betrokkenerelaties()
+                    betrokkenerelatie_syncer = BetrokkeneRelatiesSyncer(em_infra_importer=self.eminfra_importer,
+                                                                        post_gis_connector=self.connector)
+                    betrokkenerelatie_syncer.sync_betrokkenerelaties()
                     end = time.time()
                     logging.info(f'time for all betrokkenerelaties: {round(end - start, 2)}')
+                elif sync_step == 8:
+                    start = time.time()
+                    assetrelatie_syncer = AssetRelatiesSyncer(em_infra_importer=self.eminfra_importer,
+                                                              post_gis_connector=self.connector)
+                    assetrelatie_syncer.sync_assetrelaties()
+                    end = time.time()
+                    logging.info(f'time for all assetrelaties: {round(end - start, 2)}')
                 else:
 
                     # TODO beheerder
                     # TODO personen
                     # TODO toezichtgroepen
-                    # TODO assetrelaties
                     # TODO documenten
                     # raise NotImplementedError
                     pass
@@ -125,7 +137,7 @@ class Syncer:
                 self.connector.save_props_to_params(
                     {'sync_step': sync_step,
                      'pagingcursor': pagingcursor})
-                if sync_step >= 8:
+                if sync_step >= 9:
                     self.connector.save_props_to_params(
                         {'fresh_start': False})
                 self.connector.connection.commit()
@@ -138,7 +150,8 @@ class Syncer:
         start_num = 1
         step = 5
         start_num = self.recur_exp_find_start_page(current_num=start_num, step=step, page_size=page_size)
-        current_page_num = self.recur_find_last_page(current_num=int(start_num / step), current_step=int(start_num / step),
+        current_page_num = self.recur_find_last_page(current_num=int(start_num / step),
+                                                     current_step=int(start_num / step),
                                                      step=step, page_size=page_size)
 
         # doublecheck
@@ -227,5 +240,3 @@ class Syncer:
         for k, v in event_dict.items():
             if len(v) > 0:
                 logging.info(f'number of events of type {k}: {len(v)}')
-
-
