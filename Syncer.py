@@ -3,6 +3,8 @@ import time
 import traceback
 from datetime import datetime
 
+import requests
+
 from AgentSyncer import AgentSyncer
 from AssetRelatiesSyncer import AssetRelatiesSyncer
 from AssetSyncer import AssetSyncer
@@ -38,15 +40,18 @@ class Syncer:
 
     def start_syncing(self):
         while True:
-            params = self.connector.get_params()
-            if params is None:
-                self.connector.set_up_tables()
+            try:
                 params = self.connector.get_params()
+                if params is None:
+                    self.connector.set_up_tables()
+                    params = self.connector.get_params()
 
-            if params['fresh_start']:
-                self.perform_fresh_start_sync(params)
-            else:
-                self.perform_syncing()
+                if params['fresh_start']:
+                    self.perform_fresh_start_sync(params)
+                else:
+                    self.perform_syncing()
+            except requests.exceptions.ConnectionError as exc:
+                print(exc)
 
     def perform_fresh_start_sync(self, params: dict):
         page_size = params['pagesize']
