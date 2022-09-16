@@ -1,5 +1,3 @@
-import json
-
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.BetrokkeneRelatiesGewijzigdProcessor import BetrokkeneRelatiesGewijzigdProcessor
 from PostGISConnector import PostGISConnector
@@ -22,7 +20,8 @@ class BetrokkeneRelatiesSyncer:
 
             asset_uuids = list(set(map(lambda x: x['bron']['uuid'], relaties)))
             processor.process_dicts(betrokkenerelatie_dicts=relaties, cursor=cursor, asset_uuids=asset_uuids)
-            self.postGIS_connector.save_props_to_params(cursor=cursor, params={'pagingcursor': self.eminfra_importer.pagingcursor})
+            self.postGIS_connector.save_props_to_params(cursor=cursor,
+                                                        params={'pagingcursor': self.eminfra_importer.pagingcursor})
 
             if self.eminfra_importer.pagingcursor == '':
                 break
