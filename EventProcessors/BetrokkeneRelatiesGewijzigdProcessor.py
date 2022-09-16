@@ -24,7 +24,7 @@ class BetrokkeneRelatiesGewijzigdProcessor(SpecificEventProcessor):
         self.process_dicts(cursor=self.cursor, asset_uuids=uuids, betrokkenerelatie_dicts=betrokkenerelatie_dicts)
 
         end = time.time()
-        logging.info(f'updated {len(betrokkenerelatie_dicts)} assets in {str(round(end - start, 2))} seconds.')
+        logging.info(f'updated {len(betrokkenerelatie_dicts)} betrokkenerelaties in {str(round(end - start, 2))} seconds.')
 
     def process_dicts(self, cursor, asset_uuids: [str], betrokkenerelatie_dicts: dict):
         logging.info(f'started creating {len(betrokkenerelatie_dicts)} betrokkenerelaties')
@@ -64,7 +64,7 @@ class BetrokkeneRelatiesGewijzigdProcessor(SpecificEventProcessor):
                 raise AgentMissingError(nonexisting_agents)
             else:
                 raise exc
-        logging.info('done batch of with betrokkenerelaties')
+        logging.info('done batch of betrokkenerelaties')
 
     def remove_all_betrokkene_relaties(self, cursor, asset_uuids):
         if len(asset_uuids) == 0:

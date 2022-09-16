@@ -102,6 +102,7 @@ class BetrokkeneRelatieProcessorTests(TestCase):
             processor.process(['00000000-0000-1000-0000-000000000000', '00000000-0000-2000-0000-000000000000',
                                '00000000-0000-3000-0000-000000000000'])
         self.assertListEqual(['10000000-0000-0000-0000-000000000000'], exc.exception.args[0])
+        self.connector.connection.close()
 
     def set_up_one_agent(self, cursor):
         cursor.execute("""
