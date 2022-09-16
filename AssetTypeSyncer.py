@@ -216,6 +216,8 @@ WHERE to_update.uuid = assettypes.uuid;"""
             attribute_joins = ''
 
             for attribute_record in attributes_of_type:
+                if attribute_record[0] is None:
+                    continue
                 attribute_naam = attribute_record[1].replace(' ', '_')
                 attribute_type = attribute_record[2]
                 attribute_columns += f'attribuutwaarden_{attribute_naam}.waarde'
@@ -227,11 +229,15 @@ WHERE to_update.uuid = assettypes.uuid;"""
                     attribute_columns += '::date'
 
                 attribute_columns += f' AS {attribute_naam},'
-                attribute_joins += f"LEFT JOIN attribuutwaarden attribuutwaarden_{attribute_naam} ON assets.uuid = attribuutwaarden_{attribute_naam}.assetuuid AND attribuutwaarden_{attribute_naam}.attribuutuuid = '{attribute_record[0]}'"
+                attribute_joins += f"LEFT JOIN attribuutwaarden attribuutwaarden_{attribute_naam} ON assets.uuid = attribuutwaarden_{attribute_naam}.assetuuid AND attribuutwaarden_{attribute_naam}.attribuutuuid = '{attribute_record[0]}'\n"
+
+            if attribute_columns != '':
+                attribute_columns = ', ' + attribute_columns[:-1]
+
             create_view_query = f"""
             DROP VIEW IF EXISTS public.{view_name} CASCADE;
             CREATE VIEW public.{view_name} AS
-                SELECT assets.toestand, assets.actief, assets.naam, geometrie.*, ST_GeomFromText(wkt_string, 31370) AS geometry, {attribute_columns[:-1]}
+                SELECT assets.toestand, assets.actief, assets.naam as asset_naam, geometrie.*, ST_GeomFromText(wkt_string, 31370) AS geometry {attribute_columns}
                 FROM assets
                     LEFT JOIN public.geometrie ON geometrie.assetuuid = assets.uuid 
                 {attribute_joins}    
