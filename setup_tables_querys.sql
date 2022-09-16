@@ -241,7 +241,7 @@ DROP TABLE IF EXISTS public.geometrie CASCADE;
 CREATE TABLE IF NOT EXISTS public.geometrie
 (
     assetUuid uuid NOT NULL,
-    niveau integer NOT NULL,
+    geo_niveau integer NOT NULL,
     ga_versie text COLLATE pg_catalog."default",
     nauwkeurigheid text COLLATE pg_catalog."default",
     bron text COLLATE pg_catalog."default",
