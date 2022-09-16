@@ -14,7 +14,8 @@ class BetrokkeneRelatiesSyncer:
         self.eminfra_importer.pagingcursor = pagingcursor
         while True:
             cursor = self.postGIS_connector.connection.cursor()
-            processor = BetrokkeneRelatiesGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer)
+            processor = BetrokkeneRelatiesGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer,
+                                                             connector=self.postGIS_connector)
             relaties = self.eminfra_importer.import_betrokkenerelaties_from_webservice_page_by_page(page_size=page_size)
             if len(relaties) == 0:
                 break

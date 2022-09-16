@@ -1,10 +1,12 @@
 from unittest import TestCase
 from unittest.mock import MagicMock
 
+import psycopg2
 from psycopg2 import connect
 
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.BetrokkeneRelatiesGewijzigdProcessor import BetrokkeneRelatiesGewijzigdProcessor
+from Exceptions.AgentMissingError import AgentMissingError
 from PostGISConnector import PostGISConnector
 from SettingsManager import SettingsManager
 
@@ -40,7 +42,7 @@ class BetrokkeneRelatieProcessorTests(TestCase):
         self.set_up_agents(cursor)
         self.set_up_assets(cursor)
 
-        processor = BetrokkeneRelatiesGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer)
+        processor = BetrokkeneRelatiesGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer, connector=self.connector)
         processor.em_infra_importer.import_betrokkenerelaties_from_webservice_by_assetuuids = self.return_betrokkenerelaties
 
         create_betrokkenerelatie_query = """
@@ -83,6 +85,28 @@ class BetrokkeneRelatieProcessorTests(TestCase):
             cursor.execute(count_betrokkenerelatie_query)
             result = cursor.fetchone()[0]
             self.assertEqual(3, result)
+
+    def test_missing_agent(self):
+        self.setup()
+
+        cursor = self.connector.connection.cursor()
+        self.set_up_one_agent(cursor)
+        self.set_up_assets(cursor)
+
+        self.connector.commit_transaction()
+
+        processor = BetrokkeneRelatiesGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer, connector=self.connector)
+        processor.em_infra_importer.import_betrokkenerelaties_from_webservice_by_assetuuids = self.return_betrokkenerelaties
+
+        with self.assertRaises(AgentMissingError) as exc:
+            processor.process(['00000000-0000-1000-0000-000000000000', '00000000-0000-2000-0000-000000000000',
+                               '00000000-0000-3000-0000-000000000000'])
+        self.assertListEqual(['10000000-0000-0000-0000-000000000000'], exc.exception.args[0])
+
+    def set_up_one_agent(self, cursor):
+        cursor.execute("""
+        INSERT INTO agents (uuid, naam, actief) 
+        VALUES ('20000000-0000-0000-0000-000000000000', 'agent2', TRUE)""")
 
     def set_up_agents(self, cursor):
         cursor.execute("""
@@ -139,3 +163,4 @@ class BetrokkeneRelatieProcessorTests(TestCase):
             },
             "rol": "toezichter"
         }]
+
