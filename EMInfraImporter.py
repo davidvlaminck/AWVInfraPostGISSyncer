@@ -181,6 +181,10 @@ class EMInfraImporter:
         zoek_params.size = page_size
         yield from self.get_objects_from_non_oslo_endpoint(url_part='bestekrefs/search', zoek_payload=zoek_params)
 
+    def import_all_relatietypes_from_webservice(self):
+        zoek_params = ZoekParameterPayload()
+        yield from self.get_objects_from_non_oslo_endpoint(url_part='relatietypes/search', zoek_payload=zoek_params)
+
     def import_all_bestekken_from_webservice(self):
         zoek_params = ZoekParameterPayload()
         yield from self.get_objects_from_non_oslo_endpoint(url_part='bestekrefs/search', zoek_payload=zoek_params)

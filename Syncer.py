@@ -16,6 +16,7 @@ from EventProcessors.RelationNotCreatedError import BetrokkeneRelationNotCreated
 from FeedEventsCollector import FeedEventsCollector
 from FeedEventsProcessor import FeedEventsProcessor
 from PostGISConnector import PostGISConnector
+from RelatietypeSyncer import RelatietypeSyncer
 from RequestHandler import RequestHandler
 
 
@@ -82,20 +83,26 @@ class Syncer:
                     assettype_syncer.sync_assettypes(pagingcursor=pagingcursor, page_size=page_size)
                     end = time.time()
                     logging.info(f'time for all assettypes: {round(end - start, 2)}')
-                elif sync_step == 4:
+                elif sync_step == 3:
+                    start = time.time()
+                    relatietype_syncer = RelatietypeSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector)
+                    relatietype_syncer.sync_relatietypes()
+                    end = time.time()
+                    logging.info(f'time for all relatietypes: {round(end - start, 2)}')
+                elif sync_step == 5:
                     start = time.time()
                     asset_syncer = AssetSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector)
                     asset_syncer.sync_assets(pagingcursor=pagingcursor, page_size=page_size)
                     end = time.time()
                     logging.info(f'time for all assets: {round(end - start, 2)}')
-                elif sync_step == 5:
+                elif sync_step == 6:
                     start = time.time()
                     bestek_koppeling_syncer = BestekKoppelingSyncer(em_infra_importer=self.eminfra_importer,
                                                                     postGIS_connector=self.connector)
                     bestek_koppeling_syncer.sync_bestekkoppelingen()
                     end = time.time()
                     logging.info(f'time for all bestekkoppelingen: {round(end - start, 2)}')
-                elif sync_step == 6:
+                elif sync_step == 7:
                     start = time.time()
                     bestek_koppeling_syncer = BetrokkeneRelatiesSyncer(em_infra_importer=self.eminfra_importer,
                                                                        post_gis_connector=self.connector)
@@ -107,7 +114,6 @@ class Syncer:
                     # TODO beheerder
                     # TODO personen
                     # TODO toezichtgroepen
-                    # TODO relatietypes
                     # TODO assetrelaties
                     # TODO documenten
                     # raise NotImplementedError
@@ -119,7 +125,7 @@ class Syncer:
                 self.connector.save_props_to_params(
                     {'sync_step': sync_step,
                      'pagingcursor': pagingcursor})
-                if sync_step >= 7:
+                if sync_step >= 8:
                     self.connector.save_props_to_params(
                         {'fresh_start': False})
                 self.connector.connection.commit()
