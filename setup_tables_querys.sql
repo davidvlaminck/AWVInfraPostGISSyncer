@@ -344,5 +344,48 @@ CREATE TABLE IF NOT EXISTS public.relatietypes
     CONSTRAINT relatietypes_pkey PRIMARY KEY (uuid)
 );
 
+-- Table: public.assetRelaties
+
+DROP TABLE IF EXISTS public.assetRelaties CASCADE;
+CREATE TABLE IF NOT EXISTS public.assetRelaties
+(
+    uuid uuid NOT NULL,
+    bronUuid uuid NOT NULL,
+    doelUuid uuid NOT NULL,
+    relatietype uuid NOT NULL,
+    attributen text COLLATE pg_catalog."default",
+    actief boolean NOT NULL,
+    CONSTRAINT assetRelaties_pkey PRIMARY KEY (uuid)
+);
+
+CREATE INDEX assetRelaties_bronUuid_idx ON assetRelaties (bronUuid);
+CREATE INDEX assetRelaties_doelUuid_idx ON assetRelaties (doelUuid);
+CREATE INDEX assetRelaties_relatietype_idx ON assetRelaties (relatietype);
+
+ALTER TABLE IF EXISTS public.assetRelaties
+    ADD CONSTRAINT assetRelaties_bronUuid_fkey
+    FOREIGN KEY (bronUuid)
+    REFERENCES public.assets (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+ALTER TABLE IF EXISTS public.assetRelaties
+    ADD CONSTRAINT assetRelaties_doelUuid_fkey
+    FOREIGN KEY (doelUuid)
+    REFERENCES public.assets (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+ALTER TABLE IF EXISTS public.assetRelaties
+    ADD CONSTRAINT assetRelaties_relatietype_fkey
+    FOREIGN KEY (relatietype)
+    REFERENCES public.relatietypes (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+
 -- psycopg2.errors.ForeignKeyViolation: insert or update on table "assets" violates foreign key constraint "assets_assettype_fkey"
 -- DETAIL:  Key (assettype)=(00000453-56ce-4f8b-af44-960df526cb30) is not present in table "assettypes".
