@@ -22,16 +22,18 @@ class RelatietypeSyncer:
         for relatietype_dict in relatietype_dicts:
             uuid = relatietype_dict['uuid']
             naam = relatietype_dict['naam']
-            label = relatietype_dict['label']
+            label = relatietype_dict.get('label', '')
             definitie = relatietype_dict.get('definitie', '').replace("'", "''")
             actief = relatietype_dict['actief']
             gericht = relatietype_dict['gericht']
 
-            values += f"('{uuid}','{naam}','{label}',"
-            if definitie != '':
-                values += f"'{definitie}',"
-            else:
-                values += "NULL,"
+            values += f"('{uuid}','{naam}',"
+            null_values = [label, definitie]
+            for null_value in null_values:
+                if null_value != '':
+                    values += f"'{null_value}',"
+                else:
+                    values += "NULL,"
             values += f"{actief},{gericht}),"
 
         insert_query = f"""
