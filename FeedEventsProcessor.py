@@ -58,5 +58,6 @@ class FeedEventsProcessor:
     def create_processor(self, event_type, cursor):
         event_processor = EventProcessorFactory.create_event_processor(event_type=event_type,
                                                                        cursor=cursor,
-                                                                       em_infra_importer=self.emInfraImporter)
+                                                                       em_infra_importer=self.emInfraImporter,
+                                                                       postgis_connector=self.postgis_connector)
         return event_processor

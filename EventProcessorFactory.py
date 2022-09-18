@@ -1,18 +1,23 @@
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.ActiefGewijzigdProcessor import ActiefGewijzigdProcessor
+from EventProcessors.AssetRelatiesGewijzigdProcessor import AssetRelatiesGewijzigdProcessor
+from EventProcessors.AttributenGewijzigdProcessor import AttributenGewijzigdProcessor
 from EventProcessors.BestekGewijzigdProcessor import BestekGewijzigdProcessor
+from EventProcessors.BetrokkeneRelatiesGewijzigdProcessor import BetrokkeneRelatiesGewijzigdProcessor
 from EventProcessors.CommentaarGewijzigdProcessor import CommentaarGewijzigdProcessor
+from EventProcessors.ElekAansluitingGewijzigdProcessor import ElekAansluitingGewijzigdProcessor
 from EventProcessors.GeometrieOrLocatieGewijzigdProcessor import GeometrieOrLocatieGewijzigdProcessor
 from EventProcessors.NaamGewijzigdProcessor import NaamGewijzigdProcessor
 from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
 from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
 from EventProcessors.ToestandGewijzigdProcessor import ToestandGewijzigdProcessor
+from PostGISConnector import PostGISConnector
 
 
 class EventProcessorFactory:
     @classmethod
-    def create_event_processor(cls, event_type: str, cursor,
-                               em_infra_importer: EMInfraImporter) -> SpecificEventProcessor:
+    def create_event_processor(cls, event_type: str, cursor, em_infra_importer: EMInfraImporter,
+                               postgis_connector: PostGISConnector) -> SpecificEventProcessor:
         if event_type == 'NIEUWE_INSTALLATIE':
             return NieuwAssetProcessor(cursor, em_infra_importer)
         elif event_type == 'NIEUW_ONDERDEEL':
@@ -22,7 +27,8 @@ class EventProcessorFactory:
         elif event_type == 'BESTEK_GEWIJZIGD':
             return BestekGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'BETROKKENE_RELATIES_GEWIJZIGD':
-            pass
+            return BetrokkeneRelatiesGewijzigdProcessor(cursor=cursor, em_infra_importer=em_infra_importer,
+                                                        connector=postgis_connector)
         elif event_type == 'COMMENTAAR_GEWIJZIGD':
             return CommentaarGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'COMMUNICATIEAANSLUITING_GEWIJZIGD':
@@ -30,9 +36,9 @@ class EventProcessorFactory:
         elif event_type == 'DOCUMENTEN_GEWIJZIGD':
             pass
         elif event_type == 'EIGENSCHAPPEN_GEWIJZIGD':
-            pass
+            return AttributenGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'ELEKTRICITEITSAANSLUITING_GEWIJZIGD':
-            pass
+            return ElekAansluitingGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'GEOMETRIE_GEWIJZIGD' or event_type == 'LOCATIE_GEWIJZIGD':
             return GeometrieOrLocatieGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'NAAM_GEWIJZIGD' or event_type == 'NAAMPAD_GEWIJZIGD' or event_type == 'PARENT_GEWIJZIGD':
@@ -40,7 +46,8 @@ class EventProcessorFactory:
         elif event_type == 'POSTIT_GEWIJZIGD':
             pass
         elif event_type == 'RELATIES_GEWIJZIGD':
-            pass
+            return AssetRelatiesGewijzigdProcessor(cursor=cursor, em_infra_importer=em_infra_importer,
+                                                   connector=postgis_connector)
         elif event_type == 'SCHADEBEHEERDER_GEWIJZIGD':
             pass
         elif event_type == 'TOEGANG_GEWIJZIGD':
