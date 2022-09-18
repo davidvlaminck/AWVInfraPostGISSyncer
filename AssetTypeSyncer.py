@@ -198,8 +198,12 @@ WHERE to_update.uuid = assettypes.uuid;"""
         get_assettypes_with_geometrie_query = """SELECT uuid, uri, geometrie FROM assettypes;"""
         cursor.execute(get_assettypes_with_geometrie_query)
         assettype_with_geometrie = cursor.fetchall()
+        reserved_chars_for_name = [' ', '>', '.', ',', '/', '-', '+', "'", '?', '(', ')', '&']
+
         for assettype_record in assettype_with_geometrie:
             type_uuid = assettype_record[0]
+            if type_uuid == 'b0fa91d4-d061-479c-a23d-f9244a86c4c2':  # DUMMY
+                continue
             type_uri = assettype_record[1]
             has_geometry = assettype_record[2]
             view_name = type_uri.split('/ns/')[1].replace('#', '_eig_').replace('.', '_').replace('-', '_')
@@ -209,7 +213,7 @@ WHERE to_update.uuid = assettypes.uuid;"""
             FROM assettypes 
                 LEFT JOIN attribuutkoppelingen ON attribuutkoppelingen.assettypeuuid = assettypes.uuid 
                 LEFT JOIN attributen ON attribuutkoppelingen.attribuutuuid = attributen.uuid 
-            WHERE assettypes.uri = '{type_uri}';"""
+            WHERE assettypes.uri = '{type_uri}' AND attribuutkoppelingen.actief = TRUE;"""
             cursor.execute(get_attributen_query)
             attributes_of_type = cursor.fetchall()
             attribute_columns = ''
@@ -218,7 +222,12 @@ WHERE to_update.uuid = assettypes.uuid;"""
             for attribute_record in attributes_of_type:
                 if attribute_record[0] is None:
                     continue
-                attribute_naam = attribute_record[1].replace(' ', '_')
+
+                attribute_naam = attribute_record[1]
+                for char in reserved_chars_for_name:
+                    attribute_naam = attribute_naam.replace(char, '_')
+                while '__' in attribute_naam:
+                    attribute_naam = attribute_naam.replace('__', '_')
                 attribute_type = attribute_record[2]
                 attribute_columns += f'attribuutwaarden_{attribute_naam}.waarde'
                 if attribute_type in ['number', 'legacynumber']:
@@ -228,21 +237,33 @@ WHERE to_update.uuid = assettypes.uuid;"""
                 elif attribute_type in ['date', 'legacydate']:
                     attribute_columns += '::date'
 
-                attribute_columns += f' AS {attribute_naam},'
+                if attribute_naam[:1].isdigit():
+                    attribute_columns += f' AS "{attribute_naam}",'
+                else:
+                    attribute_columns += f' AS {attribute_naam},'
                 attribute_joins += f"LEFT JOIN attribuutwaarden attribuutwaarden_{attribute_naam} ON assets.uuid = attribuutwaarden_{attribute_naam}.assetuuid AND attribuutwaarden_{attribute_naam}.attribuutuuid = '{attribute_record[0]}'\n"
 
             if attribute_columns != '':
                 attribute_columns = ', ' + attribute_columns[:-1]
 
+            geometry_part1 = ''
+            geometry_part2 = ''
+            if has_geometry:
+                geometry_part1 = ', geometrie.*, ST_GeomFromText(wkt_string, 31370) AS geometry'
+                geometry_part2 = 'LEFT JOIN public.geometrie ON geometrie.assetuuid = assets.uuid'
+
             create_view_query = f"""
             DROP VIEW IF EXISTS public.{view_name} CASCADE;
             CREATE VIEW public.{view_name} AS
-                SELECT assets.toestand, assets.actief, assets.naam as asset_naam, geometrie.*, ST_GeomFromText(wkt_string, 31370) AS geometry {attribute_columns}
+                SELECT assets.toestand as toestand_asset, assets.actief as actief_asset, assets.naam as naam_asset{geometry_part1} {attribute_columns}
                 FROM assets
-                    LEFT JOIN public.geometrie ON geometrie.assetuuid = assets.uuid 
-                {attribute_joins}    
-                WHERE assettype = '{type_uuid}' and assets.actief = TRUE;"""
-            cursor.execute(create_view_query)
+                {geometry_part2}
+                {attribute_joins} WHERE assettype = '{type_uuid}' and assets.actief = TRUE;"""
+            try:
+                cursor.execute(create_view_query)
+            except Exception as exc:
+                print(create_view_query)
+                raise exc
 
     def sync_attribuut_and_koppeling(self, assettype_uuid, attribuut, cursor, force_update: bool):
         attribuut_uuid = attribuut['eigenschap']['uuid']
@@ -254,6 +275,7 @@ WHERE to_update.uuid = assettypes.uuid;"""
         elif force_update:
             raise NotImplementedError()
             self.update_attribuut(assettype_uuid, attribuut, cursor)
+        self.create_koppeling(assettype_uuid=assettype_uuid, attribuut=attribuut, cursor=cursor)
 
     @staticmethod
     def insert_attribuut(assettype_uuid, attribuut, cursor):
@@ -287,9 +309,12 @@ SELECT to_insert.uuid, to_insert.actief, to_insert.uri, to_insert.naam, to_inser
 FROM to_insert;"""
         cursor.execute(insert_query)
 
+    @staticmethod
+    def create_koppeling(cursor, assettype_uuid, attribuut):
+        uuid = attribuut['eigenschap']['uuid']
         koppeling_actief = attribuut['actief']
         update_koppeling_query = f"""
-        INSERT INTO public.attribuutKoppelingen (assettypeUuid, attribuutUuid, actief)
-        VALUES ('{assettype_uuid}'::uuid, '{uuid}'::uuid, {koppeling_actief})
-        """
+                INSERT INTO public.attribuutKoppelingen (assettypeUuid, attribuutUuid, actief)
+                VALUES ('{assettype_uuid}'::uuid, '{uuid}'::uuid, {koppeling_actief})
+                """
         cursor.execute(update_koppeling_query)
