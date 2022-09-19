@@ -37,15 +37,16 @@ class ToezichtgroepSyncer:
             if 'actiefInterval' not in toezichtgroep_dict:
                 toezichtgroep_actief = False
             else:
-                if 'van' not in toezichtgroep_dict:
+                actiefInterval = toezichtgroep_dict['actiefInterval']
+                if 'van' not in actiefInterval:
                     toezichtgroep_actief = False
                 else:
-                    van_date = datetime.strptime(toezichtgroep_dict['van'], '%y-%m-%d')
+                    van_date = datetime.strptime(actiefInterval['van'], '%Y-%m-%d')
                     if van_date > datetime.now():
                         toezichtgroep_actief = False
                     else:
-                        if 'tot' in toezichtgroep_dict:
-                            tot_date = datetime.strptime(toezichtgroep_dict['tot'], '%y-%m-%d')
+                        if 'tot' in actiefInterval:
+                            tot_date = datetime.strptime(actiefInterval['tot'], '%Y-%m-%d')
                             if tot_date < datetime.now():
                                 toezichtgroep_actief = False
 
