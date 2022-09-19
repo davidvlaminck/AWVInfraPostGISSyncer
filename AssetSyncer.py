@@ -7,6 +7,8 @@ from EMInfraImporter import EMInfraImporter
 from EventProcessors.AttributenGewijzigdProcessor import AttributenGewijzigdProcessor
 from EventProcessors.ElekAansluitingGewijzigdProcessor import ElekAansluitingGewijzigdProcessor
 from EventProcessors.GeometrieOrLocatieGewijzigdProcessor import GeometrieOrLocatieGewijzigdProcessor
+from EventProcessors.SchadebeheerderGewijzigdProcessor import SchadebeheerderGewijzigdProcessor
+from EventProcessors.ToezichtGewijzigdProcessor import ToezichtGewijzigdProcessor
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
 from PostGISConnector import PostGISConnector
 
@@ -32,6 +34,10 @@ class AssetSyncer:
 
             attributen_processor = AttributenGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer)
             attributen_processor.process_dicts(cursor=cursor, asset_uuids=uuids, asset_dicts=asset_dicts)
+            schadebeheerder_processor = SchadebeheerderGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer)
+            schadebeheerder_processor.process_dicts(cursor=cursor, asset_uuids=uuids, asset_dicts=asset_dicts)
+            toezicht_processor = ToezichtGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer)
+            toezicht_processor.process_dicts(cursor=cursor, asset_uuids=uuids, asset_dicts=asset_dicts)
 
             self.update_location_geometry_of_synced_assets(uuids, asset_dicts, cursor)
 

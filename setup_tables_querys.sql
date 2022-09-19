@@ -323,6 +323,28 @@ ALTER TABLE IF EXISTS public.assets
     NOT VALID;
 
 
+-- Table: public.beheerders
+
+DROP TABLE IF EXISTS public.beheerders CASCADE;
+CREATE TABLE IF NOT EXISTS public.beheerders
+(
+    uuid uuid NOT NULL,
+    naam text COLLATE pg_catalog."default",
+    referentie text COLLATE pg_catalog."default",
+    typeBeheerder text COLLATE pg_catalog."default",
+    actief boolean NOT NULL,
+    CONSTRAINT beheerders_pkey PRIMARY KEY (uuid)
+);
+
+ALTER TABLE IF EXISTS public.assets
+    ADD CONSTRAINT beheerders_assets_fkey
+    FOREIGN KEY (schadebeheerder)
+    REFERENCES public.beheerders (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+
 -- Table: public.betrokkeneRelaties
 
 DROP TABLE IF EXISTS public.betrokkeneRelaties CASCADE;
