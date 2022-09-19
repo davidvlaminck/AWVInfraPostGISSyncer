@@ -297,6 +297,32 @@ ALTER TABLE IF EXISTS public.assets
     NOT VALID;
 
 
+-- Table: public.identiteiten
+
+DROP TABLE IF EXISTS public.identiteiten CASCADE;
+CREATE TABLE IF NOT EXISTS public.identiteiten
+(
+    uuid uuid NOT NULL,
+    naam text COLLATE pg_catalog."default",
+    voornaam text COLLATE pg_catalog."default",
+    gebruikersnaam text COLLATE pg_catalog."default",
+    typeIdentiteit text COLLATE pg_catalog."default",
+    actief boolean NOT NULL,
+    systeem boolean NOT NULL,
+    voId text COLLATE pg_catalog."default",
+    bron text COLLATE pg_catalog."default",
+    CONSTRAINT identiteiten_pkey PRIMARY KEY (uuid)
+);
+
+ALTER TABLE IF EXISTS public.assets
+    ADD CONSTRAINT identiteiten_assets_fkey
+    FOREIGN KEY (toezichter)
+    REFERENCES public.identiteiten (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+
 -- Table: public.betrokkeneRelaties
 
 DROP TABLE IF EXISTS public.betrokkeneRelaties CASCADE;
