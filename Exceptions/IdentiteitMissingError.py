@@ -1,0 +1,3 @@
+class IdentiteitMissingError(Exception):
+    pass
+

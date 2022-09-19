@@ -1,0 +1,3 @@
+class ToezichtgroepMissingError(Exception):
+    pass
+
