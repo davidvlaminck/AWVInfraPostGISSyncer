@@ -5,13 +5,11 @@ from EMInfraImporter import EMInfraImporter
 from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
 from Exceptions.IdentiteitMissingError import IdentiteitMissingError
 from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
-from PostGISConnector import PostGISConnector
 
 
 class ToezichtGewijzigdProcessor(SpecificEventProcessor):
-    def __init__(self, cursor, em_infra_importer: EMInfraImporter, connector: PostGISConnector):
+    def __init__(self, cursor, em_infra_importer: EMInfraImporter):
         super().__init__(cursor, em_infra_importer)
-        self.connector = connector
 
     def process(self, uuids: [str]):
         logging.info(f'started updating toezicht')
@@ -66,8 +64,8 @@ class ToezichtGewijzigdProcessor(SpecificEventProcessor):
         if len(toezichter_null_assets) > 0:
             delete_toezichter_query = f"""UPDATE public.assets SET toezichter = NULL WHERE uuid IN ('{"'::uuid,'".join(toezichter_null_assets)}'::uuid)"""
             cursor.execute(delete_toezichter_query)
-        if len(toezichter_null_assets) > 0:
-            delete_toezichtgroep_query = f"""UPDATE public.assets SET toezichtgroep = NULL WHERE uuid IN ('{"'::uuid,'".join(toezichter_null_assets)}'::uuid)"""
+        if len(toezichtgroep_null_assets) > 0:
+            delete_toezichtgroep_query = f"""UPDATE public.assets SET toezichtgroep = NULL WHERE uuid IN ('{"'::uuid,'".join(toezichtgroep_null_assets)}'::uuid)"""
             cursor.execute(delete_toezichtgroep_query)
 
         if toezichter_update_values != '':

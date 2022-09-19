@@ -1,12 +1,10 @@
 from unittest import TestCase
 from unittest.mock import MagicMock
 
-import psycopg2
 from psycopg2 import connect
 
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.ToezichtGewijzigdProcessor import ToezichtGewijzigdProcessor
-from Exceptions.AgentMissingError import AgentMissingError
 from Exceptions.IdentiteitMissingError import IdentiteitMissingError
 from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 from PostGISConnector import PostGISConnector
