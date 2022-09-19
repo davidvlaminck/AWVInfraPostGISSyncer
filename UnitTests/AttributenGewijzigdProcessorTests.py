@@ -40,10 +40,10 @@ class AttributenGewijzigdProcessorTests(TestCase):
 
         raise NotImplementedError()
         self.processor = ActiefGewijzigdProcessor(cursor=self.connector.connection.cursor(),
-                                                    em_infra_importer=self.eminfra_importer)
+                                                  em_infra_importer=self.em_infra_importer)
         self.assettypes_syncer = AssetTypeSyncer(postGIS_connector=self.connector,
-                                                 emInfraImporter=self.eminfra_importer)
-        self.assets_syncer = AssetSyncer(postgis_connector=self.connector, em_infra_importer=self.eminfra_importer)
+                                                 emInfraImporter=self.em_infra_importer)
+        self.assets_syncer = AssetSyncer(postgis_connector=self.connector, em_infra_importer=self.em_infra_importer)
 
     def test_update_actief(self):
         raise NotImplementedError()
