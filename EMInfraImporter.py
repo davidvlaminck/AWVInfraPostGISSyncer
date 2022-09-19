@@ -234,6 +234,11 @@ class EMInfraImporter:
         yield from self.get_objects_from_non_oslo_endpoint(url_part='identiteiten/search', zoek_payload=zoek_params,
                                                            identiteit=True)
 
+    def import_beheerders_from_webservice_page_by_page(self, page_size):
+        zoek_params = ZoekParameterPayload()
+        zoek_params.size = page_size
+        yield from self.get_objects_from_non_oslo_endpoint(url_part='beheerders/search', zoek_payload=zoek_params)
+
     def get_kenmerken_by_assettype_uuids(self, assettype_uuid, voc):
         url_part=f'/{voc}types/{assettype_uuid}/kenmerktypes'
         return list(self.get_objects_from_non_oslo_endpoint(url_part=url_part, request_type='GET'))
@@ -241,4 +246,6 @@ class EMInfraImporter:
     def get_eigenschappen_by_kenmerk_uuid(self, kenmerk_uuid):
         url_part = f'/kenmerktypes/{kenmerk_uuid}/eigenschappen'
         return list(self.get_objects_from_non_oslo_endpoint(url_part=url_part, request_type='GET'))
+
+
 
