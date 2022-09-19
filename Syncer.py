@@ -14,6 +14,13 @@ from BestekKoppelingSyncer import BestekKoppelingSyncer
 from BestekSyncer import BestekSyncer
 from BetrokkeneRelatiesSyncer import BetrokkeneRelatiesSyncer
 from EMInfraImporter import EMInfraImporter
+from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
+from Exceptions.AgentMissingError import AgentMissingError
+from Exceptions.AssetMissingError import AssetMissingError
+from Exceptions.AssetTypeMissingError import AssetTypeMissingError
+from Exceptions.BeheerderMissingError import BeheerderMissingError
+from Exceptions.IdentiteitMissingError import IdentiteitMissingError
+from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 from FeedEventsCollector import FeedEventsCollector
 from FeedEventsProcessor import FeedEventsProcessor
 from IdentiteitSyncer import IdentiteitSyncer
@@ -73,78 +80,27 @@ class Syncer:
                     break
 
                 if sync_step == 1:
-                    start = time.time()
-                    agent_syncer = AgentSyncer(emInfraImporter=self.eminfra_importer, postGIS_connector=self.connector)
-                    agent_syncer.sync_agents(pagingcursor=pagingcursor, page_size=page_size)
-                    end = time.time()
-                    logging.info(f'time for all agents: {round(end - start, 2)}')
+                    self.sync_agents(page_size, pagingcursor)
                 elif sync_step == 2:
-                    start = time.time()
-                    toezichtgroep_syncer = ToezichtgroepSyncer(emInfraImporter=self.eminfra_importer, postGIS_connector=self.connector)
-                    toezichtgroep_syncer.sync_toezichtgroepen(pagingcursor=pagingcursor, page_size=page_size)
-                    end = time.time()
-                    logging.info(f'time for all toezichtgroepen: {round(end - start, 2)}')
+                    self.sync_toezichtgroepen(page_size, pagingcursor)
                 elif sync_step == 3:
-                    start = time.time()
-                    identiteit_syncer = IdentiteitSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector)
-                    identiteit_syncer.sync_identiteiten(pagingcursor=pagingcursor, page_size=page_size)
-                    end = time.time()
-                    logging.info(f'time for all identiteiten: {round(end - start, 2)}')
+                    self.sync_identiteiten(page_size, pagingcursor)
                 elif sync_step == 4:
-                    start = time.time()
-                    beheerder_syncer = BeheerderSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector)
-                    beheerder_syncer.sync_beheerders(pagingcursor=pagingcursor, page_size=page_size)
-                    end = time.time()
-                    logging.info(f'time for all beheerders: {round(end - start, 2)}')
+                    self.sync_beheerders(page_size, pagingcursor)
                 elif sync_step == 5:
-                    start = time.time()
-                    bestek_syncer = BestekSyncer(em_infra_importer=self.eminfra_importer,
-                                                 postGIS_connector=self.connector)
-                    bestek_syncer.sync_bestekken(pagingcursor=pagingcursor, page_size=page_size)
-                    end = time.time()
-                    logging.info(f'time for all bestekken: {round(end - start, 2)}')
+                    self.sync_bestekken(page_size, pagingcursor)
                 elif sync_step == 6:
-                    start = time.time()
-                    assettype_syncer = AssetTypeSyncer(emInfraImporter=self.eminfra_importer,
-                                                       postGIS_connector=self.connector)
-                    assettype_syncer.sync_assettypes(pagingcursor=pagingcursor, page_size=page_size)
-                    end = time.time()
-                    logging.info(f'time for all assettypes: {round(end - start, 2)}')
+                    self.sync_assettypes(page_size, pagingcursor)
                 elif sync_step == 7:
-                    start = time.time()
-                    relatietype_syncer = RelatietypeSyncer(em_infra_importer=self.eminfra_importer,
-                                                           postgis_connector=self.connector)
-                    relatietype_syncer.sync_relatietypes()
-                    end = time.time()
-                    logging.info(f'time for all relatietypes: {round(end - start, 2)}')
+                    self.sync_relatietypes()
                 elif sync_step == 8:
-                    start = time.time()
-                    asset_syncer = AssetSyncer(em_infra_importer=self.eminfra_importer,
-                                               postgis_connector=self.connector)
-                    asset_syncer.sync_assets(pagingcursor=pagingcursor, page_size=page_size)
-                    end = time.time()
-                    logging.info(f'time for all assets: {round(end - start, 2)}')
+                    self.sync_assets(page_size, pagingcursor)
                 elif sync_step == 9:
-                    start = time.time()
-                    bestek_koppeling_syncer = BestekKoppelingSyncer(em_infra_importer=self.eminfra_importer,
-                                                                    postGIS_connector=self.connector)
-                    bestek_koppeling_syncer.sync_bestekkoppelingen()
-                    end = time.time()
-                    logging.info(f'time for all bestekkoppelingen: {round(end - start, 2)}')
+                    self.sync_bestekkoppelingen()
                 elif sync_step == 10:
-                    start = time.time()
-                    betrokkenerelatie_syncer = BetrokkeneRelatiesSyncer(em_infra_importer=self.eminfra_importer,
-                                                                        post_gis_connector=self.connector)
-                    betrokkenerelatie_syncer.sync_betrokkenerelaties()
-                    end = time.time()
-                    logging.info(f'time for all betrokkenerelaties: {round(end - start, 2)}')
+                    self.sync_betrokkenerelaties()
                 elif sync_step == 11:
-                    start = time.time()
-                    assetrelatie_syncer = AssetRelatiesSyncer(em_infra_importer=self.eminfra_importer,
-                                                              post_gis_connector=self.connector)
-                    assetrelatie_syncer.sync_assetrelaties()
-                    end = time.time()
-                    logging.info(f'time for all assetrelaties: {round(end - start, 2)}')
+                    self.sync_assetrelaties()
                 else:
                     # TODO documenten
                     raise NotImplementedError
@@ -163,6 +119,91 @@ class Syncer:
                 print(err)
                 logging.info("failed connection, retrying in 1 minute")
                 time.sleep(60)
+
+    def sync_assetrelaties(self):
+        start = time.time()
+        assetrelatie_syncer = AssetRelatiesSyncer(em_infra_importer=self.eminfra_importer,
+                                                  post_gis_connector=self.connector)
+        assetrelatie_syncer.sync_assetrelaties()
+        end = time.time()
+        logging.info(f'time for all assetrelaties: {round(end - start, 2)}')
+
+    def sync_betrokkenerelaties(self):
+        start = time.time()
+        betrokkenerelatie_syncer = BetrokkeneRelatiesSyncer(em_infra_importer=self.eminfra_importer,
+                                                            post_gis_connector=self.connector)
+        betrokkenerelatie_syncer.sync_betrokkenerelaties()
+        end = time.time()
+        logging.info(f'time for all betrokkenerelaties: {round(end - start, 2)}')
+
+    def sync_bestekkoppelingen(self):
+        start = time.time()
+        bestek_koppeling_syncer = BestekKoppelingSyncer(em_infra_importer=self.eminfra_importer,
+                                                        postGIS_connector=self.connector)
+        bestek_koppeling_syncer.sync_bestekkoppelingen()
+        end = time.time()
+        logging.info(f'time for all bestekkoppelingen: {round(end - start, 2)}')
+
+    def sync_assets(self, page_size, pagingcursor):
+        start = time.time()
+        asset_syncer = AssetSyncer(em_infra_importer=self.eminfra_importer,
+                                   postgis_connector=self.connector)
+        asset_syncer.sync_assets(pagingcursor=pagingcursor, page_size=page_size)
+        end = time.time()
+        logging.info(f'time for all assets: {round(end - start, 2)}')
+
+    def sync_relatietypes(self):
+        start = time.time()
+        relatietype_syncer = RelatietypeSyncer(em_infra_importer=self.eminfra_importer,
+                                               postgis_connector=self.connector)
+        relatietype_syncer.sync_relatietypes()
+        end = time.time()
+        logging.info(f'time for all relatietypes: {round(end - start, 2)}')
+
+    def sync_assettypes(self, page_size, pagingcursor):
+        start = time.time()
+        assettype_syncer = AssetTypeSyncer(emInfraImporter=self.eminfra_importer,
+                                           postGIS_connector=self.connector)
+        assettype_syncer.sync_assettypes(pagingcursor=pagingcursor, page_size=page_size)
+        end = time.time()
+        logging.info(f'time for all assettypes: {round(end - start, 2)}')
+
+    def sync_bestekken(self, page_size, pagingcursor):
+        start = time.time()
+        bestek_syncer = BestekSyncer(em_infra_importer=self.eminfra_importer,
+                                     postGIS_connector=self.connector)
+        bestek_syncer.sync_bestekken(pagingcursor=pagingcursor, page_size=page_size)
+        end = time.time()
+        logging.info(f'time for all bestekken: {round(end - start, 2)}')
+
+    def sync_beheerders(self, page_size, pagingcursor):
+        start = time.time()
+        beheerder_syncer = BeheerderSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector)
+        beheerder_syncer.sync_beheerders(pagingcursor=pagingcursor, page_size=page_size)
+        end = time.time()
+        logging.info(f'time for all beheerders: {round(end - start, 2)}')
+
+    def sync_identiteiten(self, page_size, pagingcursor):
+        start = time.time()
+        identiteit_syncer = IdentiteitSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector)
+        identiteit_syncer.sync_identiteiten(pagingcursor=pagingcursor, page_size=page_size)
+        end = time.time()
+        logging.info(f'time for all identiteiten: {round(end - start, 2)}')
+
+    def sync_toezichtgroepen(self, page_size, pagingcursor):
+        start = time.time()
+        toezichtgroep_syncer = ToezichtgroepSyncer(emInfraImporter=self.eminfra_importer,
+                                                   postGIS_connector=self.connector)
+        toezichtgroep_syncer.sync_toezichtgroepen(pagingcursor=pagingcursor, page_size=page_size)
+        end = time.time()
+        logging.info(f'time for all toezichtgroepen: {round(end - start, 2)}')
+
+    def sync_agents(self, page_size, pagingcursor):
+        start = time.time()
+        agent_syncer = AgentSyncer(emInfraImporter=self.eminfra_importer, postGIS_connector=self.connector)
+        agent_syncer.sync_agents(pagingcursor=pagingcursor, page_size=page_size)
+        end = time.time()
+        logging.info(f'time for all agents: {round(end - start, 2)}')
 
     def save_last_feedevent_to_params(self, page_size: int):
         start_num = 1
@@ -245,6 +286,26 @@ class Syncer:
             self.log_eventparams(eventsparams_to_process.event_dict, round(end - start, 2))
             try:
                 self.events_processor.process_events(eventsparams_to_process)
+            except IdentiteitMissingError:
+                self.events_processor.postgis_connector.connection.rollback()
+                self.sync_identiteiten(page_size=params['pagesize'], pagingcursor=params['pagingcursor'])
+            except ToezichtgroepMissingError:
+                self.events_processor.postgis_connector.connection.rollback()
+                self.sync_toezichtgroepen(page_size=params['pagesize'], pagingcursor=params['pagingcursor'])
+            except BeheerderMissingError:
+                self.events_processor.postgis_connector.connection.rollback()
+                self.sync_beheerders(page_size=params['pagesize'], pagingcursor=params['pagingcursor'])
+            except AgentMissingError:
+                self.events_processor.postgis_connector.connection.rollback()
+                self.sync_agents(page_size=params['pagesize'], pagingcursor=params['pagingcursor'])
+            except AssetTypeMissingError:
+                self.events_processor.postgis_connector.connection.rollback()
+                self.sync_assettypes(page_size=params['pagesize'], pagingcursor=params['pagingcursor'])
+            except AssetMissingError as exc:
+                self.events_processor.postgis_connector.connection.rollback()
+                missing_assets = exc.exception.args[0]
+                processor = NieuwAssetProcessor(cursor=self.connector.connection.cursor(), em_infra_importer=self.eminfra_importer)
+                processor.process(missing_assets)
             except Exception as exc:
                 traceback.print_exception(exc)
                 self.events_processor.postgis_connector.connection.rollback()
@@ -252,9 +313,9 @@ class Syncer:
             sync_allowed_by_time = self.calculate_sync_allowed_by_time()
 
     @staticmethod
-    def log_eventparams(event_dict, time: float):
+    def log_eventparams(event_dict, timespan: float):
         total = sum(len(events) for events in event_dict.values())
-        logging.info(f'fetched {total} asset events to sync in {time} seconds')
+        logging.info(f'fetched {total} asset events to sync in {timespan} seconds')
         for k, v in event_dict.items():
             if len(v) > 0:
                 logging.info(f'number of events of type {k}: {len(v)}')
