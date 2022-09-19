@@ -6,10 +6,7 @@ from psycopg2 import connect
 from EMInfraImporter import EMInfraImporter
 from IdentiteitSyncer import IdentiteitSyncer
 from PostGISConnector import PostGISConnector
-from RequestHandler import RequestHandler
-from RequesterFactory import RequesterFactory
 from SettingsManager import SettingsManager
-from ToezichtgroepSyncer import ToezichtgroepSyncer
 
 
 class IdentiteitSyncerTests(TestCase):
