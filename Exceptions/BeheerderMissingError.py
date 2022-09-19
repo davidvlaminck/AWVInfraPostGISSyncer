@@ -1,0 +1,3 @@
+class BeheerderMissingError(Exception):
+    pass
+

@@ -9,8 +9,10 @@ from EventProcessors.ElekAansluitingGewijzigdProcessor import ElekAansluitingGew
 from EventProcessors.GeometrieOrLocatieGewijzigdProcessor import GeometrieOrLocatieGewijzigdProcessor
 from EventProcessors.NaamGewijzigdProcessor import NaamGewijzigdProcessor
 from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
+from EventProcessors.SchadebeheerderGewijzigdProcessor import SchadebeheerderGewijzigdProcessor
 from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
 from EventProcessors.ToestandGewijzigdProcessor import ToestandGewijzigdProcessor
+from EventProcessors.ToezichtGewijzigdProcessor import ToezichtGewijzigdProcessor
 from PostGISConnector import PostGISConnector
 
 
@@ -49,13 +51,13 @@ class EventProcessorFactory:
             return AssetRelatiesGewijzigdProcessor(cursor=cursor, em_infra_importer=em_infra_importer,
                                                    connector=postgis_connector)
         elif event_type == 'SCHADEBEHEERDER_GEWIJZIGD':
-            pass
+            return SchadebeheerderGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'TOEGANG_GEWIJZIGD':
             pass
         elif event_type == 'TOESTAND_GEWIJZIGD':
             return ToestandGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'TOEZICHT_GEWIJZIGD':
-            pass
+            return ToezichtGewijzigdProcessor(cursor, em_infra_importer)
         elif event_type == 'VPLAN_GEWIJZIGD':
             pass
         else:

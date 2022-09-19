@@ -10,13 +10,10 @@ from AssetRelatiesSyncer import AssetRelatiesSyncer
 from AssetSyncer import AssetSyncer
 from AssetTypeSyncer import AssetTypeSyncer
 from BeheerderSyncer import BeheerderSyncer
-from BestekSyncer import BestekSyncer
 from BestekKoppelingSyncer import BestekKoppelingSyncer
+from BestekSyncer import BestekSyncer
 from BetrokkeneRelatiesSyncer import BetrokkeneRelatiesSyncer
 from EMInfraImporter import EMInfraImporter
-from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
-from EventProcessors.RelatieProcessor import RelatieProcessor
-from EventProcessors.RelationNotCreatedError import BetrokkeneRelationNotCreatedError, AssetRelationNotCreatedError
 from FeedEventsCollector import FeedEventsCollector
 from FeedEventsProcessor import FeedEventsProcessor
 from IdentiteitSyncer import IdentiteitSyncer

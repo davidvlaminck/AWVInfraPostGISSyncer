@@ -1,42 +1,65 @@
 import logging
+import time
 
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
+from Exceptions.BeheerderMissingError import BeheerderMissingError
 
 
 class SchadebeheerderGewijzigdProcessor(SpecificEventProcessor):
-    def __init__(self, tx_context, em_infra_importer: EMInfraImporter):
-        super().__init__(tx_context, em_infra_importer)
+    def __init__(self, cursor, em_infra_importer: EMInfraImporter):
+        super().__init__(cursor, em_infra_importer)
 
     def process(self, uuids: [str]):
-        raise NotImplementedError
-        assetDicts = self.em_infra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
+        logging.info(f'started updating schadebeheerder')
+        start = time.time()
 
-        self.process_dicts(assetDicts)
+        asset_dicts = self.em_infra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
+        self.process_dicts(cursor=self.cursor, asset_uuids=uuids, asset_dicts=asset_dicts)
 
-    def process_dicts(self, assetDicts):
-        asset_processor = NieuwAssetProcessor()
-        logging.info(f'started changing schadebeheerder of {len(assetDicts)} assets')
-        for asset_dict in assetDicts:
-            flattened_dict = asset_processor.flatten_dict(input_dict=asset_dict)
+        end = time.time()
+        logging.info(f'updated {len(asset_dicts)} schadebeheerder in {str(round(end - start, 2))} seconds.')
 
-            korte_uri = flattened_dict['typeURI'].split('/ns/')[1]
-            ns = korte_uri.split('#')[0]
-            assettype = korte_uri.split('#')[1]
-            if '-' in assettype:
-                assettype = '`' + assettype + '`'
+    def process_dicts(self, cursor, asset_uuids: [str], asset_dicts: [dict]):
+        logging.info(f'started changing schadebeheerder of {len(asset_dicts)} assets')
 
-            toezicht_attributen = ['tz:schadebeheerder.tz:naam', 'tz:schadebeheerder.tz:referentie']
+        beheerder_null_assets = []
+        beheerder_update_values = ''
+        beheerders_referenties = set()
 
-            params = {}
-            for attribuut in toezicht_attributen:
-                if attribuut in flattened_dict.keys():
-                    params[attribuut] = flattened_dict[attribuut]
-                else:
-                    params[attribuut] = None
+        for asset_dict in asset_dicts:
+            uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]
+            if 'tz:Schadebeheerder.schadebeheerder' not in asset_dict:
+                beheerder_null_assets.append(uuid)
+            else:
+                beheerders_referenties.add(
+                    asset_dict['tz:Schadebeheerder.schadebeheerder']['tz:DtcBeheerder.referentie'])
+                beheerder_update_values += f"('{uuid}', '{asset_dict['tz:Schadebeheerder.schadebeheerder']['tz:DtcBeheerder.referentie']}'),"
 
-            self.tx_context.run(f"MATCH (a:{ns}:{assettype} "
-                                "{uuid: $uuid}) SET a += $params",
-                                uuid=flattened_dict['assetId.identificator'][0:36],
-                                params=params)
-        logging.info('done')
+        if len(beheerders_referenties) > 0:
+            lookup_beheerder_query = f"""SELECT count(*) FROM public.beheerders WHERE beheerders.referentie IN
+                ('{"','".join(list(beheerders_referenties))}')"""
+            cursor.execute(lookup_beheerder_query)
+            beheerder_count = cursor.fetchone()[0]
+            if beheerder_count != len(beheerders_referenties):
+                raise BeheerderMissingError()
+
+        if len(beheerder_null_assets) > 0:
+            delete_beheerder_query = f"""UPDATE public.assets SET schadebeheerder = NULL WHERE uuid IN ('{"'::uuid,'".join(beheerder_null_assets)}'::uuid)"""
+            cursor.execute(delete_beheerder_query)
+
+        if beheerder_update_values != '':
+            update_beheerder_query = f"""
+                WITH s (assetUuid, beheerderReferentie) 
+                    AS (VALUES {beheerder_update_values[:-1]}),
+                to_update AS (
+                    SELECT s.assetUuid::uuid AS assetUuid, beheerders.uuid as beheerderUuid
+                    FROM s
+                        LEFT JOIN public.beheerders on s.beheerderReferentie = beheerders.referentie)        
+                UPDATE assets 
+                SET schadebeheerder = to_update.beheerderUuid
+                FROM to_update 
+                WHERE to_update.assetUuid = assets.uuid"""
+            cursor.execute(update_beheerder_query)
+
+        logging.info('done changing schadebeheerder')
