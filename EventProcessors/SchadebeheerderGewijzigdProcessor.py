@@ -1,7 +1,6 @@
 import logging
 
 from EMInfraImporter import EMInfraImporter
-from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
 from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
 
 
