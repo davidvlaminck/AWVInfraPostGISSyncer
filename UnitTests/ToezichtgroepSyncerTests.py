@@ -1,4 +1,5 @@
 from unittest import TestCase
+from unittest.mock import MagicMock
 
 from psycopg2 import connect
 
@@ -32,9 +33,7 @@ class ToezichtgroepSyncerTests(TestCase):
                                           database="unittests")
         self.connector.set_up_tables('../setup_tables_querys.sql')
 
-        requester = RequesterFactory.create_requester(settings=settings_manager.settings, auth_type='JWT', env='prd')
-        request_handler = RequestHandler(requester)
-        self.eminfra_importer = EMInfraImporter(request_handler)
+        self.eminfra_importer = EMInfraImporter(MagicMock())
 
         self.toezichtgroepen_syncer = ToezichtgroepSyncer(postGIS_connector=self.connector,
                                                           emInfraImporter=self.eminfra_importer)
@@ -58,7 +57,24 @@ class ToezichtgroepSyncerTests(TestCase):
             result = cursor.fetchone()[0]
             self.assertEqual(1, result)
 
-        toezichtgroepen = [{
+        self.toezichtgroepen_syncer.eminfra_importer.import_toezichtgroepen_from_webservice_page_by_page = self.return_toezichtgroepen
+        self.toezichtgroepen_syncer.sync_toezichtgroepen()
+
+        with self.subTest('name check after the first toezichtgroep updated'):
+            cursor.execute(select_toezichtgroep_query.replace('{uuid}', 'f07b553b-a5eb-4140-a51e-3738e51cbaa9'))
+            result = cursor.fetchone()[0]
+            self.assertEqual('unit test changed', result)
+        with self.subTest('name check after new toezichtgroepen created'):
+            cursor.execute(select_toezichtgroep_query.replace('{uuid}', 'c5b6b204-917b-4399-abb4-528496b32806'))
+            result = cursor.fetchone()[0]
+            self.assertEqual('LokaalBestuur', result)
+        with self.subTest('number of toezichtgroepen after update'):
+            cursor.execute(count_toezichtgroep_query)
+            result = cursor.fetchone()[0]
+            self.assertEqual(3, result)
+
+    def return_toezichtgroepen(self, page_size):
+        return [{
             "uuid": "f07b553b-a5eb-4140-a51e-3738e51cbaa9",
             "_type": "intern",
             "naam": "unit test changed",
@@ -133,17 +149,3 @@ class ToezichtgroepSyncerTests(TestCase):
                     ]
                 }
             }]
-        self.toezichtgroepen_syncer.update_toezichtgroepen(toezichtgroep_dicts=toezichtgroepen)
-
-        with self.subTest('name check after the first toezichtgroep updated'):
-            cursor.execute(select_toezichtgroep_query.replace('{uuid}', 'f07b553b-a5eb-4140-a51e-3738e51cbaa9'))
-            result = cursor.fetchone()[0]
-            self.assertEqual('unit test changed', result)
-        with self.subTest('name check after new toezichtgroepen created'):
-            cursor.execute(select_toezichtgroep_query.replace('{uuid}', 'c5b6b204-917b-4399-abb4-528496b32806'))
-            result = cursor.fetchone()[0]
-            self.assertEqual('LokaalBestuur', result)
-        with self.subTest('number of toezichtgroepen after update'):
-            cursor.execute(count_toezichtgroep_query)
-            result = cursor.fetchone()[0]
-            self.assertEqual(3, result)

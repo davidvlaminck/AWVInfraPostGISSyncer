@@ -13,7 +13,7 @@ class ToezichtgroepSyncer:
     def sync_toezichtgroepen(self, pagingcursor: str = '', page_size: int = 100):
         self.eminfra_importer.pagingcursor = pagingcursor
         while True:
-            toezichtgroepen = self.eminfra_importer.import_toezichtgroepen_from_webservice_page_by_page(page_size=page_size)
+            toezichtgroepen = list(self.eminfra_importer.import_toezichtgroepen_from_webservice_page_by_page(page_size=page_size))
             if len(toezichtgroepen) == 0:
                 break
 
