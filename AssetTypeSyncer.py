@@ -255,7 +255,8 @@ WHERE to_update.uuid = assettypes.uuid;"""
             create_view_query = f"""
             DROP VIEW IF EXISTS public.{view_name} CASCADE;
             CREATE VIEW public.{view_name} AS
-                SELECT assets.toestand as toestand_asset, assets.actief as actief_asset, assets.naam as naam_asset{geometry_part1} {attribute_columns}
+                SELECT assets.uuid as uuid, assets.toestand as toestand_asset, assets.actief as actief_asset, 
+                    assets.naam as naam_asset{geometry_part1} {attribute_columns}
                 FROM assets
                 {geometry_part2}
                 {attribute_joins} WHERE assettype = '{type_uuid}' and assets.actief = TRUE;"""
