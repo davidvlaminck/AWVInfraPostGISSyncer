@@ -1,8 +1,8 @@
 import logging
 import time
 
-from AssetSyncer import AssetSyncer
 from BestekKoppelingSyncer import BestekKoppelingSyncer
+from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
 from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
 
 
@@ -24,9 +24,8 @@ class BestekGewijzigdProcessor(SpecificEventProcessor):
                                                                       bestek_koppelingen_dicts_list=koppelingen_list)
 
         asset_dicts = self.em_infra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
-        values = AssetSyncer.create_values_string_from_dicts(cursor=self.cursor, assets_dicts=asset_dicts,
-                                                             full_sync=False)
-        AssetSyncer.perform_insert_with_values(cursor=self.cursor, values=values)
+        values = NieuwAssetProcessor.create_values_string_from_dicts(cursor=self.cursor, assets_dicts=asset_dicts)
+        NieuwAssetProcessor.perform_insert_with_values(cursor=self.cursor, values=values)
 
         end = time.time()
         logging.info(f'updated {len(asset_dicts)} assets in {str(round(end - start, 2))} seconds.')
