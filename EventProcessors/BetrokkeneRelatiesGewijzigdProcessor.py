@@ -19,21 +19,22 @@ class BetrokkeneRelatiesGewijzigdProcessor(SpecificEventProcessor):
         start = time.time()
 
         betrokkenerelatie_dicts = self.em_infra_importer.import_betrokkenerelaties_from_webservice_by_assetuuids(asset_uuids=uuids)
-        self.process_dicts(cursor=self.cursor, asset_uuids=uuids, betrokkenerelatie_dicts=betrokkenerelatie_dicts)
+        self.remove_all_betrokkene_relaties(cursor=self.cursor, bron_uuids=list(set(uuids)))
+        self.process_dicts(cursor=self.cursor, betrokkenerelatie_dicts=betrokkenerelatie_dicts)
 
         end = time.time()
         logging.info(f'updated {len(betrokkenerelatie_dicts)} betrokkenerelaties in {str(round(end - start, 2))} seconds.')
 
-    def process_dicts(self, cursor, asset_uuids: [str], betrokkenerelatie_dicts: dict):
+    def process_dicts(self, cursor, betrokkenerelatie_dicts: dict):
         logging.info(f'started creating {len(betrokkenerelatie_dicts)} betrokkenerelaties')
-        self.remove_all_betrokkene_relaties(cursor=cursor, bron_uuids=list(set(asset_uuids)))
+
 
         values = ''
         for betrokkenerelatie_dict in betrokkenerelatie_dicts:
             values += f"('{betrokkenerelatie_dict['@id'].replace('https://data.awvvlaanderen.be/id/assetrelatie/','')[0:36]}', '{betrokkenerelatie_dict['RelatieObject.doel']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36]}', " \
                       f"'{betrokkenerelatie_dict['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36]}',"
-            if 'rol' in betrokkenerelatie_dict:
-                values += f"'{betrokkenerelatie_dict['rol'].replace('https://wegenenverkeer.data.vlaanderen.be/id/concept/KlBetrokkenheidRol/','')}',"
+            if 'HeeftBetrokkene.rol' in betrokkenerelatie_dict:
+                values += f"'{betrokkenerelatie_dict['HeeftBetrokkene.rol'].replace('https://wegenenverkeer.data.vlaanderen.be/id/concept/KlBetrokkenheidRol/','')}',"
             else:
                 values += "NULL,"
             values += "TRUE),"
