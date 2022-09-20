@@ -351,28 +351,20 @@ DROP TABLE IF EXISTS public.betrokkeneRelaties CASCADE;
 CREATE TABLE IF NOT EXISTS public.betrokkeneRelaties
 (
     uuid uuid NOT NULL,
-    agentUuid uuid NOT NULL,
-    assetUuid uuid NOT NULL,
+    doelUuid uuid NOT NULL,
+    bronUuid uuid NOT NULL,
     rol text COLLATE pg_catalog."default",
     actief boolean NOT NULL,
     CONSTRAINT betrokkeneRelaties_pkey PRIMARY KEY (uuid)
 );
 
-CREATE INDEX betrokkeneRelaties_agentUuid_idx ON betrokkeneRelaties (agentUuid);
-CREATE INDEX betrokkeneRelaties_assetUuid_idx ON betrokkeneRelaties (assetUuid);
+CREATE INDEX betrokkeneRelaties_doelUuid_idx ON betrokkeneRelaties (doelUuid);
+CREATE INDEX betrokkeneRelaties_bronUuid_idx ON betrokkeneRelaties (bronUuid);
 
 ALTER TABLE IF EXISTS public.betrokkeneRelaties
     ADD CONSTRAINT betrokkeneRelaties_agents_fkey
-    FOREIGN KEY (agentUuid)
+    FOREIGN KEY (doelUuid)
     REFERENCES public.agents (uuid) MATCH SIMPLE
-    ON UPDATE NO ACTION
-    ON DELETE NO ACTION
-    NOT VALID;
-
-ALTER TABLE IF EXISTS public.betrokkeneRelaties
-    ADD CONSTRAINT betrokkeneRelaties_assets_fkey
-    FOREIGN KEY (assetUuid)
-    REFERENCES public.assets (uuid) MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;

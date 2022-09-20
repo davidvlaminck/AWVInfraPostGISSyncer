@@ -18,7 +18,7 @@ class BetrokkeneRelatiesSyncer:
             if len(relaties) == 0:
                 break
 
-            asset_uuids = list(set(map(lambda x: x['bron']['uuid'], relaties)))
+            asset_uuids = list(set(map(lambda x: x['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36], relaties)))
             processor.process_dicts(betrokkenerelatie_dicts=relaties, cursor=cursor, asset_uuids=asset_uuids)
             self.postGIS_connector.save_props_to_params(cursor=cursor,
                                                         params={'pagingcursor': self.eminfra_importer.pagingcursor})
