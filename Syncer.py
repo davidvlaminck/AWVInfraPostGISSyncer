@@ -124,7 +124,21 @@ class Syncer:
         start = time.time()
         assetrelatie_syncer = AssetRelatiesSyncer(em_infra_importer=self.eminfra_importer,
                                                   post_gis_connector=self.connector)
-        assetrelatie_syncer.sync_assetrelaties()
+        while True:
+            try:
+                params = self.connector.get_params()
+                assetrelatie_syncer.sync_assetrelaties(pagingcursor=params['pagingcursor'])
+            except AssetMissingError as exc:
+                self.events_processor.postgis_connector.connection.rollback()
+                missing_assets = exc.args[0]
+                current_paging_cursor = self.eminfra_importer.pagingcursor
+                processor = NieuwAssetProcessor(cursor=self.connector.connection.cursor(), em_infra_importer=self.eminfra_importer)
+                processor.process(missing_assets)
+                self.eminfra_importer.pagingcursor = current_paging_cursor
+
+            if self.eminfra_importer.pagingcursor == '':
+                break
+
         end = time.time()
         logging.info(f'time for all assetrelaties: {round(end - start, 2)}')
 
@@ -303,7 +317,7 @@ class Syncer:
                 self.sync_assettypes(page_size=params['pagesize'], pagingcursor=params['pagingcursor'])
             except AssetMissingError as exc:
                 self.events_processor.postgis_connector.connection.rollback()
-                missing_assets = exc.exception.args[0]
+                missing_assets = exc.args[0]
                 processor = NieuwAssetProcessor(cursor=self.connector.connection.cursor(), em_infra_importer=self.eminfra_importer)
                 processor.process(missing_assets)
             except Exception as exc:
