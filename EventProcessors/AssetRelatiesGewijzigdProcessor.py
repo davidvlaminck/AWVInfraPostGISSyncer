@@ -1,11 +1,9 @@
-import json
 import logging
 import time
 
 import psycopg2
 
 from EMInfraImporter import EMInfraImporter
-from EventProcessors.RelatieProcessor import RelatieProcessor
 from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
 from Exceptions.AssetMissingError import AssetMissingError
 from PostGISConnector import PostGISConnector
@@ -21,14 +19,14 @@ class AssetRelatiesGewijzigdProcessor(SpecificEventProcessor):
         start = time.time()
 
         assetrelatie_dicts = self.em_infra_importer.import_assetrelaties_from_webservice_by_assetuuids(asset_uuids=uuids)
-        self.process_dicts(cursor=self.cursor, asset_uuids=uuids, assetrelatie_dicts=assetrelatie_dicts)
+        self.remove_all_asset_relaties(cursor=self.cursor, asset_uuids=list(set(uuids)))
+        self.process_dicts(cursor=self.cursor, assetrelatie_dicts=assetrelatie_dicts)
 
         end = time.time()
         logging.info(f'updated {len(assetrelatie_dicts)} assetrelaties in {str(round(end - start, 2))} seconds.')
 
-    def process_dicts(self, cursor, asset_uuids: [str], assetrelatie_dicts: dict):
+    def process_dicts(self, cursor, assetrelatie_dicts: dict):
         logging.info(f'started creating {len(assetrelatie_dicts)} assetrelaties')
-        self.remove_all_asset_relaties(cursor=cursor, asset_uuids=list(set(asset_uuids)))
 
         values = ''
         for assetrelatie_dict in assetrelatie_dicts:
