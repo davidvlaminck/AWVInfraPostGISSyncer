@@ -43,6 +43,8 @@ class AssetRelatiesGewijzigdProcessor(SpecificEventProcessor):
                          "RelatieObject.bronAssetId", "RelatieObject.doelAssetId", "RelatieObject.typeURI", "RelatieObject.bron"]:
                 attributen_dict.pop(key, None)
             attributen = str(attributen_dict).replace("'", "''")
+            if attributen == '{}':
+                attributen = ''
 
             values += f"('{uuid}', '{bron_uuid}', '{doel_uuid}', '{relatie_type_uri}', {actief}, "
             if attributen == '':
