@@ -17,6 +17,9 @@ class FeedEventsCollector:
             stop_after_this_page = False
             last_event_id = ''
 
+            if 'entries' not in page:
+                return EventParams(event_dict=event_dict, page_num=completed_page_number, event_uuid=completed_event_id)
+
             entries = list(reversed(page['entries']))
 
             for entry in entries:
