@@ -18,7 +18,7 @@ if __name__ == '__main__':
                                  user=db_settings['user'], password=db_settings['password'],
                                  database=db_settings['database'])
 
-    requester = RequesterFactory.create_requester(settings=settings_manager.settings, auth_type='JWT', env='prd')
+    requester = RequesterFactory.create_requester(settings=settings_manager.settings, auth_type='JWT', env='tei')
     request_handler = RequestHandler(requester)
 
     eminfra_importer = EMInfraImporter(request_handler)
