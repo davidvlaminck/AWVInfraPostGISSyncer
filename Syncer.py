@@ -18,6 +18,7 @@ from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
 from Exceptions.AgentMissingError import AgentMissingError
 from Exceptions.AssetMissingError import AssetMissingError
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
+from Exceptions.AttribuutMissingError import AttribuutMissingError
 from Exceptions.BeheerderMissingError import BeheerderMissingError
 from Exceptions.IdentiteitMissingError import IdentiteitMissingError
 from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
@@ -168,7 +169,7 @@ class Syncer:
             try:
                 params = self.connector.get_params()
                 asset_syncer.sync_assets(pagingcursor=params['pagingcursor'])
-            except AssetTypeMissingError as exc:
+            except (AssetTypeMissingError, AttribuutMissingError):
                 self.events_processor.postgis_connector.connection.rollback()
                 current_paging_cursor = self.eminfra_importer.pagingcursor
                 self.eminfra_importer.pagingcursor = ''

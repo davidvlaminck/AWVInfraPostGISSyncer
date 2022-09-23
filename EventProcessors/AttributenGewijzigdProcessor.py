@@ -1,8 +1,12 @@
 import logging
 import time
 
+import psycopg2
+
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
+from Exceptions.AttribuutMissingError import AttribuutMissingError
+from PostGISConnector import PostGISConnector
 
 
 class AttributenGewijzigdProcessor(SpecificEventProcessor):
@@ -75,5 +79,11 @@ to_insert AS (
 INSERT INTO public.attribuutWaarden (assetUuid, attribuutUuid, waarde)
 SELECT to_insert.assetUuid, to_insert.attribuutUuid, to_insert.waarde
 FROM to_insert;"""
-        cursor.execute(insert_query)
+        try:
+            cursor.execute(insert_query)
+        except psycopg2.Error as exc:
+            if str(exc).split('\n')[0] == 'null value in column "attribuutuuid" violates not-null constraint':
+                raise AttribuutMissingError()
+            else:
+                raise exc
 

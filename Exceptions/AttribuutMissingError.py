@@ -1,0 +1,2 @@
+class AttribuutMissingError(Exception):
+    pass
