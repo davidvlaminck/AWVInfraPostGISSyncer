@@ -132,6 +132,7 @@ class Syncer:
                 self.events_processor.postgis_connector.connection.rollback()
                 missing_assets = exc.args[0]
                 current_paging_cursor = self.eminfra_importer.pagingcursor
+                self.eminfra_importer.pagingcursor = ''
                 processor = NieuwAssetProcessor(cursor=self.connector.connection.cursor(), em_infra_importer=self.eminfra_importer)
                 processor.process(missing_assets)
                 self.eminfra_importer.pagingcursor = current_paging_cursor
