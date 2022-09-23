@@ -12,13 +12,13 @@ if __name__ == '__main__':
 
     settings_manager = SettingsManager(
         settings_path='C:/resources/settings_AwvinfraPostGISSyncer.json')
-    db_settings = settings_manager.settings['databases']['prd']
+    db_settings = settings_manager.settings['databases']['tei']
 
     connector = PostGISConnector(host=db_settings['host'], port=db_settings['port'],
                                  user=db_settings['user'], password=db_settings['password'],
                                  database=db_settings['database'])
 
-    requester = RequesterFactory.create_requester(settings=settings_manager.settings, auth_type='JWT', env='prd')
+    requester = RequesterFactory.create_requester(settings=settings_manager.settings, auth_type='JWT', env='tei')
     request_handler = RequestHandler(requester)
 
     eminfra_importer = EMInfraImporter(request_handler)
