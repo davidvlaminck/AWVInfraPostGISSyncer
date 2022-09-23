@@ -48,7 +48,7 @@ class AttributenGewijzigdProcessor(SpecificEventProcessor):
                     continue
                 if key.startswith('tz:') or key.startswith('geo:') or key.startswith('loc:'):
                     continue
-                if key.startswith('lgc:') or key.startswith('ond:') or key.startswith('ins:'):
+                if key.startswith('lgc:') or key.startswith('ond:') or key.startswith('ins:') or key.startswith('grp:'):
                     key = key[4:]
                 if isinstance(value, dict):
                     value = str(value)
