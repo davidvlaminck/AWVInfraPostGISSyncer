@@ -163,7 +163,22 @@ class Syncer:
         start = time.time()
         asset_syncer = AssetSyncer(em_infra_importer=self.eminfra_importer,
                                    postgis_connector=self.connector)
-        asset_syncer.sync_assets(pagingcursor=pagingcursor, page_size=page_size)
+        params = None
+        while True:
+            try:
+                params = self.connector.get_params()
+                asset_syncer.sync_assets(pagingcursor=params['pagingcursor'])
+            except AssetTypeMissingError as exc:
+                self.events_processor.postgis_connector.connection.rollback()
+                current_paging_cursor = self.eminfra_importer.pagingcursor
+                self.eminfra_importer.pagingcursor = ''
+                self.events_processor.postgis_connector.connection.rollback()
+                self.sync_assettypes(page_size=params['pagesize'], pagingcursor='')
+                self.eminfra_importer.pagingcursor = current_paging_cursor
+
+            if self.eminfra_importer.pagingcursor == '':
+                break
+
         end = time.time()
         logging.info(f'time for all assets: {round(end - start, 2)}')
 
@@ -303,19 +318,19 @@ class Syncer:
                 self.events_processor.process_events(eventsparams_to_process)
             except IdentiteitMissingError:
                 self.events_processor.postgis_connector.connection.rollback()
-                self.sync_identiteiten(page_size=params['pagesize'], pagingcursor=params['pagingcursor'])
+                self.sync_identiteiten(page_size=params['pagesize'], pagingcursor='')
             except ToezichtgroepMissingError:
                 self.events_processor.postgis_connector.connection.rollback()
-                self.sync_toezichtgroepen(page_size=params['pagesize'], pagingcursor=params['pagingcursor'])
+                self.sync_toezichtgroepen(page_size=params['pagesize'], pagingcursor='')
             except BeheerderMissingError:
                 self.events_processor.postgis_connector.connection.rollback()
-                self.sync_beheerders(page_size=params['pagesize'], pagingcursor=params['pagingcursor'])
+                self.sync_beheerders(page_size=params['pagesize'], pagingcursor='')
             except AgentMissingError:
                 self.events_processor.postgis_connector.connection.rollback()
-                self.sync_agents(page_size=params['pagesize'], pagingcursor=params['pagingcursor'])
+                self.sync_agents(page_size=params['pagesize'], pagingcursor='')
             except AssetTypeMissingError:
                 self.events_processor.postgis_connector.connection.rollback()
-                self.sync_assettypes(page_size=params['pagesize'], pagingcursor=params['pagingcursor'])
+                self.sync_assettypes(page_size=params['pagesize'], pagingcursor='')
             except AssetMissingError as exc:
                 self.events_processor.postgis_connector.connection.rollback()
                 missing_assets = exc.args[0]
