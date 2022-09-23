@@ -111,7 +111,7 @@ class Syncer:
                 self.connector.save_props_to_params(
                     {'sync_step': sync_step,
                      'pagingcursor': pagingcursor})
-                if sync_step >= 12:
+                if sync_step >= 11:
                     self.connector.save_props_to_params(
                         {'fresh_start': False})
                 self.connector.connection.commit()
