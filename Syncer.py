@@ -171,9 +171,9 @@ class Syncer:
                 asset_syncer.sync_assets(pagingcursor=params['pagingcursor'])
             except (AssetTypeMissingError, AttribuutMissingError):
                 self.events_processor.postgis_connector.connection.rollback()
+                print('refreshing assettypes')
                 current_paging_cursor = self.eminfra_importer.pagingcursor
                 self.eminfra_importer.pagingcursor = ''
-                self.events_processor.postgis_connector.connection.rollback()
                 self.sync_assettypes(page_size=params['pagesize'], pagingcursor='')
                 self.eminfra_importer.pagingcursor = current_paging_cursor
 
@@ -302,46 +302,51 @@ class Syncer:
             logging.info(f'starting a sync cycle, page: {str(current_page + 1)} event_uuid: {str(completed_event_id)}')
             start = time.time()
 
-            eventsparams_to_process = self.events_collector.collect_starting_from_page(current_page, completed_event_id,
-                                                                                       page_size)
-
-            total_events = sum(len(lists) for lists in eventsparams_to_process.event_dict.values())
-            if total_events == 0:
-                logging.info(f"The database is fully synced. Continuing keep up to date in 30 seconds")
-                self.connector.save_props_to_params({'last_update_utc': datetime.utcnow()})
-                time.sleep(30)  # wait 30 seconds to prevent overloading API
-                continue
-
-            end = time.time()
-
-            self.log_eventparams(eventsparams_to_process.event_dict, round(end - start, 2))
             try:
-                self.events_processor.process_events(eventsparams_to_process)
-            except IdentiteitMissingError:
-                self.events_processor.postgis_connector.connection.rollback()
-                self.sync_identiteiten(page_size=params['pagesize'], pagingcursor='')
-            except ToezichtgroepMissingError:
-                self.events_processor.postgis_connector.connection.rollback()
-                self.sync_toezichtgroepen(page_size=params['pagesize'], pagingcursor='')
-            except BeheerderMissingError:
-                self.events_processor.postgis_connector.connection.rollback()
-                self.sync_beheerders(page_size=params['pagesize'], pagingcursor='')
-            except AgentMissingError:
-                self.events_processor.postgis_connector.connection.rollback()
-                self.sync_agents(page_size=params['pagesize'], pagingcursor='')
-            except AssetTypeMissingError:
-                self.events_processor.postgis_connector.connection.rollback()
-                self.sync_assettypes(page_size=params['pagesize'], pagingcursor='')
-            except AssetMissingError as exc:
-                self.events_processor.postgis_connector.connection.rollback()
-                missing_assets = exc.args[0]
-                processor = NieuwAssetProcessor(cursor=self.connector.connection.cursor(), em_infra_importer=self.eminfra_importer)
-                processor.process(missing_assets)
-            except Exception as exc:
-                traceback.print_exception(exc)
-                self.events_processor.postgis_connector.connection.rollback()
+                eventsparams_to_process = self.events_collector.collect_starting_from_page(current_page, completed_event_id,
+                                                                                           page_size)
 
-            sync_allowed_by_time = self.calculate_sync_allowed_by_time()
+                total_events = sum(len(lists) for lists in eventsparams_to_process.event_dict.values())
+                if total_events == 0:
+                    logging.info(f"The database is fully synced. Continuing keep up to date in 30 seconds")
+                    self.connector.save_props_to_params({'last_update_utc': datetime.utcnow()})
+                    time.sleep(30)  # wait 30 seconds to prevent overloading API
+                    continue
+
+                end = time.time()
+
+                self.log_eventparams(eventsparams_to_process.event_dict, round(end - start, 2))
+                try:
+                    self.events_processor.process_events(eventsparams_to_process)
+                except IdentiteitMissingError:
+                    self.events_processor.postgis_connector.connection.rollback()
+                    self.sync_identiteiten(page_size=params['pagesize'], pagingcursor='')
+                except ToezichtgroepMissingError:
+                    self.events_processor.postgis_connector.connection.rollback()
+                    self.sync_toezichtgroepen(page_size=params['pagesize'], pagingcursor='')
+                except BeheerderMissingError:
+                    self.events_processor.postgis_connector.connection.rollback()
+                    self.sync_beheerders(page_size=params['pagesize'], pagingcursor='')
+                except AgentMissingError:
+                    self.events_processor.postgis_connector.connection.rollback()
+                    self.sync_agents(page_size=params['pagesize'], pagingcursor='')
+                except AssetTypeMissingError:
+                    self.events_processor.postgis_connector.connection.rollback()
+                    self.sync_assettypes(page_size=params['pagesize'], pagingcursor='')
+                except AssetMissingError as exc:
+                    self.events_processor.postgis_connector.connection.rollback()
+                    missing_assets = exc.args[0]
+                    processor = NieuwAssetProcessor(cursor=self.connector.connection.cursor(), em_infra_importer=self.eminfra_importer)
+                    processor.process(missing_assets)
+                except Exception as exc:
+                    traceback.print_exception(exc)
+                    self.events_processor.postgis_connector.connection.rollback()
+
+                sync_allowed_by_time = self.calculate_sync_allowed_by_time()
+            except ConnectionError as err:
+                print(err)
+                logging.info("failed connection, retrying in 1 minute")
+                time.sleep(60)
 
     @staticmethod
     def log_eventparams(event_dict, timespan: float):
