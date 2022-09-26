@@ -30,11 +30,21 @@ class AssetRelatiesGewijzigdProcessor(SpecificEventProcessor):
 
         values = ''
         for assetrelatie_dict in assetrelatie_dicts:
-            uuid = assetrelatie_dict['RelatieObject.assetId']['DtcIdentificator.identificator'][0:36]
+            if 'RelatieObject.assetId' in assetrelatie_dict:
+                uuid = assetrelatie_dict['RelatieObject.assetId']['DtcIdentificator.identificator'][0:36]
+            else:
+                uuid = assetrelatie_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36]
             bron_uuid = assetrelatie_dict['RelatieObject.bronAssetId']['DtcIdentificator.identificator'][0:36]
             doel_uuid = assetrelatie_dict['RelatieObject.doelAssetId']['DtcIdentificator.identificator'][0:36]
-            relatie_type_uri = assetrelatie_dict['RelatieObject.typeURI']
-            actief = assetrelatie_dict['AIMDBStatus.isActief']
+
+            if 'RelatieObject.typeURI' in assetrelatie_dict:
+                relatie_type_uri = assetrelatie_dict['RelatieObject.typeURI']
+            else:
+                relatie_type_uri = assetrelatie_dict['@type']
+
+            actief = None
+            if 'AIMDBStatus.isActief' in assetrelatie_dict:
+                actief = assetrelatie_dict['AIMDBStatus.isActief']
 
             attributen_dict = assetrelatie_dict.copy()
             for key in ['@type', '@id', "RelatieObject.doel", "RelatieObject.assetId", "AIMDBStatus.isActief",
