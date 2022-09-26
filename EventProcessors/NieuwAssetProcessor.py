@@ -53,7 +53,9 @@ class NieuwAssetProcessor(SpecificEventProcessor):
             except KeyError:
                 raise AssetTypeMissingError(f"Assettype {asset_dict['@type']} does not exist")
 
-            actief = asset_dict['AIMDBStatus.isActief']
+            actief = None
+            if 'AIMDBStatus.isActief' in asset_dict:
+                actief = asset_dict['AIMDBStatus.isActief']
 
             toestand = None
             if 'AIMToestand.toestand' in asset_dict:
@@ -67,6 +69,8 @@ class NieuwAssetProcessor(SpecificEventProcessor):
             naam = None
             if 'AIMNaamObject.naam' in asset_dict:
                 naam = asset_dict['AIMNaamObject.naam'].replace("'", "''")
+            elif 'AbstracteAanvullendeGeometrie.naam' in asset_dict:
+                naam = asset_dict['AbstracteAanvullendeGeometrie.naam'].replace("'", "''")
 
             commentaar = None
             if 'AIMObject.notitie' in asset_dict:
