@@ -33,9 +33,19 @@ class AssetRelatiesGewijzigdProcessor(SpecificEventProcessor):
             if 'RelatieObject.assetId' in assetrelatie_dict:
                 uuid = assetrelatie_dict['RelatieObject.assetId']['DtcIdentificator.identificator'][0:36]
             else:
-                uuid = assetrelatie_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36]
-            bron_uuid = assetrelatie_dict['RelatieObject.bronAssetId']['DtcIdentificator.identificator'][0:36]
-            doel_uuid = assetrelatie_dict['RelatieObject.doelAssetId']['DtcIdentificator.identificator'][0:36]
+                uuid = assetrelatie_dict['@id'].replace('https://data.awvvlaanderen.be/id/assetrelatie/', '')[0:36]
+
+            if 'RelatieObject.bronAssetId' in assetrelatie_dict:
+                bron_uuid = assetrelatie_dict['RelatieObject.bronAssetId']['DtcIdentificator.identificator'][0:36]
+            else:
+                bron_uuid = assetrelatie_dict['RelatieObject.bron']['@id'].replace(
+                    'https://data.awvvlaanderen.be/id/asset/', '')[0:36]
+
+            if 'RelatieObject.doelAssetId' in assetrelatie_dict:
+                doel_uuid = assetrelatie_dict['RelatieObject.doelAssetId']['DtcIdentificator.identificator'][0:36]
+            else:
+                bron_uuid = assetrelatie_dict['RelatieObject.doel']['@id'].replace(
+                    'https://data.awvvlaanderen.be/id/asset/', '')[0:36]
 
             if 'RelatieObject.typeURI' in assetrelatie_dict:
                 relatie_type_uri = assetrelatie_dict['RelatieObject.typeURI']
