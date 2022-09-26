@@ -67,6 +67,8 @@ FROM to_insert;"""
         except psycopg2.Error as exc:
             if str(exc).split('\n')[0] == 'insert or update on table "assetrelaties" violates foreign key constraint "assetrelaties_bronuuid_fkey"' or \
                 str(exc).split('\n')[0] == 'insert or update on table "assetrelaties" violates foreign key constraint "assetrelaties_doeluuid_fkey"':
+                if '\n' in str(exc):
+                    print(str(exc).split('\n')[1])
                 self.connector.connection.rollback()
                 cursor = self.connector.connection.cursor()
                 asset_uuids = set(map(lambda x: x['RelatieObject.bronAssetId']['DtcIdentificator.identificator'][0:36], assetrelatie_dicts))

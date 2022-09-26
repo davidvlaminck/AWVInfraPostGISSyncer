@@ -53,6 +53,8 @@ class BetrokkeneRelatiesGewijzigdProcessor(SpecificEventProcessor):
             cursor.execute(insert_query)
         except psycopg2.Error as exc:
             if str(exc).split('\n')[0] == 'insert or update on table "betrokkenerelaties" violates foreign key constraint "betrokkenerelaties_agents_fkey"':
+                if '\n' in str(exc):
+                    print(str(exc).split('\n')[1])
                 self.connector.connection.rollback()
                 cursor = self.connector.connection.cursor()
                 agent_uuids = set(map(lambda x: x['RelatieObject.doel']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36], betrokkenerelatie_dicts))
