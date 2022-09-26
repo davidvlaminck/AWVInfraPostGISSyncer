@@ -18,6 +18,7 @@ class EMInfraImporter:
 
     def get_objects_from_oslo_search_endpoint(self, url_part: str, filter_string: str = '{}', size: int = 100,
                                               only_next_page: bool = False, expansions_string: str = '{}') -> [dict]:
+        # TODO fix fixed expansions_string
         url = f"core/api/otl/{url_part}/search?expand=contactInfo"
         body_fixed_part = '{"size": ' + f'{size}' + ''
         if filter_string != '{}':
