@@ -140,6 +140,7 @@ class Syncer:
                 processor = NieuwAssetProcessor(cursor=self.connector.connection.cursor(), em_infra_importer=self.eminfra_importer)
                 processor.process(missing_assets)
                 self.eminfra_importer.pagingcursor = current_paging_cursor
+                self.events_processor.postgis_connector.connection.save_props_to_params({'pagingcursor': current_paging_cursor})
 
             if self.eminfra_importer.pagingcursor == '':
                 break
@@ -163,6 +164,7 @@ class Syncer:
                 self.eminfra_importer.pagingcursor = ''
                 self.sync_agents(page_size=params['pagesize'], pagingcursor='')
                 self.eminfra_importer.pagingcursor = current_paging_cursor
+                self.connector.connection.save_props_to_params({'pagingcursor': current_paging_cursor})
 
             if self.eminfra_importer.pagingcursor == '':
                 break
@@ -194,6 +196,7 @@ class Syncer:
                 self.eminfra_importer.pagingcursor = ''
                 self.sync_assettypes(page_size=params['pagesize'], pagingcursor='')
                 self.eminfra_importer.pagingcursor = current_paging_cursor
+                self.connector.connection.save_props_to_params({'pagingcursor': current_paging_cursor})
 
             if self.eminfra_importer.pagingcursor == '':
                 break
