@@ -76,8 +76,8 @@ class NieuwAssetProcessor(SpecificEventProcessor):
             if 'AIMObject.notitie' in asset_dict:
                 commentaar = asset_dict['AIMObject.notitie'].replace("'", "''").replace("\n", " ")
 
-            values += f"('{uuid}','{assettype}',{actief},"
-            for attribute in [toestand, naampad, naam, commentaar]:
+            values += f"('{uuid}','{assettype}',"
+            for attribute in [actief, toestand, naampad, naam, commentaar]:
                 if attribute is None or attribute == '':
                     values += 'NULL,'
                 else:
