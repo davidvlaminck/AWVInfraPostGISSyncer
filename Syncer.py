@@ -120,6 +120,9 @@ class Syncer:
                 print(err)
                 logging.info("failed connection, retrying in 1 minute")
                 time.sleep(60)
+            except Exception as err:
+                self.connector.connection.rollback()
+                raise err
 
     def sync_assetrelaties(self):
         start = time.time()
@@ -154,7 +157,7 @@ class Syncer:
                 params = self.connector.get_params()
                 betrokkenerelatie_syncer.sync_betrokkenerelaties(pagingcursor=params['pagingcursor'])
             except AgentMissingError:
-                self.events_processor.postgis_connector.connection.rollback()
+                self.connector.connection.rollback()
                 print('refreshing agents')
                 current_paging_cursor = self.eminfra_importer.pagingcursor
                 self.eminfra_importer.pagingcursor = ''
@@ -185,7 +188,7 @@ class Syncer:
                 params = self.connector.get_params()
                 asset_syncer.sync_assets(pagingcursor=params['pagingcursor'])
             except (AssetTypeMissingError, AttribuutMissingError):
-                self.events_processor.postgis_connector.connection.rollback()
+                self.connector.connection.rollback()
                 print('refreshing assettypes')
                 current_paging_cursor = self.eminfra_importer.pagingcursor
                 self.eminfra_importer.pagingcursor = ''
