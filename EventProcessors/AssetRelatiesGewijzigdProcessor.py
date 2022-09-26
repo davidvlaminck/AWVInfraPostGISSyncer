@@ -44,7 +44,7 @@ class AssetRelatiesGewijzigdProcessor(SpecificEventProcessor):
             if 'RelatieObject.doelAssetId' in assetrelatie_dict:
                 doel_uuid = assetrelatie_dict['RelatieObject.doelAssetId']['DtcIdentificator.identificator'][0:36]
             else:
-                bron_uuid = assetrelatie_dict['RelatieObject.doel']['@id'].replace(
+                doel_uuid = assetrelatie_dict['RelatieObject.doel']['@id'].replace(
                     'https://data.awvvlaanderen.be/id/asset/', '')[0:36]
 
             if 'RelatieObject.typeURI' in assetrelatie_dict:
