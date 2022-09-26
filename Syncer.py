@@ -148,7 +148,22 @@ class Syncer:
         start = time.time()
         betrokkenerelatie_syncer = BetrokkeneRelatiesSyncer(em_infra_importer=self.eminfra_importer,
                                                             post_gis_connector=self.connector)
-        betrokkenerelatie_syncer.sync_betrokkenerelaties()
+        params = None
+        while True:
+            try:
+                params = self.connector.get_params()
+                betrokkenerelatie_syncer.sync_betrokkenerelaties(pagingcursor=params['pagingcursor'])
+            except AgentMissingError:
+                self.events_processor.postgis_connector.connection.rollback()
+                print('refreshing agents')
+                current_paging_cursor = self.eminfra_importer.pagingcursor
+                self.eminfra_importer.pagingcursor = ''
+                self.sync_agents(page_size=params['pagesize'], pagingcursor='')
+                self.eminfra_importer.pagingcursor = current_paging_cursor
+
+            if self.eminfra_importer.pagingcursor == '':
+                break
+
         end = time.time()
         logging.info(f'time for all betrokkenerelaties: {round(end - start, 2)}')
 
