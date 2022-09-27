@@ -52,9 +52,10 @@ class AssetRelatiesGewijzigdProcessor(SpecificEventProcessor):
             else:
                 relatie_type_uri = assetrelatie_dict['@type']
 
-            actief = None
             if 'AIMDBStatus.isActief' in assetrelatie_dict:
                 actief = assetrelatie_dict['AIMDBStatus.isActief']
+            else:
+                actief = True
 
             attributen_dict = assetrelatie_dict.copy()
             for key in ['@type', '@id', "RelatieObject.doel", "RelatieObject.assetId", "AIMDBStatus.isActief",
