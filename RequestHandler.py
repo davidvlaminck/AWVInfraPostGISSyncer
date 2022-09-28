@@ -14,9 +14,15 @@ class RequestHandler:
         return dict_obj
 
     def perform_get_request(self, url) -> Response:
-        return self.requester.get(url=url)
+        response = self.requester.get(url=url)
+        if response.status_code != 200:
+            raise ConnectionError(f'status {response.status_code}')
+        return response
 
     def perform_post_request(self, url, json_data=None, **kwargs) -> Response:
         if json_data is not None:
             kwargs['json'] = json_data
-        return self.requester.post(url=url, **kwargs)
+        response = self.requester.post(url=url, **kwargs)
+        if response.status_code != 200:
+            raise ConnectionError(f'status {response.status_code}')
+        return response

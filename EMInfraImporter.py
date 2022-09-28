@@ -36,9 +36,6 @@ class EMInfraImporter:
 
             response = self.request_handler.perform_post_request(url=url, json_data=json_data)
 
-            if response.status_code != 200:
-                raise ConnectionError(f'status {response.status_code}')
-
             decoded_string = response.content.decode("utf-8")
             dict_obj = json.loads(decoded_string)
             keys = response.headers.keys()
