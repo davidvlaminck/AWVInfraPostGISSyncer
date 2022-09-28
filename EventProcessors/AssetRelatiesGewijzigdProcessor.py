@@ -92,8 +92,8 @@ FROM to_insert;"""
                     print(str(exc).split('\n')[1])
                 self.connector.connection.rollback()
                 cursor = self.connector.connection.cursor()
-                asset_uuids = set(map(lambda x: x['RelatieObject.bronAssetId']['DtcIdentificator.identificator'][0:36], assetrelatie_dicts))
-                asset_uuids.update(set(map(lambda x: x['RelatieObject.doelAssetId']['DtcIdentificator.identificator'][0:36], assetrelatie_dicts)))
+                asset_uuids = set(map(lambda x: x['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36], assetrelatie_dicts))
+                asset_uuids.update(set(map(lambda x: x['RelatieObject.doel']['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36], assetrelatie_dicts)))
                 select_assets_query = f"""SELECT uuid FROM public.assets WHERE uuid IN ('{"'::uuid,'".join(asset_uuids)}'::uuid)"""
                 cursor.execute(select_assets_query)
                 existing_asset_uuids = set(map(lambda x: x[0], cursor.fetchall()))
