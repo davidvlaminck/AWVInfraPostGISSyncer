@@ -1,3 +1,4 @@
+import logging
 from collections import namedtuple
 
 from EMInfraImporter import EMInfraImporter
@@ -49,6 +50,10 @@ class FeedEventsCollector:
 
             if stop_after_this_page:
                 links = page['links']
+                if len(entries) > 0:
+                    last_event = entries[-1]
+                    logging.info(f"processing event of {last_event['updated']}")
+
                 page_num = next(link for link in links if link['rel'] == 'self')['href'].split('/')[1]
 
                 return EventParams(event_dict=event_dict, page_num=page_num, event_uuid=last_event_id)
