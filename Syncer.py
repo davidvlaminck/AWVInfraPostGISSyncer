@@ -281,19 +281,27 @@ class Syncer:
              'page': current_page_num})
 
     def recur_exp_find_start_page(self, current_num, step, page_size):
-        event_page = self.eminfra_importer.get_events_from_page(page_num=current_num, page_size=page_size)
-        if 'message' not in event_page:
-            return self.recur_exp_find_start_page(current_num=current_num * step, step=step, page_size=100)
+        event_page = None
+        try:
+            event_page = self.eminfra_importer.get_events_from_page(page_num=current_num, page_size=page_size)
+        except Exception as ex:
+            if ex.args[0] == 'status 400':
+                return current_num
+        if event_page is None or 'message' not in event_page:
+            return self.recur_exp_find_start_page(current_num=current_num * step, step=step, page_size=page_size)
         return current_num
 
     def recur_find_last_page(self, current_num, current_step, step, page_size):
         new_i = 0
         for i in range(step + 1):
             new_num = current_num + current_step * i
-            event_page = self.eminfra_importer.get_events_from_page(page_num=new_num, page_size=page_size)
-            if 'message' in event_page:
-                new_i = i - 1
-                break
+            try:
+                event_page = self.eminfra_importer.get_events_from_page(page_num=new_num, page_size=page_size)
+            except Exception as ex:
+                if ex.args[0] == 'status 400':
+                    new_i = i - 1
+                    break
+
         if current_step == 1:
             return current_num + current_step * new_i
 
