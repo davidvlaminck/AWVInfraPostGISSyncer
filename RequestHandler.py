@@ -15,7 +15,7 @@ class RequestHandler:
 
     def perform_get_request(self, url) -> Response:
         response = self.requester.get(url=url)
-        if response.status_code != 200:
+        if str(response.status_code)[0:1] != '2':
             raise ConnectionError(f'status {response.status_code}')
         return response
 
@@ -23,6 +23,6 @@ class RequestHandler:
         if json_data is not None:
             kwargs['json'] = json_data
         response = self.requester.post(url=url, **kwargs)
-        if response.status_code != 200:
+        if str(response.status_code)[0:1] != '2':
             raise ConnectionError(f'status {response.status_code}')
         return response
