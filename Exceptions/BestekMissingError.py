@@ -1,0 +1,2 @@
+class BestekMissingError(Exception):
+    pass

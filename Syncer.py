@@ -20,6 +20,7 @@ from Exceptions.AssetMissingError import AssetMissingError
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
 from Exceptions.AttribuutMissingError import AttribuutMissingError
 from Exceptions.BeheerderMissingError import BeheerderMissingError
+from Exceptions.BestekMissingError import BestekMissingError
 from Exceptions.IdentiteitMissingError import IdentiteitMissingError
 from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 from FeedEventsCollector import FeedEventsCollector
@@ -332,7 +333,8 @@ class Syncer:
             start = time.time()
 
             try:
-                eventsparams_to_process = self.events_collector.collect_starting_from_page(current_page, completed_event_id,
+                eventsparams_to_process = self.events_collector.collect_starting_from_page(current_page,
+                                                                                           completed_event_id,
                                                                                            page_size)
 
                 total_events = sum(len(lists) for lists in eventsparams_to_process.event_dict.values())
@@ -359,6 +361,9 @@ class Syncer:
                 except AgentMissingError:
                     self.events_processor.postgis_connector.connection.rollback()
                     self.sync_agents(page_size=params['pagesize'], pagingcursor='')
+                except BestekMissingError:
+                    self.events_processor.postgis_connector.connection.rollback()
+                    self.sync_bestekken(page_size=params['pagesize'], pagingcursor='')
                 except AssetTypeMissingError:
                     self.events_processor.postgis_connector.connection.rollback()
                     self.sync_assettypes(page_size=params['pagesize'], pagingcursor='')

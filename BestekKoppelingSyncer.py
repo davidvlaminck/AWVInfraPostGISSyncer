@@ -1,7 +1,10 @@
 import json
 from collections.abc import Generator
 
+import psycopg2
+
 from EMInfraImporter import EMInfraImporter
+from Exceptions.BestekMissingError import BestekMissingError
 from PostGISConnector import PostGISConnector
 
 
@@ -71,7 +74,14 @@ INSERT INTO public.bestekkoppelingen (assetUuid, bestekUuid, startDatum, eindDat
 SELECT to_insert.assetUuid, to_insert.bestekUuid, to_insert.startDatum, to_insert.eindDatum, to_insert.koppelingStatus
 FROM to_insert;"""
 
-            cursor.execute(insert_query)
+            try:
+                cursor.execute(insert_query)
+            except psycopg2.Error as exc:
+                if str(exc).split('\n')[0] == 'insert or update on table "bestekkoppelingen" violates foreign key ' \
+                                              'constraint "bestekkoppelingen_bestekken_fkey"':
+                    raise BestekMissingError()
+                else:
+                    raise exc
 
     def create_temp_table_for_sync_bestekkoppelingen(self):
         create_table_query = """
