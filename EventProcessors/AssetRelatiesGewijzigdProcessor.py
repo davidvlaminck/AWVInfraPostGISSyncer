@@ -6,6 +6,7 @@ import psycopg2
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
 from Exceptions.AssetMissingError import AssetMissingError
+from Exceptions.RelatieTypeMissingError import RelatieTypeMissingError
 from PostGISConnector import PostGISConnector
 
 
@@ -41,6 +42,9 @@ class AssetRelatiesGewijzigdProcessor(SpecificEventProcessor):
                 bron_uuid = assetrelatie_dict['RelatieObject.bron']['@id'].replace(
                     'https://data.awvvlaanderen.be/id/asset/', '')[0:36]
 
+            if bron_uuid == '0beb911a-7bc8-410d-a393-b7e0a1441ef2':
+                print('stop')
+
             if 'RelatieObject.doelAssetId' in assetrelatie_dict:
                 doel_uuid = assetrelatie_dict['RelatieObject.doelAssetId']['DtcIdentificator.identificator'][0:36]
             else:
@@ -51,6 +55,9 @@ class AssetRelatiesGewijzigdProcessor(SpecificEventProcessor):
                 relatie_type_uri = assetrelatie_dict['RelatieObject.typeURI']
             else:
                 relatie_type_uri = assetrelatie_dict['@type']
+
+            if relatie_type_uri is None:
+                print('stop')
 
             if 'AIMDBStatus.isActief' in assetrelatie_dict:
                 actief = assetrelatie_dict['AIMDBStatus.isActief']
@@ -99,6 +106,8 @@ FROM to_insert;"""
                 existing_asset_uuids = set(map(lambda x: x[0], cursor.fetchall()))
                 nonexisting_assets = list(asset_uuids - existing_asset_uuids)
                 raise AssetMissingError(nonexisting_assets)
+            elif str(exc).split('\n')[0] == 'null value in column "relatietype" violates not-null constraint':
+                raise RelatieTypeMissingError()
             else:
                 raise exc
         logging.info('done batch of assetrelaties')

@@ -1,0 +1,2 @@
+class RelatieTypeMissingError(Exception):
+    pass

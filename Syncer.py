@@ -22,6 +22,7 @@ from Exceptions.AttribuutMissingError import AttribuutMissingError
 from Exceptions.BeheerderMissingError import BeheerderMissingError
 from Exceptions.BestekMissingError import BestekMissingError
 from Exceptions.IdentiteitMissingError import IdentiteitMissingError
+from Exceptions.RelatieTypeMissingError import RelatieTypeMissingError
 from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 from FeedEventsCollector import FeedEventsCollector
 from FeedEventsProcessor import FeedEventsProcessor
@@ -367,6 +368,9 @@ class Syncer:
                 except AssetTypeMissingError:
                     self.events_processor.postgis_connector.connection.rollback()
                     self.sync_assettypes(page_size=params['pagesize'], pagingcursor='')
+                except RelatieTypeMissingError:
+                    self.events_processor.postgis_connector.connection.rollback()
+                    self.sync_relatietypes()
                 except AssetMissingError as exc:
                     self.events_processor.postgis_connector.connection.rollback()
                     missing_assets = exc.args[0]
