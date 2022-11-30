@@ -426,6 +426,31 @@ ALTER TABLE IF EXISTS public.assetRelaties
     ON DELETE NO ACTION
     NOT VALID;
 
-
--- psycopg2.errors.ForeignKeyViolation: insert or update on table "assets" violates foreign key constraint "assets_assettype_fkey"
--- DETAIL:  Key (assettype)=(00000453-56ce-4f8b-af44-960df526cb30) is not present in table "assettypes".
+CREATE VIEW aantallen AS
+SELECT 'agents' AS naam, count(*) AS aantal FROM agents
+UNION ALL
+SELECT 'assets', count(*) FROM assets
+UNION ALL
+SELECT 'assetrelaties', count(*) FROM assetrelaties
+UNION ALL
+SELECT 'assettypes', count(*) FROM assettypes
+UNION ALL
+SELECT 'attributen', count(*) FROM attributen
+UNION ALL
+SELECT 'attribuutWaarden', count(*) FROM attribuutWaarden
+UNION ALL
+SELECT 'beheerders', count(*) FROM beheerders
+UNION ALL
+SELECT 'bestekken', count(*) FROM bestekken
+UNION ALL
+SELECT 'bestekkoppelingen', count(*) FROM bestekkoppelingen
+UNION ALL
+SELECT 'betrokkenerelaties', count(*) FROM betrokkenerelaties
+UNION ALL
+SELECT 'elek_aansluitingen', count(*) FROM elek_aansluitingen
+UNION ALL
+SELECT 'identiteiten', count(*) FROM identiteiten
+UNION ALL
+SELECT 'relatietypes', count(*) FROM relatietypes
+UNION ALL
+SELECT 'toezichtgroepen', count(*) FROM toezichtgroepen;

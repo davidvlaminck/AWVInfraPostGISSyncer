@@ -18,7 +18,6 @@ class AssetTypeSyncer:
             self.update_assettypes_with_geometrie()
             self.update_assettypes_with_elek_aansluiting()
             self.update_assettypes_with_attributen(force_update=force_update_attributen)
-            self.create_views_for_assettypes_with_geometrie()
             self.create_views_for_assettypes_with_attributes()
             self.postGIS_connector.save_props_to_params({'pagingcursor': self.eminfra_importer.pagingcursor})
 
@@ -173,26 +172,6 @@ WHERE to_update.uuid = assettypes.uuid;"""
 
         self.postGIS_connector.connection.commit()
 
-    def create_views_for_assettypes_with_geometrie(self):
-        cursor = self.postGIS_connector.connection.cursor()
-        get_assettypes_with_geometrie_query = """SELECT uuid, uri FROM assettypes WHERE geometrie = TRUE;"""
-        cursor.execute(get_assettypes_with_geometrie_query)
-        assettype_with_geometrie = cursor.fetchall()
-        for assettype_record in assettype_with_geometrie:
-            type_uuid = assettype_record[0]
-            type_uri = assettype_record[1]
-            view_name = type_uri.split('/ns/')[1].replace('#', '_').replace('.', '_').replace('-', '_')
-
-            create_view_query = f"""
-            DROP VIEW IF EXISTS public.{view_name} CASCADE;
-            CREATE VIEW public.{view_name} AS
-                SELECT geometrie.*, assets.toestand, assets.actief, assets.naam, ST_GeomFromText(wkt_string, 31370) AS geometry 
-                FROM public.assets 
-                    LEFT JOIN public.geometrie ON geometrie.assetuuid = assets.uuid 
-                    LEFT JOIN public.assettypes ON assets.assettype = assettypes.uuid
-                WHERE assettypes.uuid = '{type_uuid}' and assets.actief = TRUE;"""
-            cursor.execute(create_view_query)
-
     def create_views_for_assettypes_with_attributes(self):
         cursor = self.postGIS_connector.connection.cursor()
         get_assettypes_with_geometrie_query = """SELECT uuid, uri, geometrie FROM assettypes;"""
@@ -206,7 +185,7 @@ WHERE to_update.uuid = assettypes.uuid;"""
                 continue
             type_uri = assettype_record[1]
             has_geometry = assettype_record[2]
-            view_name = type_uri.split('/ns/')[1].replace('#', '_eig_').replace('.', '_').replace('-', '_')
+            view_name = type_uri.split('/ns/')[1].replace('#', '_').replace('.', '_').replace('-', '_')
 
             get_attributen_query = f"""
             SELECT attributen.uuid, attributen.naam, attributen.datatypetype 
