@@ -11,7 +11,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
 
     settings_manager = SettingsManager(
-        settings_path='C:/resources/settings_AwvinfraPostGISSyncer.json')
+        settings_path='.\\settings_postgiscreator.json')
     db_settings = settings_manager.settings['databases']['prd']
 
     connector = PostGISConnector(host=db_settings['host'], port=db_settings['port'],
