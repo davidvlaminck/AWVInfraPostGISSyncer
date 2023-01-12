@@ -26,6 +26,7 @@ from Exceptions.RelatieTypeMissingError import RelatieTypeMissingError
 from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 from FeedEventsCollector import FeedEventsCollector
 from FeedEventsProcessor import FeedEventsProcessor
+from Filler import Filler
 from IdentiteitSyncer import IdentiteitSyncer
 from PostGISConnector import PostGISConnector
 from RelatietypeSyncer import RelatietypeSyncer
@@ -33,7 +34,7 @@ from RequestHandler import RequestHandler
 from ToezichtgroepSyncer import ToezichtgroepSyncer
 
 
-class Syncer:
+class SyncManager:
     def __init__(self, connector: PostGISConnector, request_handler: RequestHandler, eminfra_importer: EMInfraImporter,
                  settings=None):
         self.connector = connector
@@ -48,7 +49,7 @@ class Syncer:
             self.sync_start = self.settings['time']['start']
             self.sync_end = self.settings['time']['end']
 
-    def start_syncing(self):
+    def start(self):
         while True:
             try:
                 params = self.connector.get_params()
@@ -57,74 +58,13 @@ class Syncer:
                     params = self.connector.get_params()
 
                 if params['fresh_start']:
-                    self.perform_fresh_start_sync(params)
+                    filler = Filler(connector=self.connector, request_handler=self.request_handler,
+                                    eminfra_importer=self.eminfra_importer)
+                    filler.fill(params)
                 else:
                     self.perform_syncing()
             except requests.exceptions.ConnectionError as exc:
                 print(exc)
-
-    def perform_fresh_start_sync(self, params: dict):
-        page_size = params['pagesize']
-        page = params['page']
-        if page == -1:
-            self.save_last_feedevent_to_params(page_size)
-
-        while True:
-            try:
-                # main sync loop for a fresh start
-                params = self.connector.get_params()
-                sync_step = params['sync_step']
-                pagingcursor = params['pagingcursor']
-                page_size = params['pagesize']
-
-                if sync_step == -1:
-                    sync_step = 1
-                if sync_step >= 12:
-                    break
-
-                if sync_step == 1:
-                    self.sync_agents(page_size, pagingcursor)
-                elif sync_step == 2:
-                    self.sync_toezichtgroepen(page_size, pagingcursor)
-                elif sync_step == 3:
-                    self.sync_identiteiten(page_size, pagingcursor)
-                elif sync_step == 4:
-                    self.sync_beheerders(page_size, pagingcursor)
-                elif sync_step == 5:
-                    self.sync_bestekken(page_size, pagingcursor)
-                elif sync_step == 6:
-                    self.sync_assettypes(page_size, pagingcursor)
-                elif sync_step == 7:
-                    self.sync_relatietypes()
-                elif sync_step == 8:
-                    self.sync_assets(page_size, pagingcursor)
-                elif sync_step == 9:
-                    self.sync_bestekkoppelingen()
-                elif sync_step == 10:
-                    self.sync_betrokkenerelaties()
-                elif sync_step == 11:
-                    self.sync_assetrelaties()
-                else:
-                    # TODO documenten
-                    raise NotImplementedError
-
-                pagingcursor = self.eminfra_importer.pagingcursor
-                if pagingcursor == '':
-                    sync_step += 1
-                self.connector.save_props_to_params(
-                    {'sync_step': sync_step,
-                     'pagingcursor': pagingcursor})
-                if sync_step >= 11:
-                    self.connector.save_props_to_params(
-                        {'fresh_start': False})
-                self.connector.connection.commit()
-            except ConnectionError as err:
-                print(err)
-                logging.info("failed connection, retrying in 1 minute")
-                time.sleep(60)
-            except Exception as err:
-                self.connector.connection.rollback()
-                raise err
 
     def sync_assetrelaties(self):
         start = time.time()

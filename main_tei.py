@@ -5,7 +5,7 @@ from PostGISConnector import PostGISConnector
 from RequestHandler import RequestHandler
 from RequesterFactory import RequesterFactory
 from SettingsManager import SettingsManager
-from Syncer import Syncer
+from SyncManager import SyncManager
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
@@ -22,9 +22,9 @@ if __name__ == '__main__':
     request_handler = RequestHandler(requester)
 
     eminfra_importer = EMInfraImporter(request_handler)
-    syncer = Syncer(connector=connector, request_handler=request_handler, eminfra_importer=eminfra_importer, settings=settings_manager.settings)
+    syncer = SyncManager(connector=connector, request_handler=request_handler, eminfra_importer=eminfra_importer, settings=settings_manager.settings)
 
-    syncer.start_syncing()
+    syncer.start()
 
     # set up database users
     # install postgis: CREATE EXTENSION postgis;

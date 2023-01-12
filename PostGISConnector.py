@@ -11,6 +11,12 @@ class PostGISConnector:
                                            database=database)
         self.connection.autocommit = False
         self.db = database
+        self.param_type_map = {
+            'fresh_start': 'bool',
+            'pagesize': 'int',
+            'saved_page': 'int',
+            'saved_uuid': 'text',
+        }
 
     def set_up_tables(self, file_path='setup_tables_querys.sql'):
         
@@ -31,11 +37,13 @@ class PostGISConnector:
     def get_params(self):
         cursor = self.connection.cursor()
         try:
-            keys = ['page', 'event_uuid', 'pagesize', 'fresh_start', 'sync_step', 'pagingcursor', 'last_update_utc']
-            keys_in_query = ', '.join(keys)
-            cursor.execute(f'SELECT {keys_in_query} FROM public.params')
-            record = cursor.fetchone()
-            params = dict(zip(keys, record))
+            cursor.execute('SELECT key_name, value_int, value_text, value_bool, value_timestamp '
+                           'FROM public.params')
+            raw_param_records = cursor.fetchall()
+            params = {}
+            for raw_param_record in raw_param_records:
+                self.add_params_entry(params_dict=params, raw_param_record=raw_param_record)
+
             cursor.close()
             return params
         except Error as error:
@@ -50,15 +58,15 @@ class PostGISConnector:
                 raise error
 
     def save_props_to_params(self, params: dict, cursor: psycopg2._psycopg.cursor = None):
-        query = f'UPDATE public.params SET '
-        for key, value in params.items():
-            if key in ['pagingcursor', 'event_uuid']:
-                query += key + "='" + value + "', "
-            elif key in ['last_update_utc']:
-                query += key + "='" + str(value) + "', "
+        query = ''
+        for key_name, value in params.items():
+            param_type = self.param_type_map[key_name]
+            if param_type in ['int', 'bool']:
+                query += f"""INSERT INTO public.params(key_name, value_{param_type})
+                             VALUES ('{key_name}', {value});"""
             else:
-                query += key + '=' + str(value) + ', '
-        query = query[:-2]
+                query += f"""INSERT INTO public.params(key_name, value_{param_type})
+                                             VALUES ('{key_name}', '{value}');"""
 
         if cursor is None:
             cursor = self.connection.cursor()
@@ -74,3 +82,16 @@ class PostGISConnector:
 
     def commit_transaction(self):
         self.connection.commit()
+
+    def add_params_entry(self, params_dict, raw_param_record):
+        param_type = self.param_type_map[raw_param_record[0]]
+        if param_type == 'int':
+            params_dict[raw_param_record[0]] = raw_param_record[1]
+        elif param_type == 'text':
+            params_dict[raw_param_record[0]] = raw_param_record[2]
+        elif param_type == 'bool':
+            params_dict[raw_param_record[0]] = raw_param_record[3]
+        elif param_type == 'timestamp':
+            params_dict[raw_param_record[0]] = raw_param_record[4]
+        else:
+            raise NotImplementedError

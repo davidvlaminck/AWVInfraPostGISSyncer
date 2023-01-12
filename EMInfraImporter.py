@@ -12,6 +12,10 @@ class EMInfraImporter:
         self.request_handler.requester.first_part_url += 'eminfra/'
         self.pagingcursor = ''
 
+    def get_events_from_feed_relaties(self, page_num: int, page_size: int = 1):
+        url = f"feedproxy/feed/assetrelaties/{page_num}/{page_size}"
+        return self.request_handler.get_jsondict(url)
+
     def get_events_from_page(self, page_num: int, page_size: int = 1):
         url = f"feedproxy/feed/assets/{page_num}/{page_size}"
         return self.request_handler.get_jsondict(url)

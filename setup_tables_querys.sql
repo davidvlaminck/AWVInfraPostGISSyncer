@@ -16,17 +16,17 @@ CREATE TABLE public.agents
 DROP TABLE IF EXISTS public.params CASCADE;
 CREATE TABLE IF NOT EXISTS public.params
 (
-    page integer,
-    event_uuid text,
-    pagesize integer,
-    fresh_start boolean,
-    sync_step integer,
-    pagingcursor text COLLATE pg_catalog."default",
-    last_update_utc TIMESTAMP WITH TIME ZONE
+    key_name VARCHAR(20),
+    value_int integer,
+    value_text text,
+    value_bool boolean,
+    value_timestamp TIMESTAMP WITH TIME ZONE
 );
 
-INSERT INTO public.params(page, event_uuid, pagesize, fresh_start, sync_step, pagingcursor)
-VALUES (-1, '', 100, TRUE, -1, '');
+INSERT INTO public.params(key_name, value_bool)
+VALUES ('fresh_start', TRUE);
+INSERT INTO public.params(key_name, value_int)
+VALUES ('pagesize', 100);
 
 -- Table: public.assets
 
