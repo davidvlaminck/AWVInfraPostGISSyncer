@@ -212,6 +212,22 @@ class EMInfraImporter:
         yield from self.get_objects_from_non_oslo_endpoint(url_part='installatietypes/search',
                                                            zoek_payload=zoek_params)
 
+    def get_assettypes_with_kenmerk_gevoed_door_by_uuids(self, assettype_uuids):
+        yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
+                                                                 kenmerk='c60b07d2-5570-4363-ab6a-d6fba49ef2ca')
+
+    def get_assettypes_with_kenmerk_toezicht_by_uuids(self, assettype_uuids):
+        yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
+                                                                 kenmerk='f0166ba2-757c-4cf3-bf71-2e4fdff43fa3')
+
+    def get_assettypes_with_kenmerk_beheerder_by_uuids(self, assettype_uuids):
+        yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
+                                                                 kenmerk='d911dc02-f214-4f64-9c46-720dbdeb0d02')
+
+    def get_assettypes_with_kenmerk_locatie_by_uuids(self, assettype_uuids):
+        yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
+                                                                 kenmerk='80052ed4-2f91-400c-8cba-57624653db11')
+
     def get_assettypes_with_kenmerk_geometrie_by_uuids(self, assettype_uuids):
         yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
                                                                  kenmerk='aabe29e0-9303-45f1-839e-159d70ec2859')

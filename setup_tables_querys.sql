@@ -60,6 +60,10 @@ CREATE TABLE IF NOT EXISTS public.assettypes
     actief boolean NOT NULL,
     bestek boolean,
     geometrie boolean,
+    locatie boolean,
+    beheerder boolean,
+    toezicht boolean,
+    gevoedDoor boolean,
     elek_aansluiting boolean,
     attributen boolean,
     CONSTRAINT assettypes_pkey PRIMARY KEY (uuid)

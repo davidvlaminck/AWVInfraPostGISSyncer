@@ -79,7 +79,7 @@ class Syncer:
 
                 if sync_step == -1:
                     sync_step = 1
-                if sync_step >= 15:
+                if sync_step >= 12:
                     break
 
                 if sync_step == 1:
@@ -197,6 +197,14 @@ class Syncer:
                 current_paging_cursor = self.eminfra_importer.pagingcursor
                 self.eminfra_importer.pagingcursor = ''
                 self.sync_assettypes(page_size=params['pagesize'], pagingcursor='')
+                self.eminfra_importer.pagingcursor = current_paging_cursor
+                self.connector.save_props_to_params({'pagingcursor': current_paging_cursor})
+            except (ToezichtgroepMissingError):
+                self.connector.connection.rollback()
+                print('refreshing toezichtgroepen')
+                current_paging_cursor = self.eminfra_importer.pagingcursor
+                self.eminfra_importer.pagingcursor = ''
+                self.sync_toezichtgroepen(page_size=params['pagesize'], pagingcursor='')
                 self.eminfra_importer.pagingcursor = current_paging_cursor
                 self.connector.save_props_to_params({'pagingcursor': current_paging_cursor})
 

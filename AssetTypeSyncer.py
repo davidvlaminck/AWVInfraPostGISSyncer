@@ -16,6 +16,10 @@ class AssetTypeSyncer:
             self.update_assettypes(assettypes_dicts=asset_types)
             self.update_assettypes_with_bestek()
             self.update_assettypes_with_geometrie()
+            self.update_assettypes_with_locatie()
+            self.update_assettypes_with_beheerder()
+            self.update_assettypes_with_toezicht()
+            self.update_assettypes_with_gevoed_door()
             self.update_assettypes_with_elek_aansluiting()
             self.update_assettypes_with_attributen(force_update=force_update_attributen)
             self.create_views_for_assettypes_with_attributes()
@@ -73,6 +77,28 @@ class AssetTypeSyncer:
 
         self.postGIS_connector.connection.commit()
 
+    def update_assettypes_with_locatie(self):
+        select_query = 'SELECT uuid FROM public.assettypes WHERE locatie is NULL'
+        cursor = self.postGIS_connector.connection.cursor()
+        cursor.execute(select_query)
+        assettypes_to_update = list(map(lambda x: x[0], cursor.fetchall()))
+
+        types_with_locatie_dicts = list(
+            self.eminfra_importer.get_assettypes_with_kenmerk_locatie_by_uuids(assettype_uuids=assettypes_to_update))
+        types_with_locatie = list(map(lambda x: x['uuid'], types_with_locatie_dicts))
+        types_without_locatie = list(set(assettypes_to_update) - set(types_with_locatie))
+
+        if len(types_with_locatie) > 0:
+            update_query = "UPDATE public.assettypes SET locatie = TRUE WHERE uuid IN (VALUES ('" + "'::uuid),('".join(
+                types_with_locatie) + "'::uuid));"
+            cursor.execute(update_query)
+        if len(types_without_locatie) > 0:
+            update_query = "UPDATE public.assettypes SET locatie = FALSE WHERE uuid IN (VALUES ('" + "'::uuid),('".join(
+                types_without_locatie) + "'::uuid));"
+            cursor.execute(update_query)
+
+        self.postGIS_connector.connection.commit()
+
     def update_assettypes_with_geometrie(self):
         select_query = 'SELECT uuid FROM public.assettypes WHERE geometrie is NULL'
         cursor = self.postGIS_connector.connection.cursor()
@@ -91,6 +117,72 @@ class AssetTypeSyncer:
         if len(types_without_geometrie) > 0:
             update_query = "UPDATE public.assettypes SET geometrie = FALSE WHERE uuid IN (VALUES ('" + "'::uuid),('".join(
                 types_without_geometrie) + "'::uuid));"
+            cursor.execute(update_query)
+
+        self.postGIS_connector.connection.commit()
+        
+    def update_assettypes_with_gevoed_door(self):
+        select_query = 'SELECT uuid FROM public.assettypes WHERE gevoedDoor is NULL'
+        cursor = self.postGIS_connector.connection.cursor()
+        cursor.execute(select_query)
+        assettypes_to_update = list(map(lambda x: x[0], cursor.fetchall()))
+
+        types_with_gevoed_door_dicts = list(
+            self.eminfra_importer.get_assettypes_with_kenmerk_gevoed_door_by_uuids(assettype_uuids=assettypes_to_update))
+        types_with_gevoed_door = list(map(lambda x: x['uuid'], types_with_gevoed_door_dicts))
+        types_without_gevoed_door = list(set(assettypes_to_update) - set(types_with_gevoed_door))
+
+        if len(types_with_gevoed_door) > 0:
+            update_query = "UPDATE public.assettypes SET gevoedDoor = TRUE WHERE uuid IN (VALUES ('" + "'::uuid),('".join(
+                types_with_gevoed_door) + "'::uuid));"
+            cursor.execute(update_query)
+        if len(types_without_gevoed_door) > 0:
+            update_query = "UPDATE public.assettypes SET gevoedDoor = FALSE WHERE uuid IN (VALUES ('" + "'::uuid),('".join(
+                types_without_gevoed_door) + "'::uuid));"
+            cursor.execute(update_query)
+
+        self.postGIS_connector.connection.commit()
+        
+    def update_assettypes_with_toezicht(self):
+        select_query = 'SELECT uuid FROM public.assettypes WHERE toezicht is NULL'
+        cursor = self.postGIS_connector.connection.cursor()
+        cursor.execute(select_query)
+        assettypes_to_update = list(map(lambda x: x[0], cursor.fetchall()))
+
+        types_with_toezicht_dicts = list(
+            self.eminfra_importer.get_assettypes_with_kenmerk_toezicht_by_uuids(assettype_uuids=assettypes_to_update))
+        types_with_toezicht = list(map(lambda x: x['uuid'], types_with_toezicht_dicts))
+        types_without_toezicht = list(set(assettypes_to_update) - set(types_with_toezicht))
+
+        if len(types_with_toezicht) > 0:
+            update_query = "UPDATE public.assettypes SET toezicht = TRUE WHERE uuid IN (VALUES ('" + "'::uuid),('".join(
+                types_with_toezicht) + "'::uuid));"
+            cursor.execute(update_query)
+        if len(types_without_toezicht) > 0:
+            update_query = "UPDATE public.assettypes SET toezicht = FALSE WHERE uuid IN (VALUES ('" + "'::uuid),('".join(
+                types_without_toezicht) + "'::uuid));"
+            cursor.execute(update_query)
+
+        self.postGIS_connector.connection.commit()
+        
+    def update_assettypes_with_beheerder(self):
+        select_query = 'SELECT uuid FROM public.assettypes WHERE beheerder is NULL'
+        cursor = self.postGIS_connector.connection.cursor()
+        cursor.execute(select_query)
+        assettypes_to_update = list(map(lambda x: x[0], cursor.fetchall()))
+
+        types_with_beheerder_dicts = list(
+            self.eminfra_importer.get_assettypes_with_kenmerk_beheerder_by_uuids(assettype_uuids=assettypes_to_update))
+        types_with_beheerder = list(map(lambda x: x['uuid'], types_with_beheerder_dicts))
+        types_without_beheerder = list(set(assettypes_to_update) - set(types_with_beheerder))
+
+        if len(types_with_beheerder) > 0:
+            update_query = "UPDATE public.assettypes SET beheerder = TRUE WHERE uuid IN (VALUES ('" + "'::uuid),('".join(
+                types_with_beheerder) + "'::uuid));"
+            cursor.execute(update_query)
+        if len(types_without_beheerder) > 0:
+            update_query = "UPDATE public.assettypes SET beheerder = FALSE WHERE uuid IN (VALUES ('" + "'::uuid),('".join(
+                types_without_beheerder) + "'::uuid));"
             cursor.execute(update_query)
 
         self.postGIS_connector.connection.commit()
