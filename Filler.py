@@ -1,9 +1,5 @@
 import logging
 import time
-import traceback
-from datetime import datetime
-
-import requests
 
 from AgentSyncer import AgentSyncer
 from AssetRelatiesSyncer import AssetRelatiesSyncer
@@ -19,10 +15,6 @@ from Exceptions.AgentMissingError import AgentMissingError
 from Exceptions.AssetMissingError import AssetMissingError
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
 from Exceptions.AttribuutMissingError import AttribuutMissingError
-from Exceptions.BeheerderMissingError import BeheerderMissingError
-from Exceptions.BestekMissingError import BestekMissingError
-from Exceptions.IdentiteitMissingError import IdentiteitMissingError
-from Exceptions.RelatieTypeMissingError import RelatieTypeMissingError
 from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 from FeedEventsCollector import FeedEventsCollector
 from FeedEventsProcessor import FeedEventsProcessor
@@ -42,8 +34,10 @@ class Filler:
         self.events_processor = FeedEventsProcessor(connector, eminfra_importer)
 
     def fill(self, params: dict):
+        logging.info('Filling the database with data')
         page_size = params['pagesize']
         if 'saved_page' not in params:
+            logging.info('Getting the last page')
             self.save_last_feedevent_to_params(page_size)
 
         while True:
@@ -266,6 +260,7 @@ class Filler:
         self.connector.save_props_to_params(
             {'saved_event_uuid': last_event_uuid,
              'saved_page': current_page_num})
+        logging.info('Added last page of current assetfeed to params')
 
     def recur_exp_find_start_page(self, current_num, step, page_size):
         event_page = None
