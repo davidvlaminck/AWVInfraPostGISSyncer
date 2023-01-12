@@ -8,7 +8,10 @@ from SettingsManager import SettingsManager
 from SyncManager import SyncManager
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(
+        format='%(asctime)s %(levelname)-8s %(message)s',
+        level=logging.INFO,
+        datefmt='%Y-%m-%d %H:%M:%S')
 
     environment = 'prd'
 
@@ -22,7 +25,8 @@ if __name__ == '__main__':
     request_handler = RequestHandler(requester)
 
     eminfra_importer = EMInfraImporter(request_handler)
-    syncer = SyncManager(connector=connector, request_handler=request_handler, eminfra_importer=eminfra_importer, settings=settings_manager.settings)
+    syncer = SyncManager(connector=connector, request_handler=request_handler, eminfra_importer=eminfra_importer,
+                         settings=settings_manager.settings)
 
     syncer.start()
 
