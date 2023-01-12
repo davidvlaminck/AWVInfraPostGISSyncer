@@ -45,7 +45,8 @@ class Filler:
 
             # use multithreading
             executor = ThreadPoolExecutor()
-            futures = [executor.submit(self.save_last_feedevent_to_params, feed=feed, page_size=page_size) for feed in feeds]
+            futures = [executor.submit(self.save_last_feedevent_to_params, feed=feed, page_size=page_size)
+                       for feed in feeds]
             concurrent.futures.wait(futures)
 
         while True:
