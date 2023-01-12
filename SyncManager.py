@@ -207,57 +207,6 @@ class SyncManager:
         end = time.time()
         logging.info(f'time for all agents: {round(end - start, 2)}')
 
-    def save_last_feedevent_to_params(self, page_size: int):
-        start_num = 1
-        step = 5
-        start_num = self.recur_exp_find_start_page(current_num=start_num, step=step, page_size=page_size)
-        current_page_num = self.recur_find_last_page(current_num=int(start_num / step),
-                                                     current_step=int(start_num / step),
-                                                     step=step, page_size=page_size)
-
-        # doublecheck
-        event_page = self.eminfra_importer.get_events_from_page(page_num=current_page_num, page_size=page_size)
-        links = event_page['links']
-        prev_link = next((l for l in links if l['rel'] == 'previous'), None)
-        if prev_link is not None:
-            raise RuntimeError('algorithm did not result in the last page')
-
-        # find last event_id
-        entries = event_page['entries']
-        last_event_uuid = entries[0]['id']
-
-        self.connector.save_props_to_params(
-            {'event_uuid': last_event_uuid,
-             'page': current_page_num})
-
-    def recur_exp_find_start_page(self, current_num, step, page_size):
-        event_page = None
-        try:
-            event_page = self.eminfra_importer.get_events_from_page(page_num=current_num, page_size=page_size)
-        except Exception as ex:
-            if ex.args[0] == 'status 400':
-                return current_num
-        if event_page is None or 'message' not in event_page:
-            return self.recur_exp_find_start_page(current_num=current_num * step, step=step, page_size=page_size)
-        return current_num
-
-    def recur_find_last_page(self, current_num, current_step, step, page_size):
-        new_i = 0
-        for i in range(step + 1):
-            new_num = current_num + current_step * i
-            try:
-                event_page = self.eminfra_importer.get_events_from_page(page_num=new_num, page_size=page_size)
-            except Exception as ex:
-                if ex.args[0] == 'status 400':
-                    new_i = i - 1
-                    break
-
-        if current_step == 1:
-            return current_num + current_step * new_i
-
-        return self.recur_find_last_page(current_num + current_step * new_i,
-                                         int(current_step / step), step, page_size)
-
     def calculate_sync_allowed_by_time(self):
         if self.sync_start is None:
             return True

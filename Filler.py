@@ -1,5 +1,7 @@
+import concurrent
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 from AgentSyncer import AgentSyncer
 from AssetRelatiesSyncer import AssetRelatiesSyncer
@@ -36,9 +38,15 @@ class Filler:
     def fill(self, params: dict):
         logging.info('Filling the database with data')
         page_size = params['pagesize']
-        if 'saved_page' not in params:
-            logging.info('Getting the last page')
-            self.save_last_feedevent_to_params(page_size)
+        if 'saved_page_assets' not in params or 'saved_page_assetrelaties' not in params or \
+                'saved_page_agents' not in params or 'saved_page_betrokkenerelaties' not in params:
+            logging.info('Getting the last pages for feeds')
+            feeds = ['assets', 'agents', 'assetrelaties', 'betrokkenerelaties']
+
+            # use multithreading
+            executor = ThreadPoolExecutor()
+            futures = [executor.submit(self.save_last_feedevent_to_params, feed=feed, page_size=page_size) for feed in feeds]
+            concurrent.futures.wait(futures)
 
         while True:
             try:
@@ -238,16 +246,17 @@ class Filler:
         end = time.time()
         logging.info(f'time for all agents: {round(end - start, 2)}')
 
-    def save_last_feedevent_to_params(self, page_size: int):
+    def save_last_feedevent_to_params(self, page_size: int, feed: str):
         start_num = 1
         step = 5
-        start_num = self.recur_exp_find_start_page(current_num=start_num, step=step, page_size=page_size)
+        start_num = self.recur_exp_find_start_page(current_num=start_num, step=step, page_size=page_size, feed=feed)
         current_page_num = self.recur_find_last_page(current_num=int(start_num / step),
                                                      current_step=int(start_num / step),
-                                                     step=step, page_size=page_size)
+                                                     step=step, page_size=page_size, feed=feed)
 
         # doublecheck
-        event_page = self.eminfra_importer.get_events_from_page(page_num=current_page_num, page_size=page_size)
+        event_page = self.eminfra_importer.get_events_from_feedpage(page_num=current_page_num, page_size=page_size,
+                                                                    feed=feed)
         links = event_page['links']
         prev_link = next((l for l in links if l['rel'] == 'previous'), None)
         if prev_link is not None:
@@ -258,27 +267,29 @@ class Filler:
         last_event_uuid = entries[0]['id']
 
         self.connector.save_props_to_params(
-            {'saved_event_uuid': last_event_uuid,
-             'saved_page': current_page_num})
-        logging.info('Added last page of current assetfeed to params')
+            {f'saved_event_uuid_{feed}': last_event_uuid,
+             f'saved_page_{feed}': current_page_num})
+        logging.info(f'Added last page of current feed for {feed} to params (page: {current_page_num})')
 
-    def recur_exp_find_start_page(self, current_num, step, page_size):
+    def recur_exp_find_start_page(self, current_num, step, page_size, feed):
         event_page = None
         try:
-            event_page = self.eminfra_importer.get_events_from_page(page_num=current_num, page_size=page_size)
+            event_page = self.eminfra_importer.get_events_from_feedpage(page_num=current_num, page_size=page_size,
+                                                                        feed=feed)
         except Exception as ex:
             if ex.args[0] == 'status 400':
                 return current_num
         if event_page is None or 'message' not in event_page:
-            return self.recur_exp_find_start_page(current_num=current_num * step, step=step, page_size=page_size)
+            return self.recur_exp_find_start_page(current_num=current_num * step, step=step, page_size=page_size,
+                                                  feed=feed)
         return current_num
 
-    def recur_find_last_page(self, current_num, current_step, step, page_size):
+    def recur_find_last_page(self, current_num, current_step, step, page_size, feed):
         new_i = 0
         for i in range(step + 1):
             new_num = current_num + current_step * i
             try:
-                event_page = self.eminfra_importer.get_events_from_page(page_num=new_num, page_size=page_size)
+                self.eminfra_importer.get_events_from_feedpage(page_num=new_num, page_size=page_size, feed=feed)
             except Exception as ex:
                 if ex.args[0] == 'status 400':
                     new_i = i - 1

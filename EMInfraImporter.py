@@ -13,11 +13,10 @@ class EMInfraImporter:
         self.pagingcursor = ''
 
     def get_events_from_feed_relaties(self, page_num: int, page_size: int = 1):
-        url = f"feedproxy/feed/assetrelaties/{page_num}/{page_size}"
-        return self.request_handler.get_jsondict(url)
+        return self.get_events_from_feedpage('assetrelaties', page_num=page_num, page_size=page_size)
 
-    def get_events_from_page(self, page_num: int, page_size: int = 1):
-        url = f"feedproxy/feed/assets/{page_num}/{page_size}"
+    def get_events_from_feedpage(self, feed: str, page_num: int, page_size: int = 1):
+        url = f"feedproxy/feed/{feed}/{page_num}/{page_size}"
         return self.request_handler.get_jsondict(url)
 
     def get_objects_from_oslo_search_endpoint(self, url_part: str, filter_string: str = '{}', size: int = 100,

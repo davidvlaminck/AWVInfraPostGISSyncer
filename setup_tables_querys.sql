@@ -16,7 +16,7 @@ CREATE TABLE public.agents
 DROP TABLE IF EXISTS public.params CASCADE;
 CREATE TABLE IF NOT EXISTS public.params
 (
-    key_name VARCHAR(20),
+    key_name VARCHAR(40),
     value_int integer,
     value_text text,
     value_bool boolean,
