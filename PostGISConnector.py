@@ -74,9 +74,6 @@ class PostGISConnector:
         self.connection.commit()
         cursor.close()
 
-    def update_params(self, cursor: psycopg2._psycopg.cursor, page_num: int, event_uuid: str):
-        self.save_props_to_params(cursor=cursor, params={'page': page_num, 'event_uuid': event_uuid})
-
     def close(self):
         self.connection.close()
 

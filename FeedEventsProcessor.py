@@ -18,8 +18,8 @@ class FeedEventsProcessor:
         cursor = self.postgis_connector.connection.cursor()
         self.process_events_by_event_params(event_params=event_params, cursor=cursor)
 
-        self.postgis_connector.update_params(cursor=cursor, page_num=event_params.page_num,
-                                             event_uuid=event_params.event_uuid)
+        self.postgis_connector.save_props_to_params(cursor=cursor, params={'page': event_params.page_num,
+                                                                           'event_uuid': event_params.event_uuid})
         self.postgis_connector.commit_transaction()
 
     def process_events_by_event_params(self, event_params, cursor: psycopg2._psycopg.cursor):
