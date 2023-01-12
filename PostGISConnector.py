@@ -15,7 +15,7 @@ class PostGISConnector:
             'fresh_start': 'bool',
             'pagesize': 'int',
             'saved_page': 'int',
-            'saved_uuid': 'text',
+            'saved_event_uuid': 'text',
         }
 
     def set_up_tables(self, file_path='setup_tables_querys.sql'):

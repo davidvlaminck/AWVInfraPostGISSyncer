@@ -43,7 +43,7 @@ class Filler:
 
     def fill(self, params: dict):
         page_size = params['pagesize']
-        if 'page' not in params:
+        if 'saved_page' not in params:
             self.save_last_feedevent_to_params(page_size)
 
         while True:
@@ -264,8 +264,8 @@ class Filler:
         last_event_uuid = entries[0]['id']
 
         self.connector.save_props_to_params(
-            {'event_uuid': last_event_uuid,
-             'page': current_page_num})
+            {'saved_event_uuid': last_event_uuid,
+             'saved_page': current_page_num})
 
     def recur_exp_find_start_page(self, current_num, step, page_size):
         event_page = None
