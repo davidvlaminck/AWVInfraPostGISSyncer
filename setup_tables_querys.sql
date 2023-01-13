@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS public.params
     value_int integer,
     value_text text,
     value_bool boolean,
-    value_timestamp TIMESTAMP WITH TIME ZONE
+    value_timestamp TIMESTAMP WITH TIME ZONE,
+    CONSTRAINT params_pkey PRIMARY KEY (key_name)
 );
 
 INSERT INTO public.params(key_name, value_bool)

@@ -28,7 +28,8 @@ from ToezichtgroepSyncer import ToezichtgroepSyncer
 
 
 class Filler:
-    def __init__(self, connector: PostGISConnector, request_handler: RequestHandler, eminfra_importer: EMInfraImporter,):
+    def __init__(self, connector: PostGISConnector, request_handler: RequestHandler,
+                 eminfra_importer: EMInfraImporter, ):
         self.connector = connector
         self.request_handler = request_handler
         self.eminfra_importer = eminfra_importer
@@ -38,10 +39,12 @@ class Filler:
     def fill(self, params: dict):
         logging.info('Filling the database with data')
         page_size = params['pagesize']
-        if 'saved_page_assets' not in params or 'saved_page_assetrelaties' not in params or \
-                'saved_page_agents' not in params or 'saved_page_betrokkenerelaties' not in params:
+        # TODO change to or when all feeds work
+        if 'page_assets' not in params and 'page_assetrelaties' not in params and \
+                'page_agents' not in params and 'page_betrokkenerelaties' not in params:
             logging.info('Getting the last pages for feeds')
             feeds = ['assets', 'agents', 'assetrelaties', 'betrokkenerelaties']
+            feeds = ['assets']
 
             # use multithreading
             executor = ThreadPoolExecutor()
@@ -119,7 +122,8 @@ class Filler:
                 missing_assets = exc.args[0]
                 current_paging_cursor = self.eminfra_importer.pagingcursor
                 self.eminfra_importer.pagingcursor = ''
-                processor = NieuwAssetProcessor(cursor=self.connector.connection.cursor(), em_infra_importer=self.eminfra_importer)
+                processor = NieuwAssetProcessor(cursor=self.connector.connection.cursor(),
+                                                em_infra_importer=self.eminfra_importer)
                 processor.process(missing_assets)
                 self.eminfra_importer.pagingcursor = current_paging_cursor
                 self.events_processor.postgis_connector.save_props_to_params({'pagingcursor': current_paging_cursor})
@@ -268,8 +272,8 @@ class Filler:
         last_event_uuid = entries[0]['id']
 
         self.connector.save_props_to_params(
-            {f'saved_event_uuid_{feed}': last_event_uuid,
-             f'saved_page_{feed}': current_page_num})
+            {f'event_uuid_{feed}': last_event_uuid,
+             f'page_{feed}': current_page_num})
         logging.info(f'Added last page of current feed for {feed} to params (page: {current_page_num})')
 
     def recur_exp_find_start_page(self, current_num, step, page_size, feed):
@@ -299,8 +303,8 @@ class Filler:
         if current_step == 1:
             return current_num + current_step * new_i
 
-        return self.recur_find_last_page(current_num + current_step * new_i,
-                                         int(current_step / step), step, page_size)
+        return self.recur_find_last_page(current_num=current_num + current_step * new_i, step=step,
+                                         current_step=int(current_step / step), page_size=page_size, feed=feed)
 
     @staticmethod
     def log_eventparams(event_dict, timespan: float):
@@ -309,4 +313,3 @@ class Filler:
         for k, v in event_dict.items():
             if len(v) > 0:
                 logging.info(f'number of events of type {k}: {len(v)}')
-

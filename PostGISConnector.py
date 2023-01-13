@@ -14,8 +14,14 @@ class PostGISConnector:
         self.param_type_map = {
             'fresh_start': 'bool',
             'pagesize': 'int',
-            'saved_page': 'int',
-            'saved_event_uuid': 'text',
+            'page_agents': 'int',
+            'event_uuid_agents': 'text',
+            'page_assets': 'int',
+            'event_uuid_assets': 'text',
+            'page_assetrelaties': 'int',
+            'event_uuid_assetrelaties': 'text',
+            'page_betrokkenerelaties': 'int',
+            'event_uuid_betrokkenerelaties': 'text',
         }
 
     def set_up_tables(self, file_path='setup_tables_querys.sql'):
