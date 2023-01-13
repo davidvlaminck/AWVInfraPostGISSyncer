@@ -1,18 +1,15 @@
-import abc
-import itertools
 from abc import ABC
-from typing import Iterator
 
 from EMInfraImporter import EMInfraImporter
 from PostGISConnector import PostGISConnector
 
 
 class FastFiller(ABC):
-    def __init__(self, resource: str, postgis_connector: PostGISConnector, eminfra_importer: EMInfraImporter):
+    def __init__(self, resource: str, postgis_connector: PostGISConnector, eminfra_importer: EMInfraImporter, updater):
         self.postgis_connector = postgis_connector
         self.eminfra_importer = eminfra_importer
         self.resource = resource
-        self.updater = None
+        self.updater = updater
 
     def fill(self, connection, pagingcursor: str = '', page_size: int = 100):
         self.eminfra_importer.paging_cursors[self.resource] = pagingcursor
@@ -24,6 +21,8 @@ class FastFiller(ABC):
             self.postgis_connector.update_params(
                 params={f'{self.resource}_cursor': self.eminfra_importer.paging_cursors[self.resource]},
                 connection=connection)
+
+            connection.commit()
 
             if self.eminfra_importer.paging_cursors[self.resource] == '':
                 break

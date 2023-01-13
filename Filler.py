@@ -4,6 +4,7 @@ import random
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+from AgentFiller import AgentFiller
 from AgentSyncer import AgentSyncer
 from AssetRelatiesSyncer import AssetRelatiesSyncer
 from AssetSyncer import AssetSyncer
@@ -11,6 +12,7 @@ from AssetTypeSyncer import AssetTypeSyncer
 from BeheerderSyncer import BeheerderSyncer
 from BestekKoppelingSyncer import BestekKoppelingSyncer
 from BestekSyncer import BestekSyncer
+from BetrokkeneRelatiesFiller import BetrokkeneRelatiesFiller
 from BetrokkeneRelatiesSyncer import BetrokkeneRelatiesSyncer
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
@@ -41,7 +43,7 @@ class Filler:
         if not fill:
             return
         if table_to_fill == 'agents':
-            self.sync_agents(page_size, cursor)
+            self.fill_agents(page_size, cursor)
         elif table_to_fill == 'toezichtgroepen':
             self.sync_toezichtgroepen(page_size, cursor)
         elif table_to_fill == 'beheerders':
@@ -200,7 +202,7 @@ class Filler:
 
         logging.info(f'Filling betrokkenerelaties table')
         start = time.time()
-        betrokkenerelatie_syncer = BetrokkeneRelatiesSyncer(
+        betrokkenerelatie_syncer = BetrokkeneRelatiesFiller(
             eminfra_importer=self.eminfra_importer, postgis_connector=self.connector, resource='betrokkenerelaties')
         connection = self.connector.get_connection()
         params = None
@@ -209,16 +211,20 @@ class Filler:
                 params = self.connector.get_params(connection)
                 betrokkenerelatie_syncer.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
             except AgentMissingError as exc:
-                missing_agents = exc.agent_uuids
+                missing_agents = exc.args[0]
                 params = self.connector.get_params(connection)
-                if params['agents_fill']:
+                if 'agents_fill' in params and params['agents_fill']:
                     time.sleep(30)
                     continue
 
+                logging.info(f'Syncing {len(missing_agents)} agents first.')
                 self.connector.create_params(params={'agents_ad_hoc': ''}, connection=connection)
-
                 agent_syncer = AgentSyncer(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
                                            resource='agents')
+                agent_syncer.sync(missing_agents, connection=connection)
+                self.connector.delete_params(params={'agents_ad_hoc': ''}, connection=connection)
+                continue
+
                 # make different setup for syncing specific object
 
                 # create param agents_ad_hoc_random_nr
@@ -242,11 +248,10 @@ class Filler:
                 # if agents_sync is still running:
                 # wait a number of seconds
                 # else import the missing agents
-                print('refreshing agents')
-                raise NotImplementedError
+
                 # current_paging_cursor = self.eminfra_importer.pagingcursor
                 # self.eminfra_importer.pagingcursor = ''
-                # self.sync_agents(page_size=params['pagesize'], pagingcursor='')
+                # self.fill_agents(page_size=params['pagesize'], pagingcursor='')
                 # self.eminfra_importer.pagingcursor = current_paging_cursor
                 # self.connector.save_props_to_params({'pagingcursor': current_paging_cursor}, connection)
 
@@ -351,10 +356,10 @@ class Filler:
         end = time.time()
         logging.info(f'Time for all toezichtgroepen: {round(end - start, 2)}')
 
-    def sync_agents(self, page_size, pagingcursor):
+    def fill_agents(self, page_size, pagingcursor):
         logging.info(f'Filling agents table')
         start = time.time()
-        agent_syncer = AgentSyncer(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector, resource='agents')
+        agent_syncer = AgentFiller(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector, resource='agents')
         connection = self.connector.get_connection()
         agent_syncer.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
         self.connector.update_params(params={'agents_fill': False}, connection=connection)

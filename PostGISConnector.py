@@ -97,6 +97,14 @@ class PostGISConnector:
         connection.commit()
         cursor.close()
 
+    @staticmethod
+    def delete_params(params: dict, connection):
+        query = f"""DELETE FROM public.params WHERE key_name in ('{"','".join(params.keys())}');"""
+        cursor = connection.cursor()
+        cursor.execute(query)
+        connection.commit()
+        cursor.close()
+
     def create_params(self, params: dict, connection):
         query = ''
         for key_name, value in params.items():
@@ -107,7 +115,6 @@ class PostGISConnector:
             else:
                 query += f"""INSERT INTO public.params(key_name, value_{param_type})
                                              VALUES ('{key_name}', '{value}');"""
-
 
         cursor = connection.cursor()
         cursor.execute(query)

@@ -4,18 +4,8 @@ from FastFiller import FastFiller
 from PostGISConnector import PostGISConnector
 
 
-class AgentSyncer(FastFiller):
+class AgentFiller(FastFiller):
     def __init__(self, postgis_connector: PostGISConnector, eminfra_importer: EMInfraImporter, resource: str):
         super().__init__(resource=resource, postgis_connector=postgis_connector, eminfra_importer=eminfra_importer,
                          updater=AgentUpdater())
-
-    def sync(self, uuids: [str], connection):
-        self.eminfra_importer.paging_cursors['agents_ad_hoc'] = ''
-
-        object_generator = self.eminfra_importer.import_resource_from_webservice_by_uuids(
-            resource='agents', uuids=uuids, cursor_name='agents_ad_hoc')
-
-        self.updater.update_objects(object_generator=object_generator, connection=connection)
-
-
 

@@ -358,6 +358,8 @@ CREATE TABLE IF NOT EXISTS public.betrokkeneRelaties
     uuid uuid NOT NULL,
     doelUuid uuid NOT NULL,
     bronUuid uuid NOT NULL,
+    bronAgentUuid uuid,
+    bronAassetUuid uuid,
     rol text COLLATE pg_catalog."default",
     actief boolean NOT NULL,
     CONSTRAINT betrokkeneRelaties_pkey PRIMARY KEY (uuid)
@@ -370,6 +372,22 @@ ALTER TABLE IF EXISTS public.betrokkeneRelaties
     ADD CONSTRAINT betrokkeneRelaties_agents_fkey
     FOREIGN KEY (doelUuid)
     REFERENCES public.agents (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+ALTER TABLE IF EXISTS public.betrokkeneRelaties
+    ADD CONSTRAINT betrokkeneRelaties_bron_agents_fkey
+    FOREIGN KEY (bronAgentUuid)
+    REFERENCES public.agents (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+ALTER TABLE IF EXISTS public.betrokkeneRelaties
+    ADD CONSTRAINT betrokkeneRelaties_bron_assets_fkey
+    FOREIGN KEY (bronAassetUuid)
+    REFERENCES public.assets (uuid) MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;

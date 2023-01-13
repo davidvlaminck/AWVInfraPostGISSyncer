@@ -1,6 +1,7 @@
 ﻿import base64
 import json
 from collections.abc import Generator
+from typing import Iterator
 
 from RequestHandler import RequestHandler
 from ZoekParameterPayload import ZoekParameterPayload
@@ -20,10 +21,12 @@ class EMInfraImporter:
         return self.request_handler.get_jsondict(url)
 
     def get_objects_from_oslo_search_endpoint(self, url_part: str, cursor_name: str = None, filter_string: str = '{}',
-                                              size: int = 100,
+                                              size: int = 100, contact_info: bool = False,
                                               expansions_string: str = '{}') -> [dict]:
         # TODO fix fixed expansions_string
-        url = f"core/api/otl/{url_part}/search?expand=contactInfo"
+        url = f'core/api/otl/{url_part}/search'
+        if contact_info:
+            url += '?expand=contactInfo'
         body_fixed_part = '{"size": ' + f'{size}' + ''
         if filter_string != '{}':
             body_fixed_part += ', "filters": ' + filter_string
@@ -70,11 +73,22 @@ class EMInfraImporter:
         expansions_string = '{"fields": ["contactInfo"]}'
         return self.get_objects_from_oslo_search_endpoint(url_part='agents', expansions_string=expansions_string)
 
-    def import_resource_from_webservice_page_by_page(self, page_size: int, resource: str) -> [dict]:
+    def import_resource_from_webservice_by_uuids(self, resource: str, cursor_name: str, uuids: [str],
+                                                 page_size: int = 100) -> Iterator[dict]:
+        list_string = '", "'.join(uuids)
+        filter_string = '{ "uuid": ' + f'["{list_string}"]' + ' }'
         if resource == 'agents':
             expansions_string = '{"fields": ["contactInfo"]}'
             yield from self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size,
-                                                              expansions_string=expansions_string, cursor_name=resource)
+                                                                  expansions_string=expansions_string,
+                                                                  cursor_name=cursor_name, filter_string=filter_string)
+
+    def import_resource_from_webservice_page_by_page(self, page_size: int, resource: str) -> Iterator[dict]:
+        if resource == 'agents':
+            expansions_string = '{"fields": ["contactInfo"]}'
+            yield from self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size, contact_info=True,
+                                                                  expansions_string=expansions_string,
+                                                                  cursor_name=resource)
         elif resource == 'betrokkenerelaties':
             yield from self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size,
                                                                   cursor_name=resource)
@@ -119,8 +133,6 @@ class EMInfraImporter:
         return self.get_distinct_set_from_list_of_relations(
             self.get_objects_from_oslo_search_endpoint(url_part='betrokkenerelaties'))
 
-
-
     def import_betrokkenerelaties_from_webservice_by_assetuuids(self, asset_uuids: [str]) -> [dict]:
         asset_list_string = '", "'.join(asset_uuids)
         filter_string = '{ "bronAsset": ' + f'["{asset_list_string}"]' + ' }'
@@ -143,7 +155,6 @@ class EMInfraImporter:
             url = f"identiteit/api/{url_part}"
         else:
             url = f"core/api/{url_part}"
-
 
         if request_type == 'GET':
             response = self.request_handler.perform_get_request(url=url)
@@ -213,13 +224,15 @@ class EMInfraImporter:
 
     def get_all_elek_aansluitingen_from_webservice_by_asset_uuids(self, asset_uuids: [str]) -> Generator[tuple]:
         for asset_uuid in asset_uuids:
-            yield asset_uuid, self.get_objects_from_non_oslo_endpoint(url_part=f'installaties/{asset_uuid}/kenmerken/87dff279-4162-4031-ba30-fb7ffd9c014b',
-                                                                      request_type='GET')
+            yield asset_uuid, self.get_objects_from_non_oslo_endpoint(
+                url_part=f'installaties/{asset_uuid}/kenmerken/87dff279-4162-4031-ba30-fb7ffd9c014b',
+                request_type='GET')
 
     def get_all_bestekkoppelingen_from_webservice_by_asset_uuids(self, asset_uuids: [str]) -> Generator[tuple]:
         for asset_uuid in asset_uuids:
-            yield asset_uuid, self.get_objects_from_non_oslo_endpoint(url_part=f'installaties/{asset_uuid}/kenmerken/ee2e627e-bb79-47aa-956a-ea167d20acbd/bestekken',
-                                                                      request_type='GET')
+            yield asset_uuid, self.get_objects_from_non_oslo_endpoint(
+                url_part=f'installaties/{asset_uuid}/kenmerken/ee2e627e-bb79-47aa-956a-ea167d20acbd/bestekken',
+                request_type='GET')
 
     def get_assettypes_with_kenmerk_and_by_uuids(self, assettype_uuids, kenmerk: str):
         zoek_params = ZoekParameterPayload()
@@ -261,8 +274,6 @@ class EMInfraImporter:
         yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
                                                                  kenmerk='87dff279-4162-4031-ba30-fb7ffd9c014b')
 
-
-
     def import_identiteiten_from_webservice_page_by_page(self, page_size):
         zoek_params = ZoekParameterPayload()
         zoek_params.size = page_size
@@ -270,12 +281,9 @@ class EMInfraImporter:
                                                            identiteit=True)
 
     def get_kenmerken_by_assettype_uuids(self, assettype_uuid, voc):
-        url_part=f'/{voc}types/{assettype_uuid}/kenmerktypes'
+        url_part = f'/{voc}types/{assettype_uuid}/kenmerktypes'
         return list(self.get_objects_from_non_oslo_endpoint(url_part=url_part, request_type='GET'))
 
     def get_eigenschappen_by_kenmerk_uuid(self, kenmerk_uuid):
         url_part = f'/kenmerktypes/{kenmerk_uuid}/eigenschappen'
         return list(self.get_objects_from_non_oslo_endpoint(url_part=url_part, request_type='GET'))
-
-
-

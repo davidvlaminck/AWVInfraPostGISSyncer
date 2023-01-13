@@ -3,6 +3,7 @@ from typing import Iterator
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.BetrokkeneRelatiesGewijzigdProcessor import BetrokkeneRelatiesGewijzigdProcessor
 from FastFiller import FastFiller
+from Helpers import peek_generator
 from PostGISConnector import PostGISConnector
 
 
@@ -11,7 +12,7 @@ class BetrokkeneRelatiesSyncer(FastFiller):
         super().__init__(resource=resource, postgis_connector=postgis_connector, eminfra_importer=eminfra_importer)
 
     def update_objects(self, object_generator: Iterator[dict], connection):
-        object_generator = self.peek_generator(object_generator)
+        object_generator = peek_generator(object_generator)
         if object_generator is None:
             return
 
