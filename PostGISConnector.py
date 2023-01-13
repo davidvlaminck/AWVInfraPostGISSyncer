@@ -22,6 +22,29 @@ class PostGISConnector:
             'event_uuid_assetrelaties': 'text',
             'page_betrokkenerelaties': 'int',
             'event_uuid_betrokkenerelaties': 'text',
+            'agents_fill': 'bool',
+            'agents_cursor': 'text',
+            'toezichtgroepen_fill': 'bool',
+            'toezichtgroepen_cursor': 'text',
+            'identiteiten_fill': 'bool',
+            'identiteiten_cursor': 'text',
+            'beheerders_fill': 'bool',
+            'beheerders_cursor': 'text',
+            'bestekken_fill': 'bool',
+            'bestekken_cursor': 'text',
+            'assettypes_fill': 'bool',
+            'assettypes_cursor': 'text',
+            'relatietypes_fill': 'bool',
+            'relatietypes_cursor': 'text',
+            'assets_fill': 'bool',
+            'assets_cursor': 'text',
+            'bestekkoppelingen_fill': 'bool',
+            'bestekkoppelingen_cursor': 'text',
+            'betrokkenerelaties_fill': 'bool',
+            'betrokkenerelaties_cursor': 'text',
+            'assetrelaties_fill': 'bool',
+            'assetrelaties_cursor': 'text',
+
         }
 
     def set_up_tables(self, file_path='setup_tables_querys.sql'):
@@ -63,7 +86,22 @@ class PostGISConnector:
                 self.connection.rollback()
                 raise error
 
-    def save_props_to_params(self, params: dict, cursor: psycopg2._psycopg.cursor = None):
+    def update_params(self, params: dict, cursor: psycopg2._psycopg.cursor = None):
+        query = ''
+        for key_name, value in params.items():
+            param_type = self.param_type_map[key_name]
+            if param_type in ['int', 'bool']:
+                query += f"UPDATE public.params SET value_{param_type} = {value} WHERE key_name = '{key_name}';"
+            else:
+                query += f"UPDATE public.params SET value_{param_type} = '{value}' WHERE key_name = '{key_name}';"
+
+        if cursor is None:
+            cursor = self.connection.cursor()
+        cursor.execute(query)
+        self.connection.commit()
+        cursor.close()
+
+    def create_params(self, params: dict, cursor: psycopg2._psycopg.cursor = None):
         query = ''
         for key_name, value in params.items():
             param_type = self.param_type_map[key_name]

@@ -36,12 +36,23 @@ class Filler:
         self.events_collector = FeedEventsCollector(eminfra_importer)
         self.events_processor = FeedEventsProcessor(connector, eminfra_importer)
 
+    def fill_table(self, table_to_fill, page_size, fill, cursor):
+        if not fill:
+            return
+        if table_to_fill == 'agents':
+            self.sync_agents(page_size, cursor)
+        elif table_to_fill == 'toezichtgroepen':
+            self.sync_toezichtgroepen(page_size, cursor)
+        elif table_to_fill == 'beheerders':
+            self.sync_beheerders(page_size, cursor)
+
     def fill(self, params: dict):
         logging.info('Filling the database with data')
         page_size = params['pagesize']
         # TODO change to or when all feeds work
-        if 'page_assets' not in params and 'page_assetrelaties' not in params and \
-                'page_agents' not in params and 'page_betrokkenerelaties' not in params:
+        # if 'page_assets' not in params or 'page_assetrelaties' not in params or \
+        #         'page_agents' not in params or 'page_betrokkenerelaties' not in params:
+        if 'page_assets' not in params:
             logging.info('Getting the last pages for feeds')
             feeds = ['assets', 'agents', 'assetrelaties', 'betrokkenerelaties']
             feeds = ['assets']
@@ -54,6 +65,18 @@ class Filler:
 
         while True:
             try:
+                tables_to_fill = ['agents', 'toezichtgroepen', 'beheerders']
+
+                params = self.connector.get_params()
+                if 'agents_fill' not in params:
+                    self.create_params_for_table_fill(tables_to_fill)
+                    params = self.connector.get_params()
+
+                for table_to_fill in tables_to_fill:
+                    self.fill_table(table_to_fill=table_to_fill, fill=params[table_to_fill + '_fill'],
+                                    cursor=params[table_to_fill + '_cursor'], page_size=params['pagesize'])
+
+                raise NotImplementedError()
                 # main sync loop for a fresh start
                 params = self.connector.get_params()
                 sync_step = params['sync_step']
@@ -108,6 +131,13 @@ class Filler:
             except Exception as err:
                 self.connector.connection.rollback()
                 raise err
+
+    def create_params_for_table_fill(self, tables_to_fill):
+        param_dict = {}
+        for table_to_fill in tables_to_fill:
+            param_dict[table_to_fill + '_fill'] = True
+            param_dict[table_to_fill + '_cursor'] = ''
+        self.connector.create_params(param_dict)
 
     def sync_assetrelaties(self):
         start = time.time()
@@ -223,9 +253,11 @@ class Filler:
         logging.info(f'time for all bestekken: {round(end - start, 2)}')
 
     def sync_beheerders(self, page_size, pagingcursor):
+        logging.info(f'Filling beheerders table')
         start = time.time()
         beheerder_syncer = BeheerderSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector)
         beheerder_syncer.sync_beheerders(pagingcursor=pagingcursor, page_size=page_size)
+        self.connector.update_params({'beheerders_fill': False})
         end = time.time()
         logging.info(f'time for all beheerders: {round(end - start, 2)}')
 
@@ -237,19 +269,23 @@ class Filler:
         logging.info(f'time for all identiteiten: {round(end - start, 2)}')
 
     def sync_toezichtgroepen(self, page_size, pagingcursor):
+        logging.info(f'Filling toezichtgroepen table')
         start = time.time()
-        toezichtgroep_syncer = ToezichtgroepSyncer(emInfraImporter=self.eminfra_importer,
-                                                   postGIS_connector=self.connector)
+        toezichtgroep_syncer = ToezichtgroepSyncer(em_infra_importer=self.eminfra_importer,
+                                                   postgis_connector=self.connector)
         toezichtgroep_syncer.sync_toezichtgroepen(pagingcursor=pagingcursor, page_size=page_size)
+        self.connector.update_params({'toezichtgroepen_fill': False})
         end = time.time()
-        logging.info(f'time for all toezichtgroepen: {round(end - start, 2)}')
+        logging.info(f'Time for all toezichtgroepen: {round(end - start, 2)}')
 
     def sync_agents(self, page_size, pagingcursor):
+        logging.info(f'Filling agents table')
         start = time.time()
-        agent_syncer = AgentSyncer(emInfraImporter=self.eminfra_importer, postGIS_connector=self.connector)
+        agent_syncer = AgentSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector)
         agent_syncer.sync_agents(pagingcursor=pagingcursor, page_size=page_size)
+        self.connector.update_params({'agents_fill': False})
         end = time.time()
-        logging.info(f'time for all agents: {round(end - start, 2)}')
+        logging.info(f'Time for all agents: {round(end - start, 2)}')
 
     def save_last_feedevent_to_params(self, page_size: int, feed: str):
         start_num = 1
@@ -271,7 +307,7 @@ class Filler:
         entries = event_page['entries']
         last_event_uuid = entries[0]['id']
 
-        self.connector.save_props_to_params(
+        self.connector.create_params(
             {f'event_uuid_{feed}': last_event_uuid,
              f'page_{feed}': current_page_num})
         logging.info(f'Added last page of current feed for {feed} to params (page: {current_page_num})')

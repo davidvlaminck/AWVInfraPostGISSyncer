@@ -36,7 +36,7 @@ class AgentSyncerTests(TestCase):
         request_handler = RequestHandler(requester)
         self.eminfra_importer = EMInfraImporter(request_handler)
 
-        self.agents_syncer = AgentSyncer(postGIS_connector=self.connector, emInfraImporter=self.eminfra_importer)
+        self.agents_syncer = AgentSyncer(postgis_connector=self.connector, em_infra_importer=self.eminfra_importer)
 
     def test_update_agents(self):
         self.setup()

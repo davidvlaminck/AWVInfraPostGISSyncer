@@ -33,8 +33,8 @@ class ToezichtgroepSyncerTests(TestCase):
 
         self.eminfra_importer = EMInfraImporter(MagicMock())
 
-        self.toezichtgroepen_syncer = ToezichtgroepSyncer(postGIS_connector=self.connector,
-                                                          emInfraImporter=self.eminfra_importer)
+        self.toezichtgroepen_syncer = ToezichtgroepSyncer(postgis_connector=self.connector,
+                                                          em_infra_importer=self.eminfra_importer)
 
     def test_update_toezichtgroepen(self):
         self.setup()

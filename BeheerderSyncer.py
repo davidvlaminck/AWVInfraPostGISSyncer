@@ -17,7 +17,7 @@ class BeheerderSyncer:
                 break
 
             self.update_beheerders(beheerder_dicts=beheerders)
-            self.postGIS_connector.save_props_to_params({'pagingcursor': self.em_infra_importer.pagingcursor})
+            self.postGIS_connector.update_params({'beheerders_cursor': self.em_infra_importer.pagingcursor})
 
             if self.em_infra_importer.pagingcursor == '':
                 break

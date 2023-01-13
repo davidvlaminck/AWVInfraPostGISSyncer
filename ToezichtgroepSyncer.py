@@ -6,9 +6,9 @@ from PostGISConnector import PostGISConnector
 
 
 class ToezichtgroepSyncer:
-    def __init__(self, postGIS_connector: PostGISConnector, emInfraImporter: EMInfraImporter):
-        self.postGIS_connector = postGIS_connector
-        self.eminfra_importer = emInfraImporter
+    def __init__(self, postgis_connector: PostGISConnector, em_infra_importer: EMInfraImporter):
+        self.postgis_connector = postgis_connector
+        self.eminfra_importer = em_infra_importer
 
     def sync_toezichtgroepen(self, pagingcursor: str = '', page_size: int = 100):
         self.eminfra_importer.pagingcursor = pagingcursor
@@ -18,7 +18,7 @@ class ToezichtgroepSyncer:
                 break
 
             self.update_toezichtgroepen(toezichtgroep_dicts=toezichtgroepen)
-            self.postGIS_connector.save_props_to_params({'pagingcursor': self.eminfra_importer.pagingcursor})
+            self.postgis_connector.update_params({'toezichtgroepen_cursor': self.eminfra_importer.pagingcursor})
 
             if self.eminfra_importer.pagingcursor == '':
                 break
@@ -84,9 +84,9 @@ SET naam = to_update.naam, referentie = to_update.referentie, typeGroep = to_upd
 FROM to_update 
 WHERE to_update.uuid = toezichtgroepen.uuid;"""
 
-        cursor = self.postGIS_connector.connection.cursor()
+        cursor = self.postgis_connector.connection.cursor()
         cursor.execute(insert_query)
 
-        cursor = self.postGIS_connector.connection.cursor()
+        cursor = self.postgis_connector.connection.cursor()
         cursor.execute(update_query)
-        self.postGIS_connector.connection.commit()
+        self.postgis_connector.connection.commit()
