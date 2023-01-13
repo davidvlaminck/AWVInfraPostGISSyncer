@@ -202,7 +202,7 @@ class SyncManager:
 
     def sync_agents(self, page_size, pagingcursor):
         start = time.time()
-        agent_syncer = AgentSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector)
+        agent_syncer = AgentSyncer(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector)
         agent_syncer.fill(pagingcursor=pagingcursor, page_size=page_size)
         end = time.time()
         logging.info(f'time for all agents: {round(end - start, 2)}')

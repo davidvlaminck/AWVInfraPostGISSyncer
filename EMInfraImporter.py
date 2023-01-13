@@ -10,7 +10,7 @@ class EMInfraImporter:
     def __init__(self, request_handler: RequestHandler):
         self.request_handler = request_handler
         self.request_handler.requester.first_part_url += 'eminfra/'
-        self.pagingcursor = ''
+        self.paging_cursors = {}
 
     def get_events_from_feed_relaties(self, page_num: int, page_size: int = 1):
         return self.get_events_from_feedpage('assetrelaties', page_num=page_num, page_size=page_size)
@@ -19,8 +19,9 @@ class EMInfraImporter:
         url = f"feedproxy/feed/{feed}/{page_num}/{page_size}"
         return self.request_handler.get_jsondict(url)
 
-    def get_objects_from_oslo_search_endpoint(self, url_part: str, filter_string: str = '{}', size: int = 100,
-                                              only_next_page: bool = False, expansions_string: str = '{}') -> [dict]:
+    def get_objects_from_oslo_search_endpoint(self, url_part: str, cursor_name: str, filter_string: str = '{}',
+                                              size: int = 100,
+                                              expansions_string: str = '{}') -> [dict]:
         # TODO fix fixed expansions_string
         url = f"core/api/otl/{url_part}/search?expand=contactInfo"
         body_fixed_part = '{"size": ' + f'{size}' + ''
@@ -30,29 +31,25 @@ class EMInfraImporter:
             body_fixed_part += ', "expansions": ' + expansions_string
 
         json_list = []
-        while True:
-            body = body_fixed_part
-            if self.pagingcursor != '':
-                body += ', "fromCursor": ' + f'"{self.pagingcursor}"'
-            body += '}'
-            json_data = json.loads(body)
 
-            response = self.request_handler.perform_post_request(url=url, json_data=json_data)
+        body = body_fixed_part
+        if self.paging_cursors[cursor_name] != '':
+            body += ', "fromCursor": ' + f'"{self.paging_cursors[cursor_name]}"'
+        body += '}'
+        json_data = json.loads(body)
 
-            decoded_string = response.content.decode("utf-8")
-            dict_obj = json.loads(decoded_string)
-            keys = response.headers.keys()
-            json_list.extend(dict_obj['@graph'])
-            if 'em-paging-next-cursor' in keys:
-                self.pagingcursor = response.headers['em-paging-next-cursor']
-            else:
-                self.pagingcursor = ''
-            if only_next_page:
-                yield from json_list
-                return
-            if self.pagingcursor == '':
-                yield from json_list
-                return
+        response = self.request_handler.perform_post_request(url=url, json_data=json_data)
+
+        decoded_string = response.content.decode("utf-8")
+        dict_obj = json.loads(decoded_string)
+        keys = response.headers.keys()
+        json_list.extend(dict_obj['@graph'])
+        if 'em-paging-next-cursor' in keys:
+            self.paging_cursors[cursor_name] = response.headers['em-paging-next-cursor']
+        else:
+            self.paging_cursors[cursor_name] = ''
+
+        yield from json_list
 
     def get_assets_from_webservice_by_naam(self, naam: str) -> [dict]:
         filter_string = '{ "naam": ' + f'"{naam}"' + ' }'
@@ -76,8 +73,8 @@ class EMInfraImporter:
     def import_resource_from_webservice_page_by_page(self, page_size: int, resource: str) -> [dict]:
         if resource == 'agents':
             expansions_string = '{"fields": ["contactInfo"]}'
-            yield from self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size, only_next_page=True,
-                                                              expansions_string=expansions_string)
+            yield from self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size,
+                                                              expansions_string=expansions_string, cursor_name=resource)
         elif resource == 'toezichtgroepen':
             zoek_params = ZoekParameterPayload()
             zoek_params.size = page_size

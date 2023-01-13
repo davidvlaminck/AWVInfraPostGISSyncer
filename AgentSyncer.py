@@ -7,8 +7,8 @@ from PostGISConnector import PostGISConnector
 
 
 class AgentSyncer(FastFiller):
-    def __init__(self, postgis_connector: PostGISConnector, em_infra_importer: EMInfraImporter, resource: str):
-        super().__init__(resource=resource, postgis_connector=postgis_connector, eminfra_importer=em_infra_importer)
+    def __init__(self, postgis_connector: PostGISConnector, eminfra_importer: EMInfraImporter, resource: str):
+        super().__init__(resource=resource, postgis_connector=postgis_connector, eminfra_importer=eminfra_importer)
 
     def update_objects(self, object_generator: Iterator[dict]):
         object_generator = self.peek_generator(object_generator)

@@ -45,6 +45,8 @@ class Filler:
             self.sync_toezichtgroepen(page_size, cursor)
         elif table_to_fill == 'beheerders':
             self.sync_beheerders(page_size, cursor)
+        elif table_to_fill == 'betrokkenerelaties':
+            self.sync_betrokkenerelaties(page_size, cursor)
 
     def fill(self, params: dict):
         logging.info('Filling the database with data')
@@ -65,7 +67,7 @@ class Filler:
 
         while True:
             try:
-                tables_to_fill = ['agents', 'toezichtgroepen', 'beheerders']
+                tables_to_fill = ['agents', 'toezichtgroepen', 'beheerders'] # , 'betrokkenerelaties'
 
                 params = self.connector.get_params()
                 if 'agents_fill' not in params:
@@ -192,6 +194,11 @@ class Filler:
                 params = self.connector.get_params()
                 betrokkenerelatie_syncer.sync_betrokkenerelaties(pagingcursor=params['pagingcursor'])
             except AgentMissingError:
+                # TODO change to:
+                # get params
+                # if agents_sync is still running:
+                # wait a number of seconds
+                # else import the missing agent
                 self.connector.connection.rollback()
                 print('refreshing agents')
                 current_paging_cursor = self.eminfra_importer.pagingcursor
@@ -300,7 +307,7 @@ class Filler:
     def sync_agents(self, page_size, pagingcursor):
         logging.info(f'Filling agents table')
         start = time.time()
-        agent_syncer = AgentSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector, resource='agents')
+        agent_syncer = AgentSyncer(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector, resource='agents')
         agent_syncer.fill(pagingcursor=pagingcursor, page_size=page_size)
         self.connector.update_params({'agents_fill': False})
         end = time.time()
