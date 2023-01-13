@@ -19,7 +19,7 @@ class EMInfraImporter:
         url = f"feedproxy/feed/{feed}/{page_num}/{page_size}"
         return self.request_handler.get_jsondict(url)
 
-    def get_objects_from_oslo_search_endpoint(self, url_part: str, cursor_name: str, filter_string: str = '{}',
+    def get_objects_from_oslo_search_endpoint(self, url_part: str, cursor_name: str = None, filter_string: str = '{}',
                                               size: int = 100,
                                               expansions_string: str = '{}') -> [dict]:
         # TODO fix fixed expansions_string
@@ -75,6 +75,9 @@ class EMInfraImporter:
             expansions_string = '{"fields": ["contactInfo"]}'
             yield from self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size,
                                                               expansions_string=expansions_string, cursor_name=resource)
+        elif resource == 'betrokkenerelaties':
+            yield from self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size,
+                                                                  cursor_name=resource)
         elif resource == 'toezichtgroepen':
             zoek_params = ZoekParameterPayload()
             zoek_params.size = page_size
@@ -85,6 +88,8 @@ class EMInfraImporter:
             zoek_params.size = page_size
             yield from self.get_objects_from_non_oslo_endpoint(url_part=f'{resource}/search',
                                                                zoek_payload=zoek_params)
+        else:
+            raise NotImplementedError()
 
     def import_agents_from_webservice_page_by_page(self, page_size: int) -> [dict]:
         expansions_string = '{"fields": ["contactInfo"]}'
@@ -114,9 +119,7 @@ class EMInfraImporter:
         return self.get_distinct_set_from_list_of_relations(
             self.get_objects_from_oslo_search_endpoint(url_part='betrokkenerelaties'))
 
-    def import_betrokkenerelaties_from_webservice_page_by_page(self, page_size: int) -> [dict]:
-        return self.get_distinct_set_from_list_of_relations(
-            self.get_objects_from_oslo_search_endpoint(url_part='betrokkenerelaties', size=page_size, only_next_page=True))
+
 
     def import_betrokkenerelaties_from_webservice_by_assetuuids(self, asset_uuids: [str]) -> [dict]:
         asset_list_string = '", "'.join(asset_uuids)

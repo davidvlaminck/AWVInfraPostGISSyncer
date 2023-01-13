@@ -1,5 +1,6 @@
 import concurrent
 import logging
+import random
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -67,10 +68,11 @@ class Filler:
 
         while True:
             try:
-                tables_to_fill = ['agents', 'toezichtgroepen', 'beheerders'] # , 'betrokkenerelaties'
+                # tables_to_fill = ['agents', 'toezichtgroepen', 'beheerders'] # , 'betrokkenerelaties'
+                tables_to_fill = ['betrokkenerelaties']
 
                 params = self.connector.get_params(self.connector.main_connection)
-                if 'agents_fill' not in params:
+                if 'betrokkenerelaties_fill' not in params:
                     self.create_params_for_table_fill(tables_to_fill, self.connector.main_connection)
                     params = self.connector.get_params(self.connector.main_connection)
 
@@ -184,30 +186,71 @@ class Filler:
         end = time.time()
         logging.info(f'time for all assetrelaties: {round(end - start, 2)}')
 
-    def sync_betrokkenerelaties(self):
+    def sync_betrokkenerelaties(self, page_size, pagingcursor):
+        # logging.info(f'Filling beheerders table')
+        # start = time.time()
+        # beheerder_syncer = BeheerderSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector,
+        #                                    resource='beheerders')
+        # connection = self.connector.get_connection()
+        # beheerder_syncer.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
+        # self.connector.update_params(params={'beheerders_fill': False}, connection=connection)
+        # self.connector.kill_connection(connection)
+        # end = time.time()
+        # logging.info(f'Time for all beheerders: {round(end - start, 2)}')
+
+        logging.info(f'Filling betrokkenerelaties table')
         start = time.time()
-        betrokkenerelatie_syncer = BetrokkeneRelatiesSyncer(em_infra_importer=self.eminfra_importer,
-                                                            post_gis_connector=self.connector)
+        betrokkenerelatie_syncer = BetrokkeneRelatiesSyncer(
+            eminfra_importer=self.eminfra_importer, postgis_connector=self.connector, resource='betrokkenerelaties')
+        connection = self.connector.get_connection()
         params = None
         while True:
             try:
-                params = self.connector.get_params()
-                betrokkenerelatie_syncer.sync_betrokkenerelaties(pagingcursor=params['pagingcursor'])
-            except AgentMissingError:
+                params = self.connector.get_params(connection)
+                betrokkenerelatie_syncer.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
+            except AgentMissingError as exc:
+                missing_agents = exc.agent_uuids
+                params = self.connector.get_params(connection)
+                if params['agents_fill']:
+                    time.sleep(30)
+                    continue
+
+                self.connector.create_params(params={'agents_ad_hoc': ''}, connection=connection)
+
+                agent_syncer = AgentSyncer(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
+                                           resource='agents')
+                # make different setup for syncing specific object
+
+                # create param agents_ad_hoc_random_nr
+                # pas it as paging cursor variable
+                # get all agents by uuids
+                # clean up by removing that param
+
+                # Updater : updates objects
+                #   logic how to update/create/delete objects
+                #   SQL query's
+                # Syncers : converts uuids to generator to be processed by Updater
+                #   contains logic on how to convert uuids to dicts
+                # Fillers : creates a generator to loop over all objects, to be processed by Updater
+                # Fillers inherit from FastFiller, so they all use the same mechanic fill()
+                #   contains logic on how to get all dicts
+
+
+
                 # TODO change to:
                 # get params
                 # if agents_sync is still running:
                 # wait a number of seconds
-                # else import the missing agent
-                self.connector.connection.rollback()
+                # else import the missing agents
                 print('refreshing agents')
-                current_paging_cursor = self.eminfra_importer.pagingcursor
-                self.eminfra_importer.pagingcursor = ''
-                self.sync_agents(page_size=params['pagesize'], pagingcursor='')
-                self.eminfra_importer.pagingcursor = current_paging_cursor
-                self.connector.save_props_to_params({'pagingcursor': current_paging_cursor})
+                raise NotImplementedError
+                # current_paging_cursor = self.eminfra_importer.pagingcursor
+                # self.eminfra_importer.pagingcursor = ''
+                # self.sync_agents(page_size=params['pagesize'], pagingcursor='')
+                # self.eminfra_importer.pagingcursor = current_paging_cursor
+                # self.connector.save_props_to_params({'pagingcursor': current_paging_cursor}, connection)
 
-            if self.eminfra_importer.pagingcursor == '':
+            if self.eminfra_importer.paging_cursors['betrokkenerelaties_cursor'] == '':
                 break
 
         end = time.time()

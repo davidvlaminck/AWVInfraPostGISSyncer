@@ -12,18 +12,7 @@ class FastFiller(ABC):
         self.postgis_connector = postgis_connector
         self.eminfra_importer = eminfra_importer
         self.resource = resource
-
-    @staticmethod
-    def peek_generator(iterable):
-        try:
-            first = next(iterable)
-        except StopIteration:
-            return None
-        yield from itertools.chain([first], iterable)
-
-    @abc.abstractmethod
-    def update_objects(self, object_generator: Iterator[dict], connection):
-        raise NotImplementedError()
+        self.updater = None
 
     def fill(self, connection, pagingcursor: str = '', page_size: int = 100):
         self.eminfra_importer.paging_cursors[self.resource] = pagingcursor
@@ -31,7 +20,7 @@ class FastFiller(ABC):
             object_generator = self.eminfra_importer.import_resource_from_webservice_page_by_page(
                 resource=self.resource, page_size=page_size)
 
-            self.update_objects(object_generator=object_generator, connection=connection)
+            self.updater.update_objects(object_generator=object_generator, connection=connection)
             self.postgis_connector.update_params(
                 params={f'{self.resource}_cursor': self.eminfra_importer.paging_cursors[self.resource]},
                 connection=connection)
