@@ -285,7 +285,7 @@ class Filler:
         beheerder_syncer.fill(pagingcursor=pagingcursor, page_size=page_size)
         self.connector.update_params({'beheerders_fill': False})
         end = time.time()
-        logging.info(f'time for all beheerders: {round(end - start, 2)}')
+        logging.info(f'Time for all beheerders: {round(end - start, 2)}')
 
     def sync_identiteiten(self, page_size, pagingcursor):
         start = time.time()
