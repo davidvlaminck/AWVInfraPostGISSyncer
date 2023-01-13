@@ -72,9 +72,24 @@ class Filler:
                     self.create_params_for_table_fill(tables_to_fill)
                     params = self.connector.get_params()
 
+                # use multithreading
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    futures = [executor.submit(self.fill_table, table_to_fill=table_to_fill,
+                                               fill=params[table_to_fill + '_fill'],
+                                               cursor=params[table_to_fill + '_cursor'], page_size=params['pagesize'])
+                               for table_to_fill in tables_to_fill]
+                    concurrent.futures.wait(futures)
+
+                params = self.connector.get_params()
+                done = True
                 for table_to_fill in tables_to_fill:
-                    self.fill_table(table_to_fill=table_to_fill, fill=params[table_to_fill + '_fill'],
-                                    cursor=params[table_to_fill + '_cursor'], page_size=params['pagesize'])
+                    if params[table_to_fill + '_fill']:
+                        done = False
+
+                if done:
+                    break
+                else:
+                    continue
 
                 raise NotImplementedError()
                 # main sync loop for a fresh start
@@ -131,6 +146,9 @@ class Filler:
             except Exception as err:
                 self.connector.connection.rollback()
                 raise err
+
+        print('stop')
+        raise NotImplementedError()
 
     def create_params_for_table_fill(self, tables_to_fill):
         param_dict = {}
