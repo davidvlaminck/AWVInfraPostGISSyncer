@@ -1,15 +1,13 @@
 import psycopg2
 from psycopg2 import Error
+from psycopg2.pool import ThreadedConnectionPool
 
 
 class PostGISConnector:
     def __init__(self, host, port, user, password, database: str = 'awvinfra'):
-        self.connection = psycopg2.connect(user=user,
-                                           password=password,
-                                           host=host,
-                                           port=port,
-                                           database=database)
-        self.connection.autocommit = False
+        self.pool = ThreadedConnectionPool(minconn=5, maxconn=20, user=user,password=password,host=host,port=port,database=database)
+        self.main_connection = self.pool.getconn()
+        self.main_connection.autocommit = False
         self.db = database
         self.param_type_map = {
             'fresh_start': 'bool',
@@ -48,23 +46,22 @@ class PostGISConnector:
         }
 
     def set_up_tables(self, file_path='setup_tables_querys.sql'):
-        
         # create drop views query's with:
         drop_views_query = """
         SELECT 'DROP VIEW ' || table_name || ' CASCADE;'
         FROM information_schema.views
         WHERE table_schema NOT IN ('pg_catalog', 'information_schema') AND table_name !~ '^pg_';"""
-        
-        cursor = self.connection.cursor()
+
+        cursor = self.main_connection.cursor()
         with open(file_path) as setup_queries:
             queries = setup_queries.readlines()
             query = ' '.join(queries)
             cursor.execute(query)
-            self.connection.commit()
+            self.main_connection.commit()
         cursor.close()
 
-    def get_params(self):
-        cursor = self.connection.cursor()
+    def get_params(self, connection):
+        cursor = connection.cursor()
         try:
             cursor.execute('SELECT key_name, value_int, value_text, value_bool, value_timestamp '
                            'FROM public.params')
@@ -78,15 +75,15 @@ class PostGISConnector:
         except Error as error:
             if '"public.params" does not exist' in error.pgerror:
                 cursor.close()
-                self.connection.rollback()
+                connection.rollback()
                 return None
             else:
                 print("Error while connecting to PostgreSQL", error)
                 cursor.close()
-                self.connection.rollback()
+                connection.rollback()
                 raise error
 
-    def update_params(self, params: dict, cursor: psycopg2._psycopg.cursor = None):
+    def update_params(self, params: dict, connection):
         query = ''
         for key_name, value in params.items():
             param_type = self.param_type_map[key_name]
@@ -95,13 +92,12 @@ class PostGISConnector:
             else:
                 query += f"UPDATE public.params SET value_{param_type} = '{value}' WHERE key_name = '{key_name}';"
 
-        if cursor is None:
-            cursor = self.connection.cursor()
+        cursor = connection.cursor()
         cursor.execute(query)
-        self.connection.commit()
+        connection.commit()
         cursor.close()
 
-    def create_params(self, params: dict, cursor: psycopg2._psycopg.cursor = None):
+    def create_params(self, params: dict, connection):
         query = ''
         for key_name, value in params.items():
             param_type = self.param_type_map[key_name]
@@ -112,10 +108,10 @@ class PostGISConnector:
                 query += f"""INSERT INTO public.params(key_name, value_{param_type})
                                              VALUES ('{key_name}', '{value}');"""
 
-        if cursor is None:
-            cursor = self.connection.cursor()
+
+        cursor = connection.cursor()
         cursor.execute(query)
-        self.connection.commit()
+        connection.commit()
         cursor.close()
 
     def close(self):
@@ -136,3 +132,9 @@ class PostGISConnector:
             params_dict[raw_param_record[0]] = raw_param_record[4]
         else:
             raise NotImplementedError
+
+    def get_connection(self):
+        return self.pool.getconn()
+
+    def kill_connection(self, connection):
+        self.pool.putconn(connection)

@@ -69,10 +69,10 @@ class Filler:
             try:
                 tables_to_fill = ['agents', 'toezichtgroepen', 'beheerders'] # , 'betrokkenerelaties'
 
-                params = self.connector.get_params()
+                params = self.connector.get_params(self.connector.main_connection)
                 if 'agents_fill' not in params:
-                    self.create_params_for_table_fill(tables_to_fill)
-                    params = self.connector.get_params()
+                    self.create_params_for_table_fill(tables_to_fill, self.connector.main_connection)
+                    params = self.connector.get_params(self.connector.main_connection)
 
                 # use multithreading
                 with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -82,7 +82,7 @@ class Filler:
                                for table_to_fill in tables_to_fill]
                     concurrent.futures.wait(futures)
 
-                params = self.connector.get_params()
+                params = self.connector.get_params(self.connector.main_connection)
                 done = True
                 for table_to_fill in tables_to_fill:
                     if params[table_to_fill + '_fill']:
@@ -146,18 +146,18 @@ class Filler:
                 logging.info("failed connection, retrying in 1 minute")
                 time.sleep(60)
             except Exception as err:
-                self.connector.connection.rollback()
+                self.connector.main_connection.rollback()
                 raise err
 
         print('stop')
         raise NotImplementedError()
 
-    def create_params_for_table_fill(self, tables_to_fill):
+    def create_params_for_table_fill(self, tables_to_fill, connection):
         param_dict = {}
         for table_to_fill in tables_to_fill:
             param_dict[table_to_fill + '_fill'] = True
             param_dict[table_to_fill + '_cursor'] = ''
-        self.connector.create_params(param_dict)
+        self.connector.create_params(param_dict, connection)
 
     def sync_assetrelaties(self):
         start = time.time()
@@ -282,8 +282,10 @@ class Filler:
         start = time.time()
         beheerder_syncer = BeheerderSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector,
                                            resource='beheerders')
-        beheerder_syncer.fill(pagingcursor=pagingcursor, page_size=page_size)
-        self.connector.update_params({'beheerders_fill': False})
+        connection = self.connector.get_connection()
+        beheerder_syncer.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
+        self.connector.update_params(params={'beheerders_fill': False}, connection=connection)
+        self.connector.kill_connection(connection)
         end = time.time()
         logging.info(f'Time for all beheerders: {round(end - start, 2)}')
 
@@ -299,8 +301,10 @@ class Filler:
         start = time.time()
         toezichtgroep_syncer = ToezichtgroepSyncer(em_infra_importer=self.eminfra_importer,
                                                    postgis_connector=self.connector, resource='toezichtgroepen')
-        toezichtgroep_syncer.fill(pagingcursor=pagingcursor, page_size=page_size)
-        self.connector.update_params({'toezichtgroepen_fill': False})
+        connection = self.connector.get_connection()
+        toezichtgroep_syncer.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
+        self.connector.update_params(params={'toezichtgroepen_fill': False}, connection=connection)
+        self.connector.kill_connection(connection)
         end = time.time()
         logging.info(f'Time for all toezichtgroepen: {round(end - start, 2)}')
 
@@ -308,8 +312,10 @@ class Filler:
         logging.info(f'Filling agents table')
         start = time.time()
         agent_syncer = AgentSyncer(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector, resource='agents')
-        agent_syncer.fill(pagingcursor=pagingcursor, page_size=page_size)
-        self.connector.update_params({'agents_fill': False})
+        connection = self.connector.get_connection()
+        agent_syncer.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
+        self.connector.update_params(params={'agents_fill': False}, connection=connection)
+        self.connector.kill_connection(connection)
         end = time.time()
         logging.info(f'Time for all agents: {round(end - start, 2)}')
 
@@ -335,7 +341,8 @@ class Filler:
 
         self.connector.create_params(
             {f'event_uuid_{feed}': last_event_uuid,
-             f'page_{feed}': current_page_num})
+             f'page_{feed}': current_page_num},
+            connection=self.connector.main_connection)
         logging.info(f'Added last page of current feed for {feed} to params (page: {current_page_num})')
 
     def recur_exp_find_start_page(self, current_num, step, page_size, feed):

@@ -22,17 +22,19 @@ class FastFiller(ABC):
         yield from itertools.chain([first], iterable)
 
     @abc.abstractmethod
-    def update_objects(self, object_generator: Iterator[dict]):
+    def update_objects(self, object_generator: Iterator[dict], connection):
         raise NotImplementedError()
 
-    def fill(self, pagingcursor: str = '', page_size: int = 100):
+    def fill(self, connection, pagingcursor: str = '', page_size: int = 100):
         self.eminfra_importer.paging_cursors[self.resource] = pagingcursor
         while True:
             object_generator = self.eminfra_importer.import_resource_from_webservice_page_by_page(
                 resource=self.resource, page_size=page_size)
 
-            self.update_objects(object_generator=object_generator)
-            self.postgis_connector.update_params({f'{self.resource}_cursor': self.eminfra_importer.paging_cursors[self.resource]})
+            self.update_objects(object_generator=object_generator, connection=connection)
+            self.postgis_connector.update_params(
+                params={f'{self.resource}_cursor': self.eminfra_importer.paging_cursors[self.resource]},
+                connection=connection)
 
             if self.eminfra_importer.paging_cursors[self.resource] == '':
                 break

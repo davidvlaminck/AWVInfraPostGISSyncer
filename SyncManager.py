@@ -52,10 +52,10 @@ class SyncManager:
     def start(self):
         while True:
             try:
-                params = self.connector.get_params()
+                params = self.connector.get_params(self.connector.main_connection)
                 if params is None:
                     self.connector.set_up_tables()
-                    params = self.connector.get_params()
+                    params = self.connector.get_params(self.connector.main_connection)
 
                 if params['fresh_start']:
                     filler = Filler(connector=self.connector, request_handler=self.request_handler,

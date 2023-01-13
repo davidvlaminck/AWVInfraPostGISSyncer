@@ -11,7 +11,7 @@ class ToezichtgroepSyncer(FastFiller):
     def __init__(self, postgis_connector: PostGISConnector, em_infra_importer: EMInfraImporter, resource: str):
         super().__init__(resource=resource, postgis_connector=postgis_connector, eminfra_importer=em_infra_importer)
 
-    def update_objects(self, object_generator: Iterator[dict]):
+    def update_objects(self, object_generator: Iterator[dict], connection):
         object_generator = self.peek_generator(object_generator)
         if object_generator is None:
             return
@@ -73,9 +73,9 @@ SET naam = to_update.naam, referentie = to_update.referentie, typeGroep = to_upd
 FROM to_update 
 WHERE to_update.uuid = toezichtgroepen.uuid;"""
 
-        cursor = self.postgis_connector.connection.cursor()
+        cursor = connection.cursor()
         cursor.execute(insert_query)
 
-        cursor = self.postgis_connector.connection.cursor()
+        cursor = connection.cursor()
         cursor.execute(update_query)
-        self.postgis_connector.connection.commit()
+        connection.commit()
