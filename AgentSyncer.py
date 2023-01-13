@@ -9,7 +9,7 @@ class AgentSyncer:
         self.postgis_connector = postgis_connector
         self.eminfra_importer = em_infra_importer
 
-    def sync_agents(self, pagingcursor: str = '', page_size: int = 100):
+    def fill(self, pagingcursor: str = '', page_size: int = 100):
         self.eminfra_importer.pagingcursor = pagingcursor
         while True:
             agents = self.eminfra_importer.import_agents_from_webservice_page_by_page(page_size=page_size)

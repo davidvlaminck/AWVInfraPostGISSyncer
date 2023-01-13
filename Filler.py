@@ -89,7 +89,7 @@ class Filler:
                     break
 
                 if sync_step == 1:
-                    self.sync_agents(page_size, pagingcursor)
+                    self.fill(page_size, pagingcursor)
                 elif sync_step == 2:
                     self.sync_toezichtgroepen(page_size, pagingcursor)
                 elif sync_step == 3:
@@ -282,7 +282,7 @@ class Filler:
         logging.info(f'Filling agents table')
         start = time.time()
         agent_syncer = AgentSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector)
-        agent_syncer.sync_agents(pagingcursor=pagingcursor, page_size=page_size)
+        agent_syncer.fill(pagingcursor=pagingcursor, page_size=page_size)
         self.connector.update_params({'agents_fill': False})
         end = time.time()
         logging.info(f'Time for all agents: {round(end - start, 2)}')
