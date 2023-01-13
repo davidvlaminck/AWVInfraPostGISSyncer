@@ -48,9 +48,11 @@ class EMInfraImporter:
             else:
                 self.pagingcursor = ''
             if only_next_page:
-                return json_list
+                yield from json_list
+                return
             if self.pagingcursor == '':
-                return json_list
+                yield from json_list
+                return
 
     def get_assets_from_webservice_by_naam(self, naam: str) -> [dict]:
         filter_string = '{ "naam": ' + f'"{naam}"' + ' }'
@@ -74,7 +76,7 @@ class EMInfraImporter:
     def import_resource_from_webservice_page_by_page(self, page_size: int, resource: str) -> [dict]:
         if resource == 'agents':
             expansions_string = '{"fields": ["contactInfo"]}'
-            return self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size, only_next_page=True,
+            yield from self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size, only_next_page=True,
                                                               expansions_string=expansions_string)
         elif resource == 'toezichtgroepen':
             zoek_params = ZoekParameterPayload()

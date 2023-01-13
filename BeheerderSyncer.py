@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Iterator
 
 from EMInfraImporter import EMInfraImporter
 from FastFiller import FastFiller
@@ -9,12 +10,13 @@ class BeheerderSyncer(FastFiller):
     def __init__(self, postgis_connector: PostGISConnector, em_infra_importer: EMInfraImporter, resource: str):
         super().__init__(resource=resource, postgis_connector=postgis_connector, eminfra_importer=em_infra_importer)
 
-    def update_objects(self, object_dicts: [dict]):
-        if len(list(object_dicts)) == 0:
+    def update_objects(self, object_generator: Iterator[dict]):
+        object_generator = self.peek_generator(object_generator)
+        if object_generator is None:
             return
 
         values = ''
-        for beheerder_dict in object_dicts:
+        for beheerder_dict in object_generator:
             beheerder_uuid = beheerder_dict['uuid']
             beheerder_naam = beheerder_dict.get('naam', '').replace("'", "''")
             beheerder_referentie = beheerder_dict.get('referentie', '').replace("'", "''")
@@ -75,9 +77,9 @@ SET naam = to_update.naam, referentie = to_update.referentie, typeBeheerder = to
 FROM to_update 
 WHERE to_update.uuid = beheerders.uuid;"""
 
-        cursor = self.postGIS_connector.connection.cursor()
+        cursor = self.postgis_connector.connection.cursor()
         cursor.execute(insert_query)
 
-        cursor = self.postGIS_connector.connection.cursor()
+        cursor = self.postgis_connector.connection.cursor()
         cursor.execute(update_query)
-        self.postGIS_connector.connection.commit()
+        self.postgis_connector.connection.commit()

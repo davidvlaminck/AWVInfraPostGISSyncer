@@ -1,4 +1,5 @@
 import json
+from typing import Iterator
 
 from EMInfraImporter import EMInfraImporter
 from FastFiller import FastFiller
@@ -9,12 +10,13 @@ class AgentSyncer(FastFiller):
     def __init__(self, postgis_connector: PostGISConnector, em_infra_importer: EMInfraImporter, resource: str):
         super().__init__(resource=resource, postgis_connector=postgis_connector, eminfra_importer=em_infra_importer)
 
-    def update_objects(self, object_dicts: [dict]):
-        if len(object_dicts) == 0:
+    def update_objects(self, object_generator: Iterator[dict]):
+        object_generator = self.peek_generator(object_generator)
+        if object_generator is None:
             return
 
         values = ''
-        for agent_dict in object_dicts:
+        for agent_dict in object_generator:
             agent_uuid = agent_dict['@id'].split('/')[-1][0:36]
             agent_name = agent_dict['purl:Agent.naam'].replace("'", "''")
             contact_info_value = 'NULL'

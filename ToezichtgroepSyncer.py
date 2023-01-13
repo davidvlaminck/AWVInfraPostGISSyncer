@@ -1,5 +1,6 @@
 import json
 from datetime import date, datetime
+from typing import Generator, Iterator
 
 from EMInfraImporter import EMInfraImporter
 from FastFiller import FastFiller
@@ -10,12 +11,13 @@ class ToezichtgroepSyncer(FastFiller):
     def __init__(self, postgis_connector: PostGISConnector, em_infra_importer: EMInfraImporter, resource: str):
         super().__init__(resource=resource, postgis_connector=postgis_connector, eminfra_importer=em_infra_importer)
 
-    def update_objects(self, object_dicts: [dict]):
-        if len(list(object_dicts)) == 0:
+    def update_objects(self, object_generator: Iterator[dict]):
+        object_generator = self.peek_generator(object_generator)
+        if object_generator is None:
             return
 
         values = ''
-        for toezichtgroep_dict in object_dicts:
+        for toezichtgroep_dict in object_generator:
             toezichtgroep_uuid = toezichtgroep_dict['uuid']
             toezichtgroep_naam = toezichtgroep_dict['naam'].replace("'", "''")
             toezichtgroep_ref = toezichtgroep_dict['referentie'].replace("'", "''")
