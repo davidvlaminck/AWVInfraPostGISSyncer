@@ -70,7 +70,7 @@ class AgentSyncerTests(TestCase):
                   {'@type': 'http://purl.org/dc/terms/Agent',
                    '@id': 'https://data.awvvlaanderen.be/id/asset/d2d0b44c-f8ba-4780-a3e7-664988a6db66',
                    'purl:Agent.naam': 'unit test changed'}]
-        self.agents_syncer.update_agents(agent_dicts=agents)
+        self.agents_syncer.update_objects(object_dicts=agents)
 
         with self.subTest('name check after the first agent updated'):
             cursor.execute(select_agent_query.replace('{uuid}', 'd2d0b44c-f8ba-4780-a3e7-664988a6db66'))

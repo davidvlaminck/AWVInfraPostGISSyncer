@@ -2,33 +2,20 @@ import json
 from datetime import date, datetime
 
 from EMInfraImporter import EMInfraImporter
+from FastFiller import FastFiller
 from PostGISConnector import PostGISConnector
 
 
-class ToezichtgroepSyncer:
-    def __init__(self, postgis_connector: PostGISConnector, em_infra_importer: EMInfraImporter):
-        self.postgis_connector = postgis_connector
-        self.eminfra_importer = em_infra_importer
+class ToezichtgroepSyncer(FastFiller):
+    def __init__(self, postgis_connector: PostGISConnector, em_infra_importer: EMInfraImporter, resource: str):
+        super().__init__(resource=resource, postgis_connector=postgis_connector, eminfra_importer=em_infra_importer)
 
-    def sync_toezichtgroepen(self, pagingcursor: str = '', page_size: int = 100):
-        self.eminfra_importer.pagingcursor = pagingcursor
-        while True:
-            toezichtgroepen = list(self.eminfra_importer.import_toezichtgroepen_from_webservice_page_by_page(page_size=page_size))
-            if len(toezichtgroepen) == 0:
-                break
-
-            self.update_toezichtgroepen(toezichtgroep_dicts=toezichtgroepen)
-            self.postgis_connector.update_params({'toezichtgroepen_cursor': self.eminfra_importer.pagingcursor})
-
-            if self.eminfra_importer.pagingcursor == '':
-                break
-
-    def update_toezichtgroepen(self, toezichtgroep_dicts: [dict]):
-        if len(toezichtgroep_dicts) == 0:
+    def update_objects(self, object_dicts: [dict]):
+        if len(list(object_dicts)) == 0:
             return
 
         values = ''
-        for toezichtgroep_dict in toezichtgroep_dicts:
+        for toezichtgroep_dict in object_dicts:
             toezichtgroep_uuid = toezichtgroep_dict['uuid']
             toezichtgroep_naam = toezichtgroep_dict['naam'].replace("'", "''")
             toezichtgroep_ref = toezichtgroep_dict['referentie'].replace("'", "''")

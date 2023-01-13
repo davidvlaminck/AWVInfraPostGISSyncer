@@ -1,33 +1,20 @@
 from datetime import datetime
 
 from EMInfraImporter import EMInfraImporter
+from FastFiller import FastFiller
 from PostGISConnector import PostGISConnector
 
 
-class BeheerderSyncer:
-    def __init__(self, postgis_connector: PostGISConnector, em_infra_importer: EMInfraImporter):
-        self.postGIS_connector = postgis_connector
-        self.em_infra_importer = em_infra_importer
+class BeheerderSyncer(FastFiller):
+    def __init__(self, postgis_connector: PostGISConnector, em_infra_importer: EMInfraImporter, resource: str):
+        super().__init__(resource=resource, postgis_connector=postgis_connector, eminfra_importer=em_infra_importer)
 
-    def sync_beheerders(self, pagingcursor: str = '', page_size: int = 100):
-        self.em_infra_importer.pagingcursor = pagingcursor
-        while True:
-            beheerders = list(self.em_infra_importer.import_beheerders_from_webservice_page_by_page(page_size=page_size))
-            if len(beheerders) == 0:
-                break
-
-            self.update_beheerders(beheerder_dicts=beheerders)
-            self.postGIS_connector.update_params({'beheerders_cursor': self.em_infra_importer.pagingcursor})
-
-            if self.em_infra_importer.pagingcursor == '':
-                break
-
-    def update_beheerders(self, beheerder_dicts: [dict]):
-        if len(beheerder_dicts) == 0:
+    def update_objects(self, object_dicts: [dict]):
+        if len(list(object_dicts)) == 0:
             return
 
         values = ''
-        for beheerder_dict in beheerder_dicts:
+        for beheerder_dict in object_dicts:
             beheerder_uuid = beheerder_dict['uuid']
             beheerder_naam = beheerder_dict.get('naam', '').replace("'", "''")
             beheerder_referentie = beheerder_dict.get('referentie', '').replace("'", "''")

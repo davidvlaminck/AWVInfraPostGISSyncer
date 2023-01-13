@@ -71,6 +71,22 @@ class EMInfraImporter:
         expansions_string = '{"fields": ["contactInfo"]}'
         return self.get_objects_from_oslo_search_endpoint(url_part='agents', expansions_string=expansions_string)
 
+    def import_resource_from_webservice_page_by_page(self, page_size: int, resource: str) -> [dict]:
+        if resource == 'agents':
+            expansions_string = '{"fields": ["contactInfo"]}'
+            return self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size, only_next_page=True,
+                                                              expansions_string=expansions_string)
+        elif resource == 'toezichtgroepen':
+            zoek_params = ZoekParameterPayload()
+            zoek_params.size = page_size
+            yield from self.get_objects_from_non_oslo_endpoint(url_part=f'{resource}/search',
+                                                               zoek_payload=zoek_params, identiteit=True)
+        elif resource == 'beheerders':
+            zoek_params = ZoekParameterPayload()
+            zoek_params.size = page_size
+            yield from self.get_objects_from_non_oslo_endpoint(url_part=f'{resource}/search',
+                                                               zoek_payload=zoek_params)
+
     def import_agents_from_webservice_page_by_page(self, page_size: int) -> [dict]:
         expansions_string = '{"fields": ["contactInfo"]}'
         return self.get_objects_from_oslo_search_endpoint(url_part='agents', size=page_size, only_next_page=True,
@@ -243,21 +259,13 @@ class EMInfraImporter:
         yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
                                                                  kenmerk='87dff279-4162-4031-ba30-fb7ffd9c014b')
 
-    def import_toezichtgroepen_from_webservice_page_by_page(self, page_size):
-        zoek_params = ZoekParameterPayload()
-        zoek_params.size = page_size
-        yield from self.get_objects_from_non_oslo_endpoint(url_part='toezichtgroepen/search', zoek_payload=zoek_params, identiteit=True)
+
 
     def import_identiteiten_from_webservice_page_by_page(self, page_size):
         zoek_params = ZoekParameterPayload()
         zoek_params.size = page_size
         yield from self.get_objects_from_non_oslo_endpoint(url_part='identiteiten/search', zoek_payload=zoek_params,
                                                            identiteit=True)
-
-    def import_beheerders_from_webservice_page_by_page(self, page_size):
-        zoek_params = ZoekParameterPayload()
-        zoek_params.size = page_size
-        yield from self.get_objects_from_non_oslo_endpoint(url_part='beheerders/search', zoek_payload=zoek_params)
 
     def get_kenmerken_by_assettype_uuids(self, assettype_uuid, voc):
         url_part=f'/{voc}types/{assettype_uuid}/kenmerktypes'

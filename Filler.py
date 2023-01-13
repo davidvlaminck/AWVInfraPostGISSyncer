@@ -255,8 +255,9 @@ class Filler:
     def sync_beheerders(self, page_size, pagingcursor):
         logging.info(f'Filling beheerders table')
         start = time.time()
-        beheerder_syncer = BeheerderSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector)
-        beheerder_syncer.sync_beheerders(pagingcursor=pagingcursor, page_size=page_size)
+        beheerder_syncer = BeheerderSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector,
+                                           resource='beheerders')
+        beheerder_syncer.fill(pagingcursor=pagingcursor, page_size=page_size)
         self.connector.update_params({'beheerders_fill': False})
         end = time.time()
         logging.info(f'time for all beheerders: {round(end - start, 2)}')
@@ -272,8 +273,8 @@ class Filler:
         logging.info(f'Filling toezichtgroepen table')
         start = time.time()
         toezichtgroep_syncer = ToezichtgroepSyncer(em_infra_importer=self.eminfra_importer,
-                                                   postgis_connector=self.connector)
-        toezichtgroep_syncer.sync_toezichtgroepen(pagingcursor=pagingcursor, page_size=page_size)
+                                                   postgis_connector=self.connector, resource='toezichtgroepen')
+        toezichtgroep_syncer.fill(pagingcursor=pagingcursor, page_size=page_size)
         self.connector.update_params({'toezichtgroepen_fill': False})
         end = time.time()
         logging.info(f'Time for all toezichtgroepen: {round(end - start, 2)}')
@@ -281,7 +282,7 @@ class Filler:
     def sync_agents(self, page_size, pagingcursor):
         logging.info(f'Filling agents table')
         start = time.time()
-        agent_syncer = AgentSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector)
+        agent_syncer = AgentSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector, resource='agents')
         agent_syncer.fill(pagingcursor=pagingcursor, page_size=page_size)
         self.connector.update_params({'agents_fill': False})
         end = time.time()
