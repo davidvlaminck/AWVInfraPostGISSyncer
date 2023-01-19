@@ -102,6 +102,15 @@ class EMInfraImporter:
             zoek_params.size = page_size
             yield from self.get_objects_from_non_oslo_endpoint(url_part=f'{resource}/search',
                                                                zoek_payload=zoek_params)
+        elif resource == 'assettypes':
+            zoek_params = ZoekParameterPayload()
+            zoek_params.size = page_size
+            yield from self.get_objects_from_non_oslo_endpoint(url_part=f'installatietypes/search',
+                                                               zoek_payload=zoek_params)
+            zoek_params = ZoekParameterPayload()
+            zoek_params.size = page_size
+            yield from self.get_objects_from_non_oslo_endpoint(url_part=f'onderdeeltypes/search',
+                                                               zoek_payload=zoek_params)
         elif resource == 'bestekken':
             zoek_params = ZoekParameterPayload()
             zoek_params.size = page_size

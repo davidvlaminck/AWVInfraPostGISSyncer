@@ -1,36 +1,81 @@
+from typing import Iterator
+
 from EMInfraImporter import EMInfraImporter
+from Helpers import peek_generator
 from PostGISConnector import PostGISConnector
 
 
-class AssetTypeSyncer:
-    def __init__(self, postGIS_connector: PostGISConnector, emInfraImporter: EMInfraImporter):
-        self.postGIS_connector = postGIS_connector
-        self.eminfra_importer = emInfraImporter
+class AssetTypeUpdater:
+    def __init__(self, postgis_connector: PostGISConnector, eminfra_importer: EMInfraImporter):
+        self.postgis_connector = postgis_connector
+        self.eminfra_importer = eminfra_importer
 
-    def sync_assettypes(self, pagingcursor: str = '', page_size: int = 100, force_update_attributen: bool = False):
-        self.eminfra_importer.pagingcursor = pagingcursor
-        while True:
-            asset_types = list(
-                self.eminfra_importer.import_assettypes_from_webservice_page_by_page(page_size=page_size))
+    def update_objects(self, object_generator: Iterator[dict], connection):
+        object_generator = peek_generator(object_generator)
+        if object_generator is None:
+            return
 
-            self.update_assettypes(assettypes_dicts=asset_types)
-            self.update_assettypes_with_bestek()
-            self.update_assettypes_with_geometrie()
-            self.update_assettypes_with_locatie()
-            self.update_assettypes_with_beheerder()
-            self.update_assettypes_with_toezicht()
-            self.update_assettypes_with_gevoed_door()
-            self.update_assettypes_with_elek_aansluiting()
-            self.update_assettypes_with_attributen(force_update=force_update_attributen)
-            self.create_views_for_assettypes_with_attributes()
-            self.postGIS_connector.save_props_to_params({'pagingcursor': self.eminfra_importer.pagingcursor})
+        values = ''
+        for assettype_dict in object_generator:
+            uuid = assettype_dict['uuid']
+            name = assettype_dict['naam'].replace("'", "''")
+            label = assettype_dict['afkorting'].replace("'", "''")
+            uri = assettype_dict['uri'].replace("'", "''")
+            definitie = assettype_dict['definitie'].replace("'", "''")
+            actief = assettype_dict['actief']
 
-            if self.eminfra_importer.pagingcursor == '':
-                break
+            values += f"('{uuid}','{name}','{label}','{uri}','{definitie}',{actief}),"
 
-    def update_assettypes_with_attributen(self, force_update: bool):
+        insert_query = f"""
+            WITH s (uuid, naam, label, uri, definitie, actief) 
+                AS (VALUES {values[:-1]}),
+            t AS (
+                SELECT uuid::uuid AS uuid, naam, label, uri, definitie, actief
+                FROM s),
+            to_insert AS (
+                SELECT t.* 
+                FROM t
+                    LEFT JOIN public.assettypes AS assettypes ON assettypes.uuid = t.uuid 
+                WHERE assettypes.uuid IS NULL)
+            INSERT INTO public.assettypes (uuid, naam, label, uri, definitie, actief)
+            SELECT to_insert.uuid, to_insert.naam, to_insert.label, to_insert.uri, to_insert.definitie, to_insert.actief
+            FROM to_insert;"""
+
+        update_query = f"""
+            WITH s (uuid, naam, label, uri, definitie, actief)  
+                AS (VALUES {values[:-1]}),
+            t AS (
+                SELECT uuid::uuid AS uuid, naam, label, uri, definitie, actief
+                FROM s),
+            to_update AS (
+                SELECT t.* 
+                FROM t
+                    LEFT JOIN public.assettypes AS assettypes ON assettypes.uuid = t.uuid 
+                WHERE assettypes.uuid IS NOT NULL)
+            UPDATE assettypes 
+            SET naam = to_update.naam, label = to_update.label, uri = to_update.uri, definitie = to_update.definitie, actief = to_update.actief
+            FROM to_update 
+            WHERE to_update.uuid = assettypes.uuid;"""
+
+        cursor = connection.cursor()
+        cursor.execute(insert_query)
+
+        cursor = connection.cursor()
+        cursor.execute(update_query)
+
+        self.update_assettypes_with_bestek(connection)
+        self.update_assettypes_with_geometrie(connection)
+        self.update_assettypes_with_locatie(connection)
+        self.update_assettypes_with_beheerder(connection)
+        self.update_assettypes_with_toezicht(connection)
+        self.update_assettypes_with_gevoed_door(connection)
+        self.update_assettypes_with_elek_aansluiting(connection)
+        self.update_assettypes_with_attributen(connection, force_update=True)
+        self.create_views_for_assettypes_with_attributes(connection)
+
+    def update_assettypes_with_attributen(self, connection, force_update: bool):
         select_query = 'SELECT uuid, uri FROM public.assettypes WHERE attributen is NULL'
-        cursor = self.postGIS_connector.connection.cursor()
+        cursor = connection.cursor()
         cursor.execute(select_query)
         assettypes_to_update = list(map(lambda x: (x[0], x[1]), cursor.fetchall()))
 
@@ -48,16 +93,15 @@ class AssetTypeSyncer:
                 cursor.execute(remove_existing_koppelingen_query)
                 
                 for attribuut in attributen:
-                    self.sync_attribuut_and_koppeling(assettype_uuid=assettype_uuid, attribuut=attribuut, cursor=cursor, force_update=force_update)
+                    self.sync_attribuut_and_koppeling(assettype_uuid=assettype_uuid, attribuut=attribuut, cursor=cursor,
+                                                      force_update=force_update)
                     
             finish_assettype_query = f"UPDATE public.assettypes SET attributen = TRUE WHERE uuid = '{assettype_uuid}'::uuid;"
             cursor.execute(finish_assettype_query)
 
-            self.postGIS_connector.connection.commit()
-
-    def update_assettypes_with_bestek(self):
+    def update_assettypes_with_bestek(self, connection):
         select_query = 'SELECT uuid FROM public.assettypes WHERE bestek is NULL'
-        cursor = self.postGIS_connector.connection.cursor()
+        cursor = connection.cursor()
         cursor.execute(select_query)
         assettypes_to_update = list(map(lambda x: x[0], cursor.fetchall()))
 
@@ -75,11 +119,9 @@ class AssetTypeSyncer:
                 types_without_bestek) + "'::uuid));"
             cursor.execute(update_query)
 
-        self.postGIS_connector.connection.commit()
-
-    def update_assettypes_with_locatie(self):
+    def update_assettypes_with_locatie(self, connection):
         select_query = 'SELECT uuid FROM public.assettypes WHERE locatie is NULL'
-        cursor = self.postGIS_connector.connection.cursor()
+        cursor = connection.cursor()
         cursor.execute(select_query)
         assettypes_to_update = list(map(lambda x: x[0], cursor.fetchall()))
 
@@ -97,11 +139,9 @@ class AssetTypeSyncer:
                 types_without_locatie) + "'::uuid));"
             cursor.execute(update_query)
 
-        self.postGIS_connector.connection.commit()
-
-    def update_assettypes_with_geometrie(self):
+    def update_assettypes_with_geometrie(self, connection):
         select_query = 'SELECT uuid FROM public.assettypes WHERE geometrie is NULL'
-        cursor = self.postGIS_connector.connection.cursor()
+        cursor = connection.cursor()
         cursor.execute(select_query)
         assettypes_to_update = list(map(lambda x: x[0], cursor.fetchall()))
 
@@ -119,11 +159,9 @@ class AssetTypeSyncer:
                 types_without_geometrie) + "'::uuid));"
             cursor.execute(update_query)
 
-        self.postGIS_connector.connection.commit()
-        
-    def update_assettypes_with_gevoed_door(self):
+    def update_assettypes_with_gevoed_door(self, connection):
         select_query = 'SELECT uuid FROM public.assettypes WHERE gevoedDoor is NULL'
-        cursor = self.postGIS_connector.connection.cursor()
+        cursor = connection.cursor()
         cursor.execute(select_query)
         assettypes_to_update = list(map(lambda x: x[0], cursor.fetchall()))
 
@@ -141,11 +179,9 @@ class AssetTypeSyncer:
                 types_without_gevoed_door) + "'::uuid));"
             cursor.execute(update_query)
 
-        self.postGIS_connector.connection.commit()
-        
-    def update_assettypes_with_toezicht(self):
+    def update_assettypes_with_toezicht(self, connection):
         select_query = 'SELECT uuid FROM public.assettypes WHERE toezicht is NULL'
-        cursor = self.postGIS_connector.connection.cursor()
+        cursor = connection.cursor()
         cursor.execute(select_query)
         assettypes_to_update = list(map(lambda x: x[0], cursor.fetchall()))
 
@@ -163,11 +199,9 @@ class AssetTypeSyncer:
                 types_without_toezicht) + "'::uuid));"
             cursor.execute(update_query)
 
-        self.postGIS_connector.connection.commit()
-        
-    def update_assettypes_with_beheerder(self):
+    def update_assettypes_with_beheerder(self, connection):
         select_query = 'SELECT uuid FROM public.assettypes WHERE beheerder is NULL'
-        cursor = self.postGIS_connector.connection.cursor()
+        cursor = connection.cursor()
         cursor.execute(select_query)
         assettypes_to_update = list(map(lambda x: x[0], cursor.fetchall()))
 
@@ -185,11 +219,9 @@ class AssetTypeSyncer:
                 types_without_beheerder) + "'::uuid));"
             cursor.execute(update_query)
 
-        self.postGIS_connector.connection.commit()
-
-    def update_assettypes_with_elek_aansluiting(self):
+    def update_assettypes_with_elek_aansluiting(self, connection):
         select_query = 'SELECT uuid FROM public.assettypes WHERE elek_aansluiting is NULL'
-        cursor = self.postGIS_connector.connection.cursor()
+        cursor = connection.cursor()
         cursor.execute(select_query)
         assettypes_to_update = list(map(lambda x: x[0], cursor.fetchall()))
 
@@ -208,64 +240,9 @@ class AssetTypeSyncer:
                            "'::uuid),('".join(types_without_elek_aansluiting) + "'::uuid));"
             cursor.execute(update_query)
 
-        self.postGIS_connector.connection.commit()
-
-    def update_assettypes(self, assettypes_dicts: [dict]):
-        if len(assettypes_dicts) == 0:
-            return
-
-        values = ''
-        for assettype_dict in assettypes_dicts:
-            uuid = assettype_dict['uuid']
-            name = assettype_dict['naam'].replace("'", "''")
-            label = assettype_dict['afkorting'].replace("'", "''")
-            uri = assettype_dict['uri'].replace("'", "''")
-            definitie = assettype_dict['definitie'].replace("'", "''")
-            actief = assettype_dict['actief']
-
-            values += f"('{uuid}','{name}','{label}','{uri}','{definitie}',{actief}),"
-
-        insert_query = f"""
-WITH s (uuid, naam, label, uri, definitie, actief) 
-    AS (VALUES {values[:-1]}),
-t AS (
-    SELECT uuid::uuid AS uuid, naam, label, uri, definitie, actief
-    FROM s),
-to_insert AS (
-    SELECT t.* 
-    FROM t
-        LEFT JOIN public.assettypes AS assettypes ON assettypes.uuid = t.uuid 
-    WHERE assettypes.uuid IS NULL)
-INSERT INTO public.assettypes (uuid, naam, label, uri, definitie, actief)
-SELECT to_insert.uuid, to_insert.naam, to_insert.label, to_insert.uri, to_insert.definitie, to_insert.actief
-FROM to_insert;"""
-
-        update_query = f"""
-WITH s (uuid, naam, label, uri, definitie, actief)  
-    AS (VALUES {values[:-1]}),
-t AS (
-    SELECT uuid::uuid AS uuid, naam, label, uri, definitie, actief
-    FROM s),
-to_update AS (
-    SELECT t.* 
-    FROM t
-        LEFT JOIN public.assettypes AS assettypes ON assettypes.uuid = t.uuid 
-    WHERE assettypes.uuid IS NOT NULL)
-UPDATE assettypes 
-SET naam = to_update.naam, label = to_update.label, uri = to_update.uri, definitie = to_update.definitie, actief = to_update.actief
-FROM to_update 
-WHERE to_update.uuid = assettypes.uuid;"""
-
-        cursor = self.postGIS_connector.connection.cursor()
-        cursor.execute(insert_query)
-
-        cursor = self.postGIS_connector.connection.cursor()
-        cursor.execute(update_query)
-
-        self.postGIS_connector.connection.commit()
-
-    def create_views_for_assettypes_with_attributes(self):
-        cursor = self.postGIS_connector.connection.cursor()
+    @staticmethod
+    def create_views_for_assettypes_with_attributes(connection):
+        cursor = connection.cursor()
         get_assettypes_with_geometrie_query = """SELECT uuid, uri, geometrie FROM assettypes;"""
         cursor.execute(get_assettypes_with_geometrie_query)
         assettype_with_geometrie = cursor.fetchall()
@@ -343,14 +320,14 @@ WHERE to_update.uuid = assettypes.uuid;"""
         cursor.execute(get_attribuut_query)
         attribuut_existing_uuid = cursor.fetchone()
         if attribuut_existing_uuid is None:
-            self.insert_attribuut(assettype_uuid, attribuut, cursor)
+            self.insert_attribuut(attribuut, cursor)
         elif force_update:
             raise NotImplementedError()
-            self.update_attribuut(assettype_uuid, attribuut, cursor)
+            self.update_attribuut(attribuut, cursor)
         self.create_koppeling(assettype_uuid=assettype_uuid, attribuut=attribuut, cursor=cursor)
 
     @staticmethod
-    def insert_attribuut(assettype_uuid, attribuut, cursor):
+    def insert_attribuut(attribuut, cursor):
         eig = attribuut['eigenschap']
         uuid = eig['uuid']
         actief = eig['actief']

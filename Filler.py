@@ -8,12 +8,12 @@ from AgentFiller import AgentFiller
 from AgentSyncer import AgentSyncer
 from AssetRelatiesSyncer import AssetRelatiesSyncer
 from AssetSyncer import AssetSyncer
-from AssetTypeSyncer import AssetTypeSyncer
+
+from AssetTypeFiller import AssetTypeFiller
 from BeheerderFiller import BeheerderFiller
 from BestekFiller import BestekFiller
 from BestekKoppelingSyncer import BestekKoppelingSyncer
 from BetrokkeneRelatiesFiller import BetrokkeneRelatiesFiller
-from BetrokkeneRelatiesSyncer import BetrokkeneRelatiesSyncer
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
 from Exceptions.AgentMissingError import AgentMissingError
@@ -52,6 +52,8 @@ class Filler:
             self.sync_betrokkenerelaties(page_size, cursor)
         elif table_to_fill == 'bestekken':
             self.fill_bestekken(page_size, cursor)
+        elif table_to_fill == 'assettypes':
+            self.fill_assettypes(page_size, cursor)
 
     def fill(self, params: dict):
         logging.info('Filling the database with data')
@@ -122,7 +124,7 @@ class Filler:
                 elif sync_step == 5:
                     self.fill_bestekken(page_size, pagingcursor)
                 elif sync_step == 6:
-                    self.sync_assettypes(page_size, pagingcursor)
+                    self.fill_assettypes(page_size, pagingcursor)
                 elif sync_step == 7:
                     self.sync_relatietypes()
                 elif sync_step == 8:
@@ -268,7 +270,7 @@ class Filler:
                 print('refreshing assettypes')
                 current_paging_cursor = self.eminfra_importer.pagingcursor
                 self.eminfra_importer.pagingcursor = ''
-                self.sync_assettypes(page_size=params['pagesize'], pagingcursor='')
+                self.fill_assettypes(page_size=params['pagesize'], pagingcursor='')
                 self.eminfra_importer.pagingcursor = current_paging_cursor
                 self.connector.save_props_to_params({'pagingcursor': current_paging_cursor})
             except (ToezichtgroepMissingError):
@@ -294,11 +296,14 @@ class Filler:
         end = time.time()
         logging.info(f'time for all relatietypes: {round(end - start, 2)}')
 
-    def sync_assettypes(self, page_size, pagingcursor):
+    def fill_assettypes(self, page_size, pagingcursor):
         start = time.time()
-        assettype_syncer = AssetTypeSyncer(emInfraImporter=self.eminfra_importer,
-                                           postGIS_connector=self.connector)
-        assettype_syncer.sync_assettypes(pagingcursor=pagingcursor, page_size=page_size)
+        assettype_filler = AssetTypeFiller(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
+                                           resource='assettypes')
+        connection = self.connector.get_connection()
+        assettype_filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
+        self.connector.update_params(params={'assettypes_fill': False}, connection=connection)
+        self.connector.kill_connection(connection)
         end = time.time()
         logging.info(f'time for all assettypes: {round(end - start, 2)}')
 
