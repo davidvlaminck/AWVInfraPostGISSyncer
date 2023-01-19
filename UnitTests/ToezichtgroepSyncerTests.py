@@ -6,7 +6,7 @@ from psycopg2 import connect
 from EMInfraImporter import EMInfraImporter
 from PostGISConnector import PostGISConnector
 from SettingsManager import SettingsManager
-from ToezichtgroepSyncer import ToezichtgroepSyncer
+from ToezichtgroepFiller import ToezichtgroepFiller
 
 
 class ToezichtgroepSyncerTests(TestCase):
@@ -33,8 +33,8 @@ class ToezichtgroepSyncerTests(TestCase):
 
         self.eminfra_importer = EMInfraImporter(MagicMock())
 
-        self.toezichtgroepen_syncer = ToezichtgroepSyncer(postgis_connector=self.connector,
-                                                          em_infra_importer=self.eminfra_importer)
+        self.toezichtgroepen_syncer = ToezichtgroepFiller(postgis_connector=self.connector,
+                                                          eminfra_importer=self.eminfra_importer)
 
     def test_update_toezichtgroepen(self):
         self.setup()
@@ -56,7 +56,7 @@ class ToezichtgroepSyncerTests(TestCase):
             self.assertEqual(1, result)
 
         self.toezichtgroepen_syncer.eminfra_importer.import_toezichtgroepen_from_webservice_page_by_page = self.return_toezichtgroepen
-        self.toezichtgroepen_syncer.sync_toezichtgroepen()
+        self.toezichtgroepen_syncer.fill_toezichtgroepen()
 
         with self.subTest('name check after the first toezichtgroep updated'):
             cursor.execute(select_toezichtgroep_query.replace('{uuid}', 'f07b553b-a5eb-4140-a51e-3738e51cbaa9'))

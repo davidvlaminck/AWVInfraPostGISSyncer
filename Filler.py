@@ -27,7 +27,7 @@ from IdentiteitSyncer import IdentiteitSyncer
 from PostGISConnector import PostGISConnector
 from RelatietypeSyncer import RelatietypeSyncer
 from RequestHandler import RequestHandler
-from ToezichtgroepSyncer import ToezichtgroepSyncer
+from ToezichtgroepFiller import ToezichtgroepFiller
 
 
 class Filler:
@@ -45,7 +45,7 @@ class Filler:
         if table_to_fill == 'agents':
             self.fill_agents(page_size, cursor)
         elif table_to_fill == 'toezichtgroepen':
-            self.sync_toezichtgroepen(page_size, cursor)
+            self.fill_toezichtgroepen(page_size, cursor)
         elif table_to_fill == 'beheerders':
             self.fill_beheerders(page_size, cursor)
         elif table_to_fill == 'betrokkenerelaties':
@@ -54,6 +54,8 @@ class Filler:
             self.fill_bestekken(page_size, cursor)
         elif table_to_fill == 'assettypes':
             self.fill_assettypes(page_size, cursor)
+        elif table_to_fill == 'toezichtgroepen':
+            self.fill_toezichtgroepen(page_size, cursor)
 
     def fill(self, params: dict):
         logging.info('Filling the database with data')
@@ -75,7 +77,7 @@ class Filler:
         while True:
             try:
                 # tables_to_fill = ['agents', 'toezichtgroepen', 'beheerders'] # , 'betrokkenerelaties'
-                tables_to_fill = ['bestekken']
+                tables_to_fill = ['bestekken'] # assettypes, toezichtgroepen
 
                 params = self.connector.get_params(self.connector.main_connection)
                 if 'bestekken_fill' not in params:
@@ -116,7 +118,7 @@ class Filler:
                 if sync_step == 1:
                     self.fill(page_size, pagingcursor)
                 elif sync_step == 2:
-                    self.sync_toezichtgroepen(page_size, pagingcursor)
+                    self.fill_toezichtgroepen(page_size, pagingcursor)
                 elif sync_step == 3:
                     self.sync_identiteiten(page_size, pagingcursor)
                 elif sync_step == 4:
@@ -278,7 +280,7 @@ class Filler:
                 print('refreshing toezichtgroepen')
                 current_paging_cursor = self.eminfra_importer.pagingcursor
                 self.eminfra_importer.pagingcursor = ''
-                self.sync_toezichtgroepen(page_size=params['pagesize'], pagingcursor='')
+                self.fill_toezichtgroepen(page_size=params['pagesize'], pagingcursor='')
                 self.eminfra_importer.pagingcursor = current_paging_cursor
                 self.connector.save_props_to_params({'pagingcursor': current_paging_cursor})
 
@@ -338,13 +340,13 @@ class Filler:
         end = time.time()
         logging.info(f'time for all identiteiten: {round(end - start, 2)}')
 
-    def sync_toezichtgroepen(self, page_size, pagingcursor):
+    def fill_toezichtgroepen(self, page_size, pagingcursor):
         logging.info(f'Filling toezichtgroepen table')
         start = time.time()
-        toezichtgroep_syncer = ToezichtgroepSyncer(em_infra_importer=self.eminfra_importer,
+        toezichtgroep_filler = ToezichtgroepFiller(eminfra_importer=self.eminfra_importer,
                                                    postgis_connector=self.connector, resource='toezichtgroepen')
         connection = self.connector.get_connection()
-        toezichtgroep_syncer.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
+        toezichtgroep_filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
         self.connector.update_params(params={'toezichtgroepen_fill': False}, connection=connection)
         self.connector.kill_connection(connection)
         end = time.time()

@@ -1,18 +1,13 @@
-import json
-from datetime import date, datetime
-from typing import Generator, Iterator
+from datetime import datetime
+from typing import Iterator
 
-from EMInfraImporter import EMInfraImporter
-from FastFiller import FastFiller
-from PostGISConnector import PostGISConnector
+from Helpers import peek_generator
 
 
-class ToezichtgroepSyncer(FastFiller):
-    def __init__(self, postgis_connector: PostGISConnector, em_infra_importer: EMInfraImporter, resource: str):
-        super().__init__(resource=resource, postgis_connector=postgis_connector, eminfra_importer=em_infra_importer)
-
-    def update_objects(self, object_generator: Iterator[dict], connection):
-        object_generator = self.peek_generator(object_generator)
+class ToezichtgroepUpdater:
+    @staticmethod
+    def update_objects(object_generator: Iterator[dict], connection):
+        object_generator = peek_generator(object_generator)
         if object_generator is None:
             return
 
@@ -38,7 +33,6 @@ class ToezichtgroepSyncer(FastFiller):
                             tot_date = datetime.strptime(actiefInterval['tot'], '%Y-%m-%d')
                             if tot_date < datetime.now():
                                 toezichtgroep_actief = False
-
 
             values += f"('{toezichtgroep_uuid}','{toezichtgroep_naam}','{toezichtgroep_ref}','{toezichtgroep_type}',{toezichtgroep_actief}),"
 
@@ -78,4 +72,3 @@ WHERE to_update.uuid = toezichtgroepen.uuid;"""
 
         cursor = connection.cursor()
         cursor.execute(update_query)
-        connection.commit()
