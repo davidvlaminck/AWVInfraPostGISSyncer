@@ -9,7 +9,7 @@ from AgentSyncer import AgentSyncer
 from AssetRelatiesSyncer import AssetRelatiesSyncer
 from AssetSyncer import AssetSyncer
 from AssetTypeSyncer import AssetTypeSyncer
-from BeheerderSyncer import BeheerderSyncer
+from BeheerderFiller import BeheerderFiller
 from BestekFiller import BestekFiller
 from BestekKoppelingSyncer import BestekKoppelingSyncer
 from BetrokkeneRelatiesFiller import BetrokkeneRelatiesFiller
@@ -47,7 +47,7 @@ class Filler:
         elif table_to_fill == 'toezichtgroepen':
             self.sync_toezichtgroepen(page_size, cursor)
         elif table_to_fill == 'beheerders':
-            self.sync_beheerders(page_size, cursor)
+            self.fill_beheerders(page_size, cursor)
         elif table_to_fill == 'betrokkenerelaties':
             self.sync_betrokkenerelaties(page_size, cursor)
         elif table_to_fill == 'bestekken':
@@ -118,7 +118,7 @@ class Filler:
                 elif sync_step == 3:
                     self.sync_identiteiten(page_size, pagingcursor)
                 elif sync_step == 4:
-                    self.sync_beheerders(page_size, pagingcursor)
+                    self.fill_beheerders(page_size, pagingcursor)
                 elif sync_step == 5:
                     self.fill_bestekken(page_size, pagingcursor)
                 elif sync_step == 6:
@@ -314,10 +314,10 @@ class Filler:
         end = time.time()
         logging.info(f'Time for all bestekken: {round(end - start, 2)}')
 
-    def sync_beheerders(self, page_size, pagingcursor):
+    def fill_beheerders(self, page_size, pagingcursor):
         logging.info(f'Filling beheerders table')
         start = time.time()
-        beheerder_syncer = BeheerderSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector,
+        beheerder_syncer = BeheerderFiller(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
                                            resource='beheerders')
         connection = self.connector.get_connection()
         beheerder_syncer.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)

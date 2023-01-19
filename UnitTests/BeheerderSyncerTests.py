@@ -57,7 +57,7 @@ class BeheerderSyncerTests(TestCase):
                                                 em_infra_importer=self.eminfra_importer)
 
         self.beheerder_syncer.em_infra_importer.import_beheerders_from_webservice_page_by_page = self.return_beheerders
-        self.beheerder_syncer.sync_beheerders()
+        self.beheerder_syncer.fill_beheerders()
 
         with self.subTest('name check after the first beheerder updated'):
             cursor.execute(select_beheerder_query.replace('{uuid}', '10000000-0000-0000-0000-000000000000'))
