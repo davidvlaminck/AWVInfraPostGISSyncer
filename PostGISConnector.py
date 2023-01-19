@@ -42,7 +42,8 @@ class PostGISConnector:
             'betrokkenerelaties_cursor': 'text',
             'assetrelaties_fill': 'bool',
             'assetrelaties_cursor': 'text',
-            'agents_ad_hoc': 'text'
+            'agents_ad_hoc': 'text',
+            'assets_ad_hoc': 'text'
         }
 
     def set_up_tables(self, file_path='setup_tables_querys.sql'):

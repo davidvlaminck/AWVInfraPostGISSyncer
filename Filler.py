@@ -10,8 +10,8 @@ from AssetRelatiesSyncer import AssetRelatiesSyncer
 from AssetSyncer import AssetSyncer
 from AssetTypeSyncer import AssetTypeSyncer
 from BeheerderSyncer import BeheerderSyncer
+from BestekFiller import BestekFiller
 from BestekKoppelingSyncer import BestekKoppelingSyncer
-from BestekSyncer import BestekSyncer
 from BetrokkeneRelatiesFiller import BetrokkeneRelatiesFiller
 from BetrokkeneRelatiesSyncer import BetrokkeneRelatiesSyncer
 from EMInfraImporter import EMInfraImporter
@@ -50,6 +50,8 @@ class Filler:
             self.sync_beheerders(page_size, cursor)
         elif table_to_fill == 'betrokkenerelaties':
             self.sync_betrokkenerelaties(page_size, cursor)
+        elif table_to_fill == 'bestekken':
+            self.fill_bestekken(page_size, cursor)
 
     def fill(self, params: dict):
         logging.info('Filling the database with data')
@@ -60,7 +62,7 @@ class Filler:
         if 'page_assets' not in params:
             logging.info('Getting the last pages for feeds')
             feeds = ['assets', 'agents', 'assetrelaties', 'betrokkenerelaties']
-            feeds = ['assets']
+            feeds = []
 
             # use multithreading
             executor = ThreadPoolExecutor()
@@ -71,10 +73,10 @@ class Filler:
         while True:
             try:
                 # tables_to_fill = ['agents', 'toezichtgroepen', 'beheerders'] # , 'betrokkenerelaties'
-                tables_to_fill = ['betrokkenerelaties']
+                tables_to_fill = ['bestekken']
 
                 params = self.connector.get_params(self.connector.main_connection)
-                if 'betrokkenerelaties_fill' not in params:
+                if 'bestekken_fill' not in params:
                     self.create_params_for_table_fill(tables_to_fill, self.connector.main_connection)
                     params = self.connector.get_params(self.connector.main_connection)
 
@@ -118,7 +120,7 @@ class Filler:
                 elif sync_step == 4:
                     self.sync_beheerders(page_size, pagingcursor)
                 elif sync_step == 5:
-                    self.sync_bestekken(page_size, pagingcursor)
+                    self.fill_bestekken(page_size, pagingcursor)
                 elif sync_step == 6:
                     self.sync_assettypes(page_size, pagingcursor)
                 elif sync_step == 7:
@@ -189,17 +191,6 @@ class Filler:
         logging.info(f'time for all assetrelaties: {round(end - start, 2)}')
 
     def sync_betrokkenerelaties(self, page_size, pagingcursor):
-        # logging.info(f'Filling beheerders table')
-        # start = time.time()
-        # beheerder_syncer = BeheerderSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector,
-        #                                    resource='beheerders')
-        # connection = self.connector.get_connection()
-        # beheerder_syncer.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
-        # self.connector.update_params(params={'beheerders_fill': False}, connection=connection)
-        # self.connector.kill_connection(connection)
-        # end = time.time()
-        # logging.info(f'Time for all beheerders: {round(end - start, 2)}')
-
         logging.info(f'Filling betrokkenerelaties table')
         start = time.time()
         betrokkenerelatie_syncer = BetrokkeneRelatiesFiller(
@@ -224,13 +215,21 @@ class Filler:
                 agent_syncer.sync(missing_agents, connection=connection)
                 self.connector.delete_params(params={'agents_ad_hoc': ''}, connection=connection)
                 continue
+            except AssetMissingError as exc:
+                raise NotImplementedError()
+                missing_assets = exc.args[0]
+                params = self.connector.get_params(connection)
+                if 'assets_fill' in params and params['assets_fill']:
+                    time.sleep(30)
+                    continue
 
-                # make different setup for syncing specific object
-
-                # create param agents_ad_hoc_random_nr
-                # pas it as paging cursor variable
-                # get all agents by uuids
-                # clean up by removing that param
+                logging.info(f'Syncing {len(missing_assets)} assets first.')
+                self.connector.create_params(params={'assets_ad_hoc': ''}, connection=connection)
+                asset_syncer = AssetSyncer(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
+                                           resource='assets')
+                asset_syncer.sync(missing_assets, connection=connection)
+                self.connector.delete_params(params={'assets_ad_hoc': ''}, connection=connection)
+                continue
 
                 # Updater : updates objects
                 #   logic how to update/create/delete objects
@@ -240,20 +239,6 @@ class Filler:
                 # Fillers : creates a generator to loop over all objects, to be processed by Updater
                 # Fillers inherit from FastFiller, so they all use the same mechanic fill()
                 #   contains logic on how to get all dicts
-
-
-
-                # TODO change to:
-                # get params
-                # if agents_sync is still running:
-                # wait a number of seconds
-                # else import the missing agents
-
-                # current_paging_cursor = self.eminfra_importer.pagingcursor
-                # self.eminfra_importer.pagingcursor = ''
-                # self.fill_agents(page_size=params['pagesize'], pagingcursor='')
-                # self.eminfra_importer.pagingcursor = current_paging_cursor
-                # self.connector.save_props_to_params({'pagingcursor': current_paging_cursor}, connection)
 
             if self.eminfra_importer.paging_cursors['betrokkenerelaties_cursor'] == '':
                 break
@@ -317,13 +302,17 @@ class Filler:
         end = time.time()
         logging.info(f'time for all assettypes: {round(end - start, 2)}')
 
-    def sync_bestekken(self, page_size, pagingcursor):
+    def fill_bestekken(self, page_size, pagingcursor):
+        logging.info(f'Filling bestekken table')
         start = time.time()
-        bestek_syncer = BestekSyncer(em_infra_importer=self.eminfra_importer,
-                                     postGIS_connector=self.connector)
-        bestek_syncer.sync_bestekken(pagingcursor=pagingcursor, page_size=page_size)
+        bestek_filler = BestekFiller(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
+                                     resource='bestekken')
+        connection = self.connector.get_connection()
+        bestek_filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
+        self.connector.update_params(params={'bestekken_fill': False}, connection=connection)
+        self.connector.kill_connection(connection)
         end = time.time()
-        logging.info(f'time for all bestekken: {round(end - start, 2)}')
+        logging.info(f'Time for all bestekken: {round(end - start, 2)}')
 
     def sync_beheerders(self, page_size, pagingcursor):
         logging.info(f'Filling beheerders table')
@@ -359,9 +348,10 @@ class Filler:
     def fill_agents(self, page_size, pagingcursor):
         logging.info(f'Filling agents table')
         start = time.time()
-        agent_syncer = AgentFiller(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector, resource='agents')
+        agent_filler = AgentFiller(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
+                                   resource='agents')
         connection = self.connector.get_connection()
-        agent_syncer.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
+        agent_filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
         self.connector.update_params(params={'agents_fill': False}, connection=connection)
         self.connector.kill_connection(connection)
         end = time.time()
