@@ -22,7 +22,6 @@ from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 from FeedEventsCollector import FeedEventsCollector
 from FeedEventsProcessor import FeedEventsProcessor
 from IdentiteitFiller import IdentiteitFiller
-from IdentiteitSyncer import IdentiteitSyncer
 from PostGISConnector import PostGISConnector
 from RelatieTypeFiller import RelatieTypeFiller
 from RequestHandler import RequestHandler
@@ -55,6 +54,8 @@ class Filler:
             self.fill_assettypes(page_size, cursor)
         elif table_to_fill == 'toezichtgroepen':
             self.fill_toezichtgroepen(page_size, cursor)
+        elif table_to_fill == 'identiteiten':
+            self.fill_identiteiten(page_size, cursor)
         elif table_to_fill == 'relatietypes':
             self.fill_relatietypes(page_size, cursor)
 
@@ -339,7 +340,7 @@ class Filler:
         end = time.time()
         logging.info(f'Time for all beheerders: {round(end - start, 2)}')
 
-    def sync_identiteiten(self, page_size, pagingcursor):
+    def fill_identiteiten(self, page_size, pagingcursor):
         logging.info(f'Filling identiteiten table')
         start = time.time()
         identiteit_filler = IdentiteitFiller(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
