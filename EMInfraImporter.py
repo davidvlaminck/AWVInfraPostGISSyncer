@@ -97,6 +97,11 @@ class EMInfraImporter:
             zoek_params.size = page_size
             yield from self.get_objects_from_non_oslo_endpoint(url_part=f'{resource}/search',
                                                                zoek_payload=zoek_params, identiteit=True)
+        elif resource == 'identiteiten':
+            zoek_params = ZoekParameterPayload()
+            zoek_params.size = page_size
+            yield from self.get_objects_from_non_oslo_endpoint(url_part=f'{resource}/search',
+                                                               zoek_payload=zoek_params, identiteit=True)
         elif resource == 'beheerders':
             zoek_params = ZoekParameterPayload()
             zoek_params.size = page_size

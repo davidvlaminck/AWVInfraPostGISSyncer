@@ -21,6 +21,7 @@ from Exceptions.AttribuutMissingError import AttribuutMissingError
 from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 from FeedEventsCollector import FeedEventsCollector
 from FeedEventsProcessor import FeedEventsProcessor
+from IdentiteitFiller import IdentiteitFiller
 from IdentiteitSyncer import IdentiteitSyncer
 from PostGISConnector import PostGISConnector
 from RelatieTypeFiller import RelatieTypeFiller
@@ -329,19 +330,24 @@ class Filler:
     def fill_beheerders(self, page_size, pagingcursor):
         logging.info(f'Filling beheerders table')
         start = time.time()
-        beheerder_syncer = BeheerderFiller(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
+        beheerder_filler = BeheerderFiller(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
                                            resource='beheerders')
         connection = self.connector.get_connection()
-        beheerder_syncer.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
+        beheerder_filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
         self.connector.update_params(params={'beheerders_fill': False}, connection=connection)
         self.connector.kill_connection(connection)
         end = time.time()
         logging.info(f'Time for all beheerders: {round(end - start, 2)}')
 
     def sync_identiteiten(self, page_size, pagingcursor):
+        logging.info(f'Filling identiteiten table')
         start = time.time()
-        identiteit_syncer = IdentiteitSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector)
-        identiteit_syncer.sync_identiteiten(pagingcursor=pagingcursor, page_size=page_size)
+        identiteit_filler = IdentiteitFiller(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
+                                             resource='identiteiten')
+        connection = self.connector.get_connection()
+        identiteit_filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
+        self.connector.update_params(params={'identiteiten_fill': False}, connection=connection)
+        self.connector.kill_connection(connection)
         end = time.time()
         logging.info(f'time for all identiteiten: {round(end - start, 2)}')
 
