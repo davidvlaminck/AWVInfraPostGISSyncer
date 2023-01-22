@@ -1,25 +1,17 @@
-import json
-import logging
+from typing import Iterator
 
-from EMInfraImporter import EMInfraImporter
-from PostGISConnector import PostGISConnector
+from Helpers import peek_generator
 
 
-class RelatietypeSyncer:
-    def __init__(self, postgis_connector: PostGISConnector, em_infra_importer: EMInfraImporter):
-        self.postGIS_connector = postgis_connector
-        self.eminfra_importer = em_infra_importer
-
-    def sync_relatietypes(self):
-        relatietypes = list(self.eminfra_importer.import_all_relatietypes_from_webservice())
-        self.update_relatietypes(relatietype_dicts=relatietypes)
-
-    def update_relatietypes(self, relatietype_dicts: [dict]):
-        if len(relatietype_dicts) == 0:
+class RelatieTypeUpdater:
+    @staticmethod
+    def update_objects(object_generator: Iterator[dict], connection):
+        object_generator = peek_generator(object_generator)
+        if object_generator is None:
             return
 
         values = ''
-        for relatietype_dict in relatietype_dicts:
+        for relatietype_dict in object_generator:
             uuid = relatietype_dict['uuid']
             naam = relatietype_dict['naam']
             label = relatietype_dict.get('label', '')
@@ -69,9 +61,8 @@ SET naam = to_update.naam, uri = to_update.uri, label = to_update.label, definit
 FROM to_update 
 WHERE to_update.uuid = relatietypes.uuid;"""
 
-        cursor = self.postGIS_connector.connection.cursor()
+        cursor = connection.cursor()
         cursor.execute(insert_query)
 
-        cursor = self.postGIS_connector.connection.cursor()
+        cursor = connection.cursor()
         cursor.execute(update_query)
-        self.postGIS_connector.connection.commit()

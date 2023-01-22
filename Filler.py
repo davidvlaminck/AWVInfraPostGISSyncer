@@ -1,6 +1,5 @@
 import concurrent
 import logging
-import random
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -8,7 +7,6 @@ from AgentFiller import AgentFiller
 from AgentSyncer import AgentSyncer
 from AssetRelatiesSyncer import AssetRelatiesSyncer
 from AssetSyncer import AssetSyncer
-
 from AssetTypeFiller import AssetTypeFiller
 from BeheerderFiller import BeheerderFiller
 from BestekFiller import BestekFiller
@@ -25,7 +23,7 @@ from FeedEventsCollector import FeedEventsCollector
 from FeedEventsProcessor import FeedEventsProcessor
 from IdentiteitSyncer import IdentiteitSyncer
 from PostGISConnector import PostGISConnector
-from RelatietypeSyncer import RelatietypeSyncer
+from RelatieTypeFiller import RelatieTypeFiller
 from RequestHandler import RequestHandler
 from ToezichtgroepFiller import ToezichtgroepFiller
 
@@ -56,6 +54,8 @@ class Filler:
             self.fill_assettypes(page_size, cursor)
         elif table_to_fill == 'toezichtgroepen':
             self.fill_toezichtgroepen(page_size, cursor)
+        elif table_to_fill == 'relatietypes':
+            self.fill_relatietypes(page_size, cursor)
 
     def fill(self, params: dict):
         logging.info('Filling the database with data')
@@ -290,15 +290,20 @@ class Filler:
         end = time.time()
         logging.info(f'time for all assets: {round(end - start, 2)}')
 
-    def sync_relatietypes(self):
+    def fill_relatietypes(self, page_size, pagingcursor):
+        logging.info(f'Filling relatietypes table')
         start = time.time()
-        relatietype_syncer = RelatietypeSyncer(em_infra_importer=self.eminfra_importer,
-                                               postgis_connector=self.connector)
-        relatietype_syncer.sync_relatietypes()
+        relatietypes_filler = RelatieTypeFiller(eminfra_importer=self.eminfra_importer,
+                                                postgis_connector=self.connector, resource='relatietypes')
+        connection = self.connector.get_connection()
+        relatietypes_filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
+        self.connector.update_params(params={'relatietypes_fill': False}, connection=connection)
+        self.connector.kill_connection(connection)
         end = time.time()
         logging.info(f'time for all relatietypes: {round(end - start, 2)}')
 
     def fill_assettypes(self, page_size, pagingcursor):
+        logging.info(f'Filling assettypes table')
         start = time.time()
         assettype_filler = AssetTypeFiller(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
                                            resource='assettypes')
