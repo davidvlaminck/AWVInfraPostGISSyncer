@@ -56,7 +56,7 @@ class BeheerderSyncerTests(TestCase):
         self.beheerder_syncer = BeheerderSyncer(postgis_connector=self.connector,
                                                 em_infra_importer=self.eminfra_importer)
 
-        self.beheerder_syncer.em_infra_importer.import_beheerders_from_webservice_page_by_page = self.return_beheerders
+        self.beheerder_syncer.eminfra_importer.import_beheerders_from_webservice_page_by_page = self.return_beheerders
         self.beheerder_syncer.fill_beheerders()
 
         with self.subTest('name check after the first beheerder updated'):

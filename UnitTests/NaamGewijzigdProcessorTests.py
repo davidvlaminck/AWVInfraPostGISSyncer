@@ -39,7 +39,7 @@ class NaamGewijzigdProcessorTests(TestCase):
         self.eminfra_importer = EMInfraImporter(request_handler)
 
         self.processor = NaamGewijzigdProcessor(cursor=self.connector.connection.cursor(),
-                                                em_infra_importer=self.eminfra_importer)
+                                                eminfra_importer=self.eminfra_importer)
         self.assettypes_syncer = AssetTypeSyncer(postGIS_connector=self.connector,
                                                  emInfraImporter=self.eminfra_importer)
         self.assets_syncer = AssetSyncer(postgis_connector=self.connector, em_infra_importer=self.eminfra_importer)

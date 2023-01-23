@@ -64,7 +64,7 @@ class AssetRelatieProcessorTests(TestCase):
             result = cursor.fetchone()[0]
             self.assertEqual(1, result)
 
-        processor = AssetRelatiesGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer,
+        processor = AssetRelatiesGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer,
                                                     connector=self.connector)
         processor.em_infra_importer.import_assetrelaties_from_webservice_by_assetuuids = self.return_assetrelaties
 
@@ -100,7 +100,7 @@ class AssetRelatieProcessorTests(TestCase):
 
         self.connector.commit_transaction()
 
-        processor = AssetRelatiesGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer,
+        processor = AssetRelatiesGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer,
                                                     connector=self.connector)
         processor.em_infra_importer.import_assetrelaties_from_webservice_by_assetuuids = self.return_assetrelaties
 

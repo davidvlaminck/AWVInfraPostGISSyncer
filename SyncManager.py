@@ -1,6 +1,8 @@
+import concurrent
 import logging
 import time
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 import requests
@@ -8,11 +10,7 @@ import requests
 from AgentSyncer import AgentSyncer
 from AssetRelatiesSyncer import AssetRelatiesSyncer
 from AssetSyncer import AssetSyncer
-from AssetTypeSyncer import AssetTypeSyncer
-from BeheerderSyncer import BeheerderSyncer
 from BestekKoppelingSyncer import BestekKoppelingSyncer
-from BestekSyncer import BestekSyncer
-from BetrokkeneRelatiesSyncer import BetrokkeneRelatiesSyncer
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
 from Exceptions.AgentMissingError import AgentMissingError
@@ -27,11 +25,23 @@ from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 from FeedEventsCollector import FeedEventsCollector
 from FeedEventsProcessor import FeedEventsProcessor
 from Filler import Filler
-from IdentiteitSyncer import IdentiteitSyncer
 from PostGISConnector import PostGISConnector
-from RelatietypeSyncer import RelatietypeSyncer
 from RequestHandler import RequestHandler
-from ToezichtgroepSyncer import ToezichtgroepSyncer
+from SyncTimer import SyncTimer
+
+
+class SyncerFactory:
+
+    @classmethod
+    def get_syncer_by_feed_name(cls, feed, eminfra_importer: EMInfraImporter, postgis_connector: PostGISConnector):
+        if feed == 'agents':
+            return AgentSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
+        elif feed == 'assets':
+            return AssetSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
+        elif feed == 'assetrelaties':
+            return AssetRelatieSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
+        elif feed == 'betrokkenerelaties':
+            return BetrokkeneRelatieSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
 
 
 class SyncManager:
@@ -41,13 +51,11 @@ class SyncManager:
         self.request_handler = request_handler
         self.eminfra_importer = eminfra_importer
         self.events_collector = FeedEventsCollector(eminfra_importer)
-        self.events_processor = FeedEventsProcessor(connector, eminfra_importer)
+        self.events_processor = FeedEventsProcessor(connector)
         self.settings = settings
-        self.sync_start = None
-        self.sync_end = None
         if 'time' in self.settings:
-            self.sync_start = self.settings['time']['start']
-            self.sync_end = self.settings['time']['end']
+            SyncTimer.sync_start = self.settings['time']['start']
+            SyncTimer.sync_end = self.settings['time']['end']
 
     def start(self):
         while True:
@@ -65,6 +73,26 @@ class SyncManager:
                     self.perform_syncing()
             except requests.exceptions.ConnectionError as exc:
                 print(exc)
+            except Exception as exc:
+                print(exc)
+
+    def start_sync_by_feed(self, feed):
+        syncer = SyncerFactory.get_syncer_by_feed_name(feed, eminfra_importer=self.eminfra_importer,
+                                                       postgis_connector=self.connector)
+        connection = self.connector.get_connection()
+        syncer.sync(connection=connection)
+
+    def perform_syncing(self):
+        params = self.connector.get_params(self.connector.main_connection)
+
+        feeds = ['assets', 'agents', 'assetrelaties', 'betrokkenerelaties']
+        feeds = ['agents']
+
+        # use multithreading
+        executor = ThreadPoolExecutor(4)
+        futures = [executor.submit(self.start_sync_by_feed, feed=feed)
+                   for feed in feeds]
+        concurrent.futures.wait(futures)
 
     def sync_assetrelaties(self):
         start = time.time()
@@ -79,7 +107,7 @@ class SyncManager:
                 missing_assets = exc.args[0]
                 current_paging_cursor = self.eminfra_importer.pagingcursor
                 self.eminfra_importer.pagingcursor = ''
-                processor = NieuwAssetProcessor(cursor=self.connector.connection.cursor(), em_infra_importer=self.eminfra_importer)
+                processor = NieuwAssetProcessor(cursor=self.connector.connection.cursor(), eminfra_importer=self.eminfra_importer)
                 processor.process(missing_assets)
                 self.eminfra_importer.pagingcursor = current_paging_cursor
                 self.events_processor.postgis_connector.save_props_to_params({'pagingcursor': current_paging_cursor})
@@ -92,8 +120,8 @@ class SyncManager:
 
     def sync_betrokkenerelaties(self):
         start = time.time()
-        betrokkenerelatie_syncer = BetrokkeneRelatiesSyncer(em_infra_importer=self.eminfra_importer,
-                                                            post_gis_connector=self.connector)
+        betrokkenerelatie_syncer = BetrokkeneRelatieSyncer(em_infra_importer=self.eminfra_importer,
+                                                           post_gis_connector=self.connector)
         params = None
         while True:
             try:
@@ -166,7 +194,7 @@ class SyncManager:
         start = time.time()
         assettype_syncer = AssetTypeSyncer(emInfraImporter=self.eminfra_importer,
                                            postGIS_connector=self.connector)
-        assettype_syncer.sync_assettypes(pagingcursor=pagingcursor, page_size=page_size)
+        assettype_syncer.fill_assettypes(pagingcursor=pagingcursor, page_size=page_size)
         end = time.time()
         logging.info(f'time for all assettypes: {round(end - start, 2)}')
 
@@ -174,14 +202,14 @@ class SyncManager:
         start = time.time()
         bestek_syncer = BestekSyncer(em_infra_importer=self.eminfra_importer,
                                      postGIS_connector=self.connector)
-        bestek_syncer.sync_bestekken(pagingcursor=pagingcursor, page_size=page_size)
+        bestek_syncer.fill_bestekken(pagingcursor=pagingcursor, page_size=page_size)
         end = time.time()
         logging.info(f'time for all bestekken: {round(end - start, 2)}')
 
     def sync_beheerders(self, page_size, pagingcursor):
         start = time.time()
         beheerder_syncer = BeheerderSyncer(em_infra_importer=self.eminfra_importer, postgis_connector=self.connector)
-        beheerder_syncer.sync_beheerders(pagingcursor=pagingcursor, page_size=page_size)
+        beheerder_syncer.fill_beheerders(pagingcursor=pagingcursor, page_size=page_size)
         end = time.time()
         logging.info(f'time for all beheerders: {round(end - start, 2)}')
 
@@ -196,7 +224,7 @@ class SyncManager:
         start = time.time()
         toezichtgroep_syncer = ToezichtgroepSyncer(em_infra_importer=self.eminfra_importer,
                                                    postgis_connector=self.connector)
-        toezichtgroep_syncer.sync_toezichtgroepen(pagingcursor=pagingcursor, page_size=page_size)
+        toezichtgroep_syncer.fill_toezichtgroepen(pagingcursor=pagingcursor, page_size=page_size)
         end = time.time()
         logging.info(f'time for all toezichtgroepen: {round(end - start, 2)}')
 
@@ -207,20 +235,8 @@ class SyncManager:
         end = time.time()
         logging.info(f'time for all agents: {round(end - start, 2)}')
 
-    def calculate_sync_allowed_by_time(self):
-        if self.sync_start is None:
-            return True
-
-        start_struct = time.strptime(self.sync_start, "%H:%M:%S")
-        end_struct = time.strptime(self.sync_end, "%H:%M:%S")
-        now = datetime.utcnow().time()
-        start = now.replace(hour=start_struct.tm_hour, minute=start_struct.tm_min, second=start_struct.tm_sec)
-        end = now.replace(hour=end_struct.tm_hour, minute=end_struct.tm_min, second=end_struct.tm_sec)
-        v = start < now < end
-        return v
-
-    def perform_syncing(self):
-        sync_allowed_by_time = self.calculate_sync_allowed_by_time()
+    def perform_syncing_old(self):
+        sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
 
         while sync_allowed_by_time:
             params = self.connector.get_params()
@@ -271,7 +287,7 @@ class SyncManager:
                 except AssetMissingError as exc:
                     self.events_processor.postgis_connector.connection.rollback()
                     missing_assets = exc.args[0]
-                    processor = NieuwAssetProcessor(cursor=self.connector.connection.cursor(), em_infra_importer=self.eminfra_importer)
+                    processor = NieuwAssetProcessor(cursor=self.connector.connection.cursor(), eminfra_importer=self.eminfra_importer)
                     processor.process(missing_assets)
                 except Exception as exc:
                     traceback.print_exception(exc)

@@ -11,7 +11,6 @@ from AssetTypeFiller import AssetTypeFiller
 from BeheerderFiller import BeheerderFiller
 from BestekFiller import BestekFiller
 from BestekKoppelingSyncer import BestekKoppelingSyncer
-from BetrokkeneRelatiesFiller import BetrokkeneRelatiesFiller
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
 from Exceptions.AgentMissingError import AgentMissingError
@@ -65,10 +64,10 @@ class Filler:
         # TODO change to or when all feeds work
         # if 'page_assets' not in params or 'page_assetrelaties' not in params or \
         #         'page_agents' not in params or 'page_betrokkenerelaties' not in params:
-        if 'page_assets' not in params:
+        if 'page_agents' not in params:
             logging.info('Getting the last pages for feeds')
             feeds = ['assets', 'agents', 'assetrelaties', 'betrokkenerelaties']
-            feeds = []
+            feeds = ['agents']
 
             # use multithreading
             executor = ThreadPoolExecutor()
@@ -113,9 +112,7 @@ class Filler:
 
         print('stop')
         self.delete_params_for_table_fill(tables_to_fill, connection=self.connector.main_connection)
-        self.connector.update_params(connection=self.connector.main_connection)
-
-        raise NotImplementedError()
+        self.connector.update_params(connection=self.connector.main_connection, params={'fresh_start': False})
 
     def delete_params_for_table_fill(self, tables_to_fill, connection):
         param_dict = {}
@@ -145,7 +142,7 @@ class Filler:
                 current_paging_cursor = self.eminfra_importer.pagingcursor
                 self.eminfra_importer.pagingcursor = ''
                 processor = NieuwAssetProcessor(cursor=self.connector.connection.cursor(),
-                                                em_infra_importer=self.eminfra_importer)
+                                                eminfra_importer=self.eminfra_importer)
                 processor.process(missing_assets)
                 self.eminfra_importer.pagingcursor = current_paging_cursor
                 self.events_processor.postgis_connector.save_props_to_params({'pagingcursor': current_paging_cursor})
@@ -176,9 +173,8 @@ class Filler:
 
                 logging.info(f'Syncing {len(missing_agents)} agents first.')
                 self.connector.create_params(params={'agents_ad_hoc': ''}, connection=connection)
-                agent_syncer = AgentSyncer(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
-                                           resource='agents')
-                agent_syncer.sync(missing_agents, connection=connection)
+                agent_syncer = AgentSyncer(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector)
+                agent_syncer.sync_by_uuids(missing_agents, connection=connection)
                 self.connector.delete_params(params={'agents_ad_hoc': ''}, connection=connection)
                 continue
             except AssetMissingError as exc:
@@ -193,7 +189,7 @@ class Filler:
                 self.connector.create_params(params={'assets_ad_hoc': ''}, connection=connection)
                 asset_syncer = AssetSyncer(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
                                            resource='assets')
-                asset_syncer.sync(missing_assets, connection=connection)
+                asset_syncer.sync_ad_hoc(missing_assets, connection=connection)
                 self.connector.delete_params(params={'assets_ad_hoc': ''}, connection=connection)
                 continue
 
@@ -358,7 +354,8 @@ class Filler:
 
         self.connector.create_params(
             {f'event_uuid_{feed}': last_event_uuid,
-             f'page_{feed}': current_page_num},
+             f'page_{feed}': current_page_num,
+             f'last_update_utc_{feed}': None},
             connection=self.connector.main_connection)
         logging.info(f'Added last page of current feed for {feed} to params (page: {current_page_num})')
 

@@ -7,7 +7,7 @@ from Helpers import peek_generator
 from PostGISConnector import PostGISConnector
 
 
-class BetrokkeneRelatiesSyncer(FastFiller):
+class BetrokkeneRelatieSyncer(FastFiller):
     def __init__(self, postgis_connector: PostGISConnector, eminfra_importer: EMInfraImporter, resource: str):
         super().__init__(resource=resource, postgis_connector=postgis_connector, eminfra_importer=eminfra_importer)
 
@@ -16,7 +16,7 @@ class BetrokkeneRelatiesSyncer(FastFiller):
         if object_generator is None:
             return
 
-        processor = BetrokkeneRelatiesGewijzigdProcessor(cursor=None, em_infra_importer=self.eminfra_importer,
+        processor = BetrokkeneRelatiesGewijzigdProcessor(cursor=None, eminfra_importer=self.eminfra_importer,
                                                          connector=self.postgis_connector)
         processor.process_dicts(betrokkenerelatie_dicts=object_generator, connection=connection)
 
@@ -24,7 +24,7 @@ class BetrokkeneRelatiesSyncer(FastFiller):
         self.eminfra_importer.pagingcursor = pagingcursor
         while True:
             cursor = self.postgis_connector.connection.cursor()
-            processor = BetrokkeneRelatiesGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer,
+            processor = BetrokkeneRelatiesGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer,
                                                              connector=self.postgis_connector)
             relaties = self.eminfra_importer.import_betrokkenerelaties_from_webservice_page_by_page(page_size=page_size)
 

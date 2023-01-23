@@ -7,8 +7,8 @@ from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
 
 
 class BestekGewijzigdProcessor(SpecificEventProcessor):
-    def __init__(self, cursor, em_infra_importer):
-        super().__init__(cursor, em_infra_importer)
+    def __init__(self, cursor, eminfra_importer):
+        super().__init__(cursor, eminfra_importer)
 
     def process(self, uuids: [str]):
         logging.info(f'started updating bestekken')

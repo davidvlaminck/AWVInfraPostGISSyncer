@@ -7,7 +7,7 @@ from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
 
 
-class NieuwAssetProcessor(SpecificEventProcessor):
+class NieuwAgentProcessor(SpecificEventProcessor):
     def __init__(self, cursor, eminfra_importer):
         super().__init__(cursor, eminfra_importer)
 

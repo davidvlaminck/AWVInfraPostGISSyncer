@@ -12,7 +12,7 @@ class AssetRelatiesSyncer:
         self.eminfra_importer.pagingcursor = pagingcursor
         while True:
             cursor = self.postGIS_connector.connection.cursor()
-            processor = AssetRelatiesGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer,
+            processor = AssetRelatiesGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer,
                                                         connector=self.postGIS_connector)
             relaties = self.eminfra_importer.import_assetrelaties_from_webservice_page_by_page(page_size=page_size)
             if len(relaties) == 0:
