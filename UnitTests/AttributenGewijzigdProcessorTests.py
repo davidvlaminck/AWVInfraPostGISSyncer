@@ -40,10 +40,10 @@ class AttributenGewijzigdProcessorTests(TestCase):
 
         raise NotImplementedError()
         self.processor = ActiefGewijzigdProcessor(cursor=self.connector.connection.cursor(),
-                                                  em_infra_importer=self.em_infra_importer)
+                                                  eminfra_importer=self.eminfra_importer)
         self.assettypes_syncer = AssetTypeSyncer(postGIS_connector=self.connector,
-                                                 emInfraImporter=self.em_infra_importer)
-        self.assets_syncer = AssetSyncer(postgis_connector=self.connector, em_infra_importer=self.em_infra_importer)
+                                                 emInfraImporter=self.eminfra_importer)
+        self.assets_syncer = AssetSyncer(postgis_connector=self.connector, em_infra_importer=self.eminfra_importer)
 
     def test_update_actief(self):
         raise NotImplementedError()
@@ -61,7 +61,7 @@ class AttributenGewijzigdProcessorTests(TestCase):
             result = cursor.fetchone()[0]
             self.assertEqual(True, result)
 
-        self.processor.em_infra_importer.import_assets_from_webservice_by_uuids = self.return_new_asset_dicts
+        self.processor.eminfra_importer.import_assets_from_webservice_by_uuids = self.return_new_asset_dicts
 
         self.processor.process(['00000453-56ce-4f8b-af44-960df526cb30', '00088892-53a8-4dfc-a2c9-875cab2d7e11'])
 

@@ -42,7 +42,7 @@ class GeometrieSyncerTests(TestCase):
                                                  emInfraImporter=self.eminfra_importer)
         self.assets_syncer = AssetSyncer(postgis_connector=self.connector, em_infra_importer=self.eminfra_importer)
         self.processor = GeometrieOrLocatieGewijzigdProcessor(cursor=self.connector.connection.cursor(),
-                                                              em_infra_importer=self.eminfra_importer)
+                                                              eminfra_importer=self.eminfra_importer)
 
     def test_update_geometries(self):
         self.setup()

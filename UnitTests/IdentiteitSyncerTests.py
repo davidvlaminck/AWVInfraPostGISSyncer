@@ -55,7 +55,7 @@ class IdentiteitSyncerTests(TestCase):
         self.identiteit_syncer = IdentiteitSyncer(postgis_connector=self.connector,
                                                   em_infra_importer=self.eminfra_importer)
 
-        self.identiteit_syncer.em_infra_importer.import_identiteiten_from_webservice_page_by_page = self.return_identiteiten
+        self.identiteit_syncer.eminfra_importer.import_identiteiten_from_webservice_page_by_page = self.return_identiteiten
         self.identiteit_syncer.sync_identiteiten()
 
         with self.subTest('name check after the first identiteit updated'):

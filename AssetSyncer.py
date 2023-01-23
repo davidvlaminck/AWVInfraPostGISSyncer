@@ -32,11 +32,11 @@ class AssetSyncer:
 
             uuids = list(map(lambda d: d['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36], asset_dicts))
 
-            attributen_processor = AttributenGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer)
+            attributen_processor = AttributenGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer)
             attributen_processor.process_dicts(cursor=cursor, asset_uuids=uuids, asset_dicts=asset_dicts)
-            schadebeheerder_processor = SchadebeheerderGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer)
+            schadebeheerder_processor = SchadebeheerderGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer)
             schadebeheerder_processor.process_dicts(cursor=cursor, asset_uuids=uuids, asset_dicts=asset_dicts)
-            toezicht_processor = ToezichtGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer)
+            toezicht_processor = ToezichtGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer)
             toezicht_processor.process_dicts(cursor=cursor, asset_uuids=uuids, asset_dicts=asset_dicts)
 
             self.update_location_geometry_of_synced_assets(uuids, asset_dicts, cursor)
@@ -62,7 +62,7 @@ class AssetSyncer:
         cursor.execute(select_assets_for_elek_aansluiting_query)
         assets_for_elek_aansluiting = list(map(lambda x: x[0], cursor.fetchall()))
         elek_aansluiting_processor = ElekAansluitingGewijzigdProcessor(cursor=cursor,
-                                                                       em_infra_importer=self.eminfra_importer)
+                                                                       eminfra_importer=self.eminfra_importer)
         elek_aansluiting_processor.process(uuids=assets_for_elek_aansluiting)
         end = time.time()
         logging.info(f'updated elek aansluiting of {len(assets_for_elek_aansluiting)} assets in {str(round(end - start, 2))} seconds.')
@@ -70,7 +70,7 @@ class AssetSyncer:
     def update_location_geometry_of_synced_assets(self, uuids, asset_dicts, cursor):
         start = time.time()
         geometry_processor = GeometrieOrLocatieGewijzigdProcessor(cursor=cursor,
-                                                                  em_infra_importer=self.eminfra_importer)
+                                                                  eminfra_importer=self.eminfra_importer)
         geometry_processor.process_dicts(uuids=uuids, asset_dicts=asset_dicts)
         end = time.time()
         logging.info(f'updated location/geometry of {len(asset_dicts)} assets in {str(round(end - start, 2))} seconds.')

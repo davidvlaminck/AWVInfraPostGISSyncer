@@ -8,8 +8,8 @@ from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 
 
 class ToezichtGewijzigdProcessor(SpecificEventProcessor):
-    def __init__(self, cursor, em_infra_importer: EMInfraImporter):
-        super().__init__(cursor, em_infra_importer)
+    def __init__(self, cursor, eminfra_importer: EMInfraImporter):
+        super().__init__(cursor, eminfra_importer)
 
     def process(self, uuids: [str]):
         logging.info(f'started updating toezicht')

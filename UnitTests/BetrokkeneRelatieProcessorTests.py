@@ -41,7 +41,7 @@ class BetrokkeneRelatieProcessorTests(TestCase):
         self.set_up_agents(cursor)
         self.set_up_assets(cursor)
 
-        processor = BetrokkeneRelatiesGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer,
+        processor = BetrokkeneRelatiesGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer,
                                                          connector=self.connector)
         processor.em_infra_importer.import_betrokkenerelaties_from_webservice_by_assetuuids = self.return_betrokkenerelaties
 
@@ -100,7 +100,7 @@ class BetrokkeneRelatieProcessorTests(TestCase):
 
         self.connector.commit_transaction()
 
-        processor = BetrokkeneRelatiesGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer,
+        processor = BetrokkeneRelatiesGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer,
                                                          connector=self.connector)
         processor.em_infra_importer.import_betrokkenerelaties_from_webservice_by_assetuuids = self.return_betrokkenerelaties
 

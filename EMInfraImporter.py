@@ -13,8 +13,8 @@ class EMInfraImporter:
         self.request_handler.requester.first_part_url += 'eminfra/'
         self.paging_cursors = {}
 
-    def get_events_from_feed_relaties(self, page_num: int, page_size: int = 1):
-        return self.get_events_from_feedpage('assetrelaties', page_num=page_num, page_size=page_size)
+    def get_events_from_feed_relaties(self, resource: str, page_num: int, page_size: int = 1):
+        return self.get_events_from_feedpage(feed=resource, page_num=page_num, page_size=page_size)
 
     def get_events_from_feedpage(self, feed: str, page_num: int, page_size: int = 1):
         url = f"feedproxy/feed/{feed}/{page_num}/{page_size}"

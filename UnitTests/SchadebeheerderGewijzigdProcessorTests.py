@@ -44,7 +44,7 @@ class SchadebeheerderGewijzigdProcessorTests(TestCase):
         self.set_up_schadebeheerders(cursor)
         self.set_up_assets(cursor)
 
-        processor = SchadebeheerderGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer)
+        processor = SchadebeheerderGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer)
         processor.em_infra_importer.import_assets_from_webservice_by_uuids = self.return_assets
 
         select_beheerder_query = "SELECT schadebeheerder FROM assets WHERE uuid = '{uuid}'"
@@ -87,7 +87,7 @@ class SchadebeheerderGewijzigdProcessorTests(TestCase):
 
         self.connector.commit_transaction()
 
-        processor = SchadebeheerderGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer)
+        processor = SchadebeheerderGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer)
         processor.em_infra_importer.import_assets_from_webservice_by_uuids = self.return_assets
 
         with self.assertRaises(BeheerderMissingError):

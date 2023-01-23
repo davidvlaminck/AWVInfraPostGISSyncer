@@ -7,14 +7,17 @@ EventParams = namedtuple('EventParams', 'event_dict page_num event_uuid')
 
 
 class FeedEventsCollector:
-    def __init__(self, em_infra_importer: EMInfraImporter):
-        self.em_infra_importer = em_infra_importer
+    def __init__(self, eminfra_importer: EMInfraImporter):
+        self.eminfra_importer = eminfra_importer
+        self.resource: str = ''
 
-    def collect_starting_from_page(self, completed_page_number: int, completed_event_id: str, page_size: int) -> EventParams:
+    def collect_starting_from_page(self, completed_page_number: int, completed_event_id: str, page_size: int,
+                                   resource: str) -> EventParams:
         event_dict = self.create_empty_event_dict()
         searching_where_stopped = True
         while True:
-            page = self.em_infra_importer.get_events_from_feed_relaties(page_num=0, page_size=page_size)
+            page = self.eminfra_importer.get_events_from_feed_relaties(
+                page_num=0, page_size=page_size, resource=self.resource)
             stop_after_this_page = False
             last_event_id = ''
 
@@ -32,7 +35,7 @@ class FeedEventsCollector:
                     searching_where_stopped = False
                     continue
                 event_type = entry_value['event-type']
-                event_uuids = entry_value['uuids']
+                event_uuids = entry_value[f'{resource[:-1]}-uuids']
                 event_dict[event_type].update(event_uuids)
 
                 next_page = next((link for link in page['links'] if link['rel'] == 'previous'), None)
@@ -63,6 +66,7 @@ class FeedEventsCollector:
 
     @staticmethod
     def create_empty_event_dict() -> {}:
+        raise not NotImplementedError('implement this in the child class')
         empty_dict = {}
         for event_type in ["ACTIEF_GEWIJZIGD", "BESTEK_GEWIJZIGD", "BETROKKENE_RELATIES_GEWIJZIGD", "COMMENTAAR_GEWIJZIGD",
                            "COMMUNICATIEAANSLUITING_GEWIJZIGD", "DOCUMENTEN_GEWIJZIGD", "EIGENSCHAPPEN_GEWIJZIGD",
