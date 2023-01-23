@@ -23,7 +23,6 @@ class EMInfraImporter:
     def get_objects_from_oslo_search_endpoint(self, url_part: str, cursor_name: str = None, filter_string: str = '{}',
                                               size: int = 100, contact_info: bool = False,
                                               expansions_string: str = '{}') -> [dict]:
-        # TODO fix fixed expansions_string
         url = f'core/api/otl/{url_part}/search'
         if contact_info:
             url += '?expand=contactInfo'

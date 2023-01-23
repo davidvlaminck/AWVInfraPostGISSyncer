@@ -322,9 +322,42 @@ class AssetTypeUpdater:
         if attribuut_existing_uuid is None:
             self.insert_attribuut(attribuut, cursor)
         elif force_update:
-            raise NotImplementedError()
             self.update_attribuut(attribuut, cursor)
         self.create_koppeling(assettype_uuid=assettype_uuid, attribuut=attribuut, cursor=cursor)
+
+    @staticmethod
+    def update_attribuut(attribuut, cursor):
+        eig = attribuut['eigenschap']
+        uuid = eig['uuid']
+        actief = eig['actief']
+        uri = eig['uri']
+        naam = eig['naam'].replace("'", "''")
+        label = eig.get('label', '').replace("'", "''")
+        definitie = eig['definitie'].replace("'", "''")
+        categorie = eig['categorie']
+
+        if 'datatype' in eig['type']:
+            datatype_naam = eig['type']['datatype']['naam']
+            datatype_type = eig['type']['datatype']['type']['_type']
+        else:
+            datatype_naam = 'legacy' + eig['type']['_type']
+            datatype_type = 'legacy' + eig['type']['_type']
+        kardinaliteit_min = eig['kardinaliteitMin']
+        kardinaliteit_max = eig.get('kardinaliteitMax', '*')
+        values = f"('{uuid}',{actief},'{uri}','{naam}','{label}','{definitie}','{categorie}','{datatype_naam}','{datatype_type}','{kardinaliteit_min}','{kardinaliteit_max}') "
+        update_query = f"""
+    WITH s (uuid, actief, uri, naam, label, definitie, categorie, datatypeNaam, datatypeType, kardinaliteitMin, kardinaliteitMax) 
+        AS (VALUES {values}),
+    to_update AS (
+        SELECT uuid::uuid AS uuid, actief, uri, naam, label, definitie, categorie, datatypeNaam, datatypeType, kardinaliteitMin, kardinaliteitMax
+        FROM s)
+    UPDATE public.attributen
+    SET actief = to_update.actief, uri = to_update.uri, naam = to_update.naam, label = to_update.label, 
+        categorie = to_update.categorie, datatypeNaam = to_update.datatypeNaam, datatypeType = to_update.datatypeType, 
+        kardinaliteitMin = to_update.kardinaliteitMin, kardinaliteitMax = to_update.kardinaliteitMax  
+    FROM to_update 
+    WHERE to_update.uuid = public.attributen.uuid;"""
+        cursor.execute(update_query)
 
     @staticmethod
     def insert_attribuut(attribuut, cursor):

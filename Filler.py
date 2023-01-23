@@ -76,13 +76,14 @@ class Filler:
                        for feed in feeds]
             concurrent.futures.wait(futures)
 
+        tables_to_fill = []
         while True:
             try:
                 # tables_to_fill = ['agents', 'toezichtgroepen', 'beheerders'] # , 'betrokkenerelaties'
-                tables_to_fill = ['bestekken'] # assettypes, toezichtgroepen
+                tables_to_fill = ['agents']  # 'bestekken', 'toezichtgroepen', 'identiteiten', 'relatietypes', 'assettypes'
 
                 params = self.connector.get_params(self.connector.main_connection)
-                if 'bestekken_fill' not in params:
+                if 'agents_fill' not in params:
                     self.create_params_for_table_fill(tables_to_fill, self.connector.main_connection)
                     params = self.connector.get_params(self.connector.main_connection)
 
@@ -99,60 +100,9 @@ class Filler:
                 for table_to_fill in tables_to_fill:
                     if params[table_to_fill + '_fill']:
                         done = False
-
                 if done:
                     break
-                else:
-                    continue
 
-                raise NotImplementedError()
-                # main sync loop for a fresh start
-                params = self.connector.get_params()
-                sync_step = params['sync_step']
-                pagingcursor = params['pagingcursor']
-                page_size = params['pagesize']
-
-                if sync_step == -1:
-                    sync_step = 1
-                if sync_step >= 12:
-                    break
-
-                if sync_step == 1:
-                    self.fill(page_size, pagingcursor)
-                elif sync_step == 2:
-                    self.fill_toezichtgroepen(page_size, pagingcursor)
-                elif sync_step == 3:
-                    self.sync_identiteiten(page_size, pagingcursor)
-                elif sync_step == 4:
-                    self.fill_beheerders(page_size, pagingcursor)
-                elif sync_step == 5:
-                    self.fill_bestekken(page_size, pagingcursor)
-                elif sync_step == 6:
-                    self.fill_assettypes(page_size, pagingcursor)
-                elif sync_step == 7:
-                    self.sync_relatietypes()
-                elif sync_step == 8:
-                    self.sync_assets(page_size, pagingcursor)
-                elif sync_step == 9:
-                    self.sync_bestekkoppelingen()
-                elif sync_step == 10:
-                    self.sync_betrokkenerelaties()
-                elif sync_step == 11:
-                    self.sync_assetrelaties()
-                else:
-                    # TODO documenten
-                    raise NotImplementedError
-
-                pagingcursor = self.eminfra_importer.pagingcursor
-                if pagingcursor == '':
-                    sync_step += 1
-                self.connector.save_props_to_params(
-                    {'sync_step': sync_step,
-                     'pagingcursor': pagingcursor})
-                if sync_step >= 11:
-                    self.connector.save_props_to_params(
-                        {'fresh_start': False})
-                self.connector.connection.commit()
             except ConnectionError as err:
                 print(err)
                 logging.info("failed connection, retrying in 1 minute")
@@ -162,7 +112,17 @@ class Filler:
                 raise err
 
         print('stop')
+        self.delete_params_for_table_fill(tables_to_fill, connection=self.connector.main_connection)
+        self.connector.update_params(connection=self.connector.main_connection)
+
         raise NotImplementedError()
+
+    def delete_params_for_table_fill(self, tables_to_fill, connection):
+        param_dict = {}
+        for table_to_fill in tables_to_fill:
+            param_dict[table_to_fill + '_fill'] = True
+            param_dict[table_to_fill + '_cursor'] = True
+        self.connector.delete_params(param_dict, connection)
 
     def create_params_for_table_fill(self, tables_to_fill, connection):
         param_dict = {}
