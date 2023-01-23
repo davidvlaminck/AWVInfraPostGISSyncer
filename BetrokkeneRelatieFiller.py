@@ -1,5 +1,5 @@
 from EMInfraImporter import EMInfraImporter
-from EventProcessors.BetrokkeneRelatiesGewijzigdProcessor import BetrokkeneRelatiesUpdater
+from BetrokkeneRelatiesUpdater import BetrokkeneRelatiesUpdater
 from FastFiller import FastFiller
 from PostGISConnector import PostGISConnector
 

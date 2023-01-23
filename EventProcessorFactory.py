@@ -1,6 +1,9 @@
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.ActiefGewijzigdProcessor import ActiefGewijzigdProcessor
+from EventProcessors.AgentProcessors.AgentActiefGewijzigdProcessor import AgentActiefGewijzigdProcessor
+from EventProcessors.AgentProcessors.AgentContactInfoGewijzigdProcessor import AgentContactInfoGewijzigdProcessor
 from EventProcessors.AgentProcessors.AgentNaamGewijzigdProcessor import AgentNaamGewijzigdProcessor
+from EventProcessors.AgentProcessors.AgentVOIDGewijzigdProcessor import AgentVOIDGewijzigdProcessor
 from EventProcessors.AssetRelatiesGewijzigdProcessor import AssetRelatiesGewijzigdProcessor
 from EventProcessors.AttributenGewijzigdProcessor import AttributenGewijzigdProcessor
 from EventProcessors.BestekGewijzigdProcessor import BestekGewijzigdProcessor
@@ -20,12 +23,16 @@ from PostGISConnector import PostGISConnector
 
 class EventProcessorFactory:
     @classmethod
-    def create_event_processor(cls, event_type: str, connection, eminfra_importer: EMInfraImporter,
+    def create_event_processor(cls, event_type: str, eminfra_importer: EMInfraImporter,
                                postgis_connector: PostGISConnector, resource: str) -> SpecificEventProcessor:
         if resource == 'agents':
-            return EventProcessorFactory.create_agent_event_processor(event_type=event_type, connection=connection,
+            return EventProcessorFactory.create_agent_event_processor(event_type=event_type,
                                                                       eminfra_importer=eminfra_importer)
+        elif resource == 'betrokkenerelaties':
+            return EventProcessorFactory.create_betrokkene_relatie_event_processor(
+                event_type=event_type, eminfra_importer=eminfra_importer)
 
+        raise NotImplementedError
 
         if event_type == 'NIEUWE_INSTALLATIE':
             return NieuwAssetProcessor(cursor, em_infra_importer)
@@ -71,16 +78,37 @@ class EventProcessorFactory:
             raise NotImplementedError()
 
     @classmethod
-    def create_agent_event_processor(cls, event_type, connection, eminfra_importer) -> SpecificEventProcessor:
+    def create_agent_event_processor(cls, event_type: str, eminfra_importer: EMInfraImporter) -> SpecificEventProcessor:
         if event_type == 'NIEUWE_AGENT':
             return NieuwAgentProcessor(eminfra_importer=eminfra_importer)
-            raise NotImplementedError('NIEUWE_AGENT event_processor missing')
-        if event_type == 'NAAM_GEWIJZIGD':
+        elif event_type == 'NAAM_GEWIJZIGD':
             return AgentNaamGewijzigdProcessor(eminfra_importer=eminfra_importer)
-            raise NotImplementedError('NAAM_GEWIJZIGD event_processor missing')
-        if event_type == 'VO_ID_GEWIJZIGD':
-            raise NotImplementedError('VO_ID_GEWIJZIGD event_processor missing')
-        if event_type == 'CONTACT_INFO_GEWIJZIGD':
-            raise NotImplementedError('CONTACT_INFO_GEWIJZIGD event_processor missing')
-        if event_type == 'ACTIEF_GEWIJZIGD':
-            raise NotImplementedError('ACTIEF_GEWIJZIGD event_processor missing')
+        elif event_type == 'VO_ID_GEWIJZIGD':
+            return AgentVOIDGewijzigdProcessor(eminfra_importer=eminfra_importer)
+        elif event_type == 'CONTACT_INFO_GEWIJZIGD':
+            return AgentContactInfoGewijzigdProcessor(eminfra_importer=eminfra_importer)
+        elif event_type == 'ACTIEF_GEWIJZIGD':
+            return AgentActiefGewijzigdProcessor(eminfra_importer=eminfra_importer)
+        else:
+            raise NotImplementedError(f"can't create an agent event processor with type: {event_type}")
+
+    @classmethod
+    def create_betrokkene_relatie_event_processor(cls, event_type: str, eminfra_importer: EMInfraImporter) -> \
+            SpecificEventProcessor:
+        if event_type == 'NIEUWE_RELATIE':
+            raise NotImplementedError
+            return NieuwAgentProcessor(eminfra_importer=eminfra_importer)
+        elif event_type in ['RELATIE_VERWIJDERD', 'RELATIE_VERWIJDERD_ONGEDAAN']:
+            raise NotImplementedError
+            return AgentNaamGewijzigdProcessor(eminfra_importer=eminfra_importer)
+        elif event_type == 'ROL_GEWIJZIGD':
+            raise NotImplementedError
+            return AgentVOIDGewijzigdProcessor(eminfra_importer=eminfra_importer)
+        elif event_type == 'CONTACT_INFO_GEWIJZIGD':
+            raise NotImplementedError
+            return AgentContactInfoGewijzigdProcessor(eminfra_importer=eminfra_importer)
+        elif event_type == 'GELDIGHEID_GEWIJZIGD':
+            raise NotImplementedError
+            return AgentActiefGewijzigdProcessor(eminfra_importer=eminfra_importer)
+        else:
+            raise NotImplementedError(f"can't create an agent event processor with type: {event_type}")
