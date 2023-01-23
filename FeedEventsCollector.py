@@ -16,7 +16,7 @@ class FeedEventsCollector:
         event_dict = self.create_empty_event_dict()
         searching_where_stopped = True
         while True:
-            page = self.eminfra_importer.get_events_from_feed_relaties(
+            page = self.eminfra_importer.get_events_from_proxyfeed(
                 page_num=0, page_size=page_size, resource=self.resource)
             stop_after_this_page = False
             last_event_id = ''

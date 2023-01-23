@@ -1,5 +1,6 @@
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.ActiefGewijzigdProcessor import ActiefGewijzigdProcessor
+from EventProcessors.AgentProcessors.AgentNaamGewijzigdProcessor import AgentNaamGewijzigdProcessor
 from EventProcessors.AssetRelatiesGewijzigdProcessor import AssetRelatiesGewijzigdProcessor
 from EventProcessors.AttributenGewijzigdProcessor import AttributenGewijzigdProcessor
 from EventProcessors.BestekGewijzigdProcessor import BestekGewijzigdProcessor
@@ -8,7 +9,7 @@ from EventProcessors.CommentaarGewijzigdProcessor import CommentaarGewijzigdProc
 from EventProcessors.ElekAansluitingGewijzigdProcessor import ElekAansluitingGewijzigdProcessor
 from EventProcessors.GeometrieOrLocatieGewijzigdProcessor import GeometrieOrLocatieGewijzigdProcessor
 from EventProcessors.NaamGewijzigdProcessor import NaamGewijzigdProcessor
-from EventProcessors.NieuwAgentProcessor import NieuwAgentProcessor
+from EventProcessors.AgentProcessors.NieuwAgentProcessor import NieuwAgentProcessor
 from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
 from EventProcessors.SchadebeheerderGewijzigdProcessor import SchadebeheerderGewijzigdProcessor
 from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
@@ -19,10 +20,11 @@ from PostGISConnector import PostGISConnector
 
 class EventProcessorFactory:
     @classmethod
-    def create_event_processor(cls, event_type: str, cursor, eminfra_importer: EMInfraImporter,
+    def create_event_processor(cls, event_type: str, connection, eminfra_importer: EMInfraImporter,
                                postgis_connector: PostGISConnector, resource: str) -> SpecificEventProcessor:
         if resource == 'agents':
-            return EventProcessorFactory.create_agent_event_processor(event_type, eminfra_importer, cursor)
+            return EventProcessorFactory.create_agent_event_processor(event_type=event_type, connection=connection,
+                                                                      eminfra_importer=eminfra_importer)
 
 
         if event_type == 'NIEUWE_INSTALLATIE':
@@ -69,11 +71,12 @@ class EventProcessorFactory:
             raise NotImplementedError()
 
     @classmethod
-    def create_agent_event_processor(cls, event_type, cursor, eminfra_importer) -> SpecificEventProcessor:
+    def create_agent_event_processor(cls, event_type, connection, eminfra_importer) -> SpecificEventProcessor:
         if event_type == 'NIEUWE_AGENT':
-            return NieuwAgentProcessor(cursor, eminfra_importer)
+            return NieuwAgentProcessor(eminfra_importer=eminfra_importer)
             raise NotImplementedError('NIEUWE_AGENT event_processor missing')
         if event_type == 'NAAM_GEWIJZIGD':
+            return AgentNaamGewijzigdProcessor(eminfra_importer=eminfra_importer)
             raise NotImplementedError('NAAM_GEWIJZIGD event_processor missing')
         if event_type == 'VO_ID_GEWIJZIGD':
             raise NotImplementedError('VO_ID_GEWIJZIGD event_processor missing')

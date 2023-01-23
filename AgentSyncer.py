@@ -17,7 +17,8 @@ class AgentSyncer:
         self.eminfra_importer: EMInfraImporter = eminfra_importer
         self.updater: AgentUpdater = AgentUpdater()
         self.events_collector: AgentFeedEventsCollector = AgentFeedEventsCollector(eminfra_importer)
-        self.events_processor: AgentFeedEventsProcessor = AgentFeedEventsProcessor(postgis_connector)
+        self.events_processor: AgentFeedEventsProcessor = AgentFeedEventsProcessor(postgis_connector,
+                                                                                   eminfra_importer=eminfra_importer)
 
     def sync(self, connection):
         sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()

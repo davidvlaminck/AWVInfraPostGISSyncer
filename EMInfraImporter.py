@@ -13,11 +13,8 @@ class EMInfraImporter:
         self.request_handler.requester.first_part_url += 'eminfra/'
         self.paging_cursors = {}
 
-    def get_events_from_feed_relaties(self, resource: str, page_num: int, page_size: int = 1):
-        return self.get_events_from_feedpage(feed=resource, page_num=page_num, page_size=page_size)
-
-    def get_events_from_feedpage(self, feed: str, page_num: int, page_size: int = 1):
-        url = f"feedproxy/feed/{feed}/{page_num}/{page_size}"
+    def get_events_from_proxyfeed(self, resource: str, page_num: int, page_size: int = 1):
+        url = f"feedproxy/feed/{resource}/{page_num}/{page_size}"
         return self.request_handler.get_jsondict(url)
 
     def get_objects_from_oslo_search_endpoint(self, url_part: str, cursor_name: str = None, filter_string: str = '{}',
@@ -35,7 +32,7 @@ class EMInfraImporter:
         json_list = []
 
         body = body_fixed_part
-        if self.paging_cursors[cursor_name] != '':
+        if cursor_name is not None and self.paging_cursors[cursor_name] != '':
             body += ', "fromCursor": ' + f'"{self.paging_cursors[cursor_name]}"'
         body += '}'
         json_data = json.loads(body)
@@ -46,10 +43,11 @@ class EMInfraImporter:
         dict_obj = json.loads(decoded_string)
         keys = response.headers.keys()
         json_list.extend(dict_obj['@graph'])
-        if 'em-paging-next-cursor' in keys:
-            self.paging_cursors[cursor_name] = response.headers['em-paging-next-cursor']
-        else:
-            self.paging_cursors[cursor_name] = ''
+        if cursor_name is not None:
+            if 'em-paging-next-cursor' in keys:
+                self.paging_cursors[cursor_name] = response.headers['em-paging-next-cursor']
+            else:
+                self.paging_cursors[cursor_name] = ''
 
         yield from json_list
 
@@ -72,7 +70,7 @@ class EMInfraImporter:
         expansions_string = '{"fields": ["contactInfo"]}'
         return self.get_objects_from_oslo_search_endpoint(url_part='agents', expansions_string=expansions_string)
 
-    def import_resource_from_webservice_by_uuids(self, resource: str, cursor_name: str, uuids: [str],
+    def import_resource_from_webservice_by_uuids(self, resource: str, uuids: [str],
                                                  page_size: int = 100) -> Iterator[dict]:
         list_string = '", "'.join(uuids)
         filter_string = '{ "uuid": ' + f'["{list_string}"]' + ' }'
@@ -80,7 +78,7 @@ class EMInfraImporter:
             expansions_string = '{"fields": ["contactInfo"]}'
             yield from self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size,
                                                                   expansions_string=expansions_string,
-                                                                  cursor_name=cursor_name, filter_string=filter_string)
+                                                                  filter_string=filter_string)
 
     def import_resource_from_webservice_page_by_page(self, page_size: int, resource: str) -> Iterator[dict]:
         if resource == 'agents':
