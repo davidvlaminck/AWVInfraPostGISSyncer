@@ -51,7 +51,7 @@ class SyncManager:
         self.request_handler = request_handler
         self.eminfra_importer = eminfra_importer
         self.events_collector = FeedEventsCollector(eminfra_importer)
-        self.events_processor = FeedEventsProcessor(connector)
+        self.events_processor = FeedEventsProcessor(connector, eminfra_importer=eminfra_importer)
         self.settings = settings
         if 'time' in self.settings:
             SyncTimer.sync_start = self.settings['time']['start']

@@ -1,3 +1,4 @@
+from EMInfraImporter import EMInfraImporter
 from FeedEventsProcessor import FeedEventsProcessor
 from PostGISConnector import PostGISConnector
 

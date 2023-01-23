@@ -6,12 +6,11 @@ from EMInfraImporter import EMInfraImporter
 
 
 class SpecificEventProcessor:
-    def __init__(self, cursor: psycopg2._psycopg.cursor, eminfra_importer: EMInfraImporter):
+    def __init__(self, eminfra_importer: EMInfraImporter):
         self.em_infra_importer = eminfra_importer
-        self.cursor = cursor
 
     @abstractmethod
-    def process(self, uuids: [str]):
+    def process(self, uuids: [str], connection):
         pass
 
 
