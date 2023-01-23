@@ -70,15 +70,22 @@ class EMInfraImporter:
         expansions_string = '{"fields": ["contactInfo"]}'
         return self.get_objects_from_oslo_search_endpoint(url_part='agents', expansions_string=expansions_string)
 
-    def import_resource_from_webservice_by_uuids(self, resource: str, uuids: [str],
+    def import_resource_from_webservice_by_uuids(self, resource: str, uuids: [str], oslo_endpoint: bool = True,
                                                  page_size: int = 100) -> Iterator[dict]:
         list_string = '", "'.join(uuids)
         filter_string = '{ "uuid": ' + f'["{list_string}"]' + ' }'
         if resource == 'agents':
             expansions_string = '{"fields": ["contactInfo"]}'
-            yield from self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size,
-                                                                  expansions_string=expansions_string,
-                                                                  filter_string=filter_string)
+            if oslo_endpoint:
+                yield from self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size,
+                                                                      expansions_string=expansions_string,
+                                                                      filter_string=filter_string)
+            else:
+                zoek_params = ZoekParameterPayload()
+                zoek_params.add_term(property='id', value=uuids, operator='IN')
+                zoek_params.size = page_size
+                yield from self.get_objects_from_non_oslo_endpoint(url_part=f'{resource}/search',
+                                                                   zoek_payload=zoek_params)
 
     def import_resource_from_webservice_page_by_page(self, page_size: int, resource: str) -> Iterator[dict]:
         if resource == 'agents':
@@ -255,7 +262,7 @@ class EMInfraImporter:
                 url_part=f'installaties/{asset_uuid}/kenmerken/ee2e627e-bb79-47aa-956a-ea167d20acbd/bestekken',
                 request_type='GET')
 
-    def get_assettypes_with_kenmerk_and_by_uuids(self, assettype_uuids, kenmerk: str):
+    def get_assettypes_with_kenmerk_and_by_uuids(self, assettype_uuids: [str], kenmerk: str):
         zoek_params = ZoekParameterPayload()
         zoek_params.add_term(property='kenmerkTypes', value=kenmerk, operator='EQ')
         zoek_params.add_term(logicalOp='AND', property='id', value=assettype_uuids, operator='IN')
@@ -267,31 +274,31 @@ class EMInfraImporter:
         yield from self.get_objects_from_non_oslo_endpoint(url_part='installatietypes/search',
                                                            zoek_payload=zoek_params)
 
-    def get_assettypes_with_kenmerk_gevoed_door_by_uuids(self, assettype_uuids):
+    def get_assettypes_with_kenmerk_gevoed_door_by_uuids(self, assettype_uuids: [str]):
         yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
                                                                  kenmerk='c60b07d2-5570-4363-ab6a-d6fba49ef2ca')
 
-    def get_assettypes_with_kenmerk_toezicht_by_uuids(self, assettype_uuids):
+    def get_assettypes_with_kenmerk_toezicht_by_uuids(self, assettype_uuids: [str]):
         yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
                                                                  kenmerk='f0166ba2-757c-4cf3-bf71-2e4fdff43fa3')
 
-    def get_assettypes_with_kenmerk_beheerder_by_uuids(self, assettype_uuids):
+    def get_assettypes_with_kenmerk_beheerder_by_uuids(self, assettype_uuids: [str]):
         yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
                                                                  kenmerk='d911dc02-f214-4f64-9c46-720dbdeb0d02')
 
-    def get_assettypes_with_kenmerk_locatie_by_uuids(self, assettype_uuids):
+    def get_assettypes_with_kenmerk_locatie_by_uuids(self, assettype_uuids: [str]):
         yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
                                                                  kenmerk='80052ed4-2f91-400c-8cba-57624653db11')
 
-    def get_assettypes_with_kenmerk_geometrie_by_uuids(self, assettype_uuids):
+    def get_assettypes_with_kenmerk_geometrie_by_uuids(self, assettype_uuids: [str]):
         yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
                                                                  kenmerk='aabe29e0-9303-45f1-839e-159d70ec2859')
 
-    def get_assettypes_with_kenmerk_bestek_by_uuids(self, assettype_uuids):
+    def get_assettypes_with_kenmerk_bestek_by_uuids(self, assettype_uuids: [str]):
         yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
                                                                  kenmerk='ee2e627e-bb79-47aa-956a-ea167d20acbd')
 
-    def get_assettypes_with_kenmerk_elek_aansluiting_by_uuids(self, assettype_uuids):
+    def get_assettypes_with_kenmerk_elek_aansluiting_by_uuids(self, assettype_uuids: [str]):
         yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
                                                                  kenmerk='87dff279-4162-4031-ba30-fb7ffd9c014b')
 
@@ -301,10 +308,10 @@ class EMInfraImporter:
         yield from self.get_objects_from_non_oslo_endpoint(url_part='identiteiten/search', zoek_payload=zoek_params,
                                                            identiteit=True)
 
-    def get_kenmerken_by_assettype_uuids(self, assettype_uuid, voc):
+    def get_kenmerken_by_assettype_uuids(self, assettype_uuid: str, voc: str):
         url_part = f'/{voc}types/{assettype_uuid}/kenmerktypes'
         return list(self.get_objects_from_non_oslo_endpoint(url_part=url_part, request_type='GET'))
 
-    def get_eigenschappen_by_kenmerk_uuid(self, kenmerk_uuid):
+    def get_eigenschappen_by_kenmerk_uuid(self, kenmerk_uuid: str):
         url_part = f'/kenmerktypes/{kenmerk_uuid}/eigenschappen'
         return list(self.get_objects_from_non_oslo_endpoint(url_part=url_part, request_type='GET'))

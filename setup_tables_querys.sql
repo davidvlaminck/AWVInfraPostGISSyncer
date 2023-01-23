@@ -362,6 +362,9 @@ CREATE TABLE IF NOT EXISTS public.betrokkeneRelaties
     bronAssetUuid uuid,
     rol text COLLATE pg_catalog."default",
     actief boolean NOT NULL,
+    contact_info json,
+    startDatum TIMESTAMP WITH TIME ZONE,
+    eindDatum TIMESTAMP WITH TIME ZONE,
     CONSTRAINT betrokkeneRelaties_pkey PRIMARY KEY (uuid)
 );
 
