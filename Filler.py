@@ -11,6 +11,7 @@ from AssetTypeFiller import AssetTypeFiller
 from BeheerderFiller import BeheerderFiller
 from BestekFiller import BestekFiller
 from BestekKoppelingSyncer import BestekKoppelingSyncer
+from BetrokkeneRelatieFiller import BetrokkeneRelatieFiller
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
 from Exceptions.AgentMissingError import AgentMissingError
@@ -46,7 +47,7 @@ class Filler:
         elif table_to_fill == 'beheerders':
             self.fill_beheerders(page_size, cursor)
         elif table_to_fill == 'betrokkenerelaties':
-            self.sync_betrokkenerelaties(page_size, cursor)
+            self.fill_betrokkenerelaties(page_size, cursor)
         elif table_to_fill == 'bestekken':
             self.fill_bestekken(page_size, cursor)
         elif table_to_fill == 'assettypes':
@@ -64,10 +65,10 @@ class Filler:
         # TODO change to or when all feeds work
         # if 'page_assets' not in params or 'page_assetrelaties' not in params or \
         #         'page_agents' not in params or 'page_betrokkenerelaties' not in params:
-        if 'page_agents' not in params:
+        if 'page_agents' not in params or 'page_betrokkenerelaties' not in params:
             logging.info('Getting the last pages for feeds')
             feeds = ['assets', 'agents', 'assetrelaties', 'betrokkenerelaties']
-            feeds = ['agents']
+            feeds = ['agents', 'betrokkenerelaties']
 
             # use multithreading
             executor = ThreadPoolExecutor()
@@ -153,10 +154,10 @@ class Filler:
         end = time.time()
         logging.info(f'time for all assetrelaties: {round(end - start, 2)}')
 
-    def sync_betrokkenerelaties(self, page_size, pagingcursor):
+    def fill_betrokkenerelaties(self, page_size, pagingcursor):
         logging.info(f'Filling betrokkenerelaties table')
         start = time.time()
-        betrokkenerelatie_syncer = BetrokkeneRelatiesFiller(
+        betrokkenerelatie_syncer = BetrokkeneRelatieFiller(
             eminfra_importer=self.eminfra_importer, postgis_connector=self.connector, resource='betrokkenerelaties')
         connection = self.connector.get_connection()
         params = None
@@ -333,16 +334,19 @@ class Filler:
         logging.info(f'Time for all agents: {round(end - start, 2)}')
 
     def save_last_feedevent_to_params(self, page_size: int, feed: str):
+        logging.info(f'Searching last page of current feed for {feed}')
         start_num = 1
         step = 5
         start_num = self.recur_exp_find_start_page(current_num=start_num, step=step, page_size=page_size, feed=feed)
+        if start_num < step:
+            start_num = step
         current_page_num = self.recur_find_last_page(current_num=int(start_num / step),
                                                      current_step=int(start_num / step),
                                                      step=step, page_size=page_size, feed=feed)
 
         # doublecheck
-        event_page = self.eminfra_importer.get_events_from_feedpage(page_num=current_page_num, page_size=page_size,
-                                                                    feed=feed)
+        event_page = self.eminfra_importer.get_events_from_proxyfeed(page_num=current_page_num, page_size=page_size,
+                                                                     resource=feed)
         links = event_page['links']
         prev_link = next((l for l in links if l['rel'] == 'previous'), None)
         if prev_link is not None:
@@ -362,8 +366,8 @@ class Filler:
     def recur_exp_find_start_page(self, current_num, step, page_size, feed):
         event_page = None
         try:
-            event_page = self.eminfra_importer.get_events_from_feedpage(page_num=current_num, page_size=page_size,
-                                                                        feed=feed)
+            event_page = self.eminfra_importer.get_events_from_proxyfeed(page_num=current_num, page_size=page_size,
+                                                                         resource=feed)
         except Exception as ex:
             if ex.args[0] == 'status 400':
                 return current_num
@@ -377,7 +381,7 @@ class Filler:
         for i in range(step + 1):
             new_num = current_num + current_step * i
             try:
-                self.eminfra_importer.get_events_from_feedpage(page_num=new_num, page_size=page_size, feed=feed)
+                self.eminfra_importer.get_events_from_proxyfeed(page_num=new_num, page_size=page_size, resource=feed)
             except Exception as ex:
                 if ex.args[0] == 'status 400':
                     new_i = i - 1

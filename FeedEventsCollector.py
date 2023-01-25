@@ -15,9 +15,13 @@ class FeedEventsCollector:
                                    resource: str) -> EventParams:
         event_dict = self.create_empty_event_dict()
         searching_where_stopped = True
+        if resource == 'betrokkenerelaties':
+            resource = 'betrokkene-relaties'
+        elif resource == 'assetrelaties':
+            resource = 'asset-relaties'
         while True:
             page = self.eminfra_importer.get_events_from_proxyfeed(
-                page_num=0, page_size=page_size, resource=self.resource)
+                page_num=completed_page_number, page_size=page_size, resource=self.resource)
             stop_after_this_page = False
             last_event_id = ''
 

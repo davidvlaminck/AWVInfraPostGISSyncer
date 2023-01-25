@@ -32,3 +32,5 @@ if __name__ == '__main__':
 
     # set up database users
     # install postgis: CREATE EXTENSION postgis;
+
+    # too many connections: https://www.cybertec-postgresql.com/en/terminating-database-connections-in-postgresql/

@@ -11,6 +11,7 @@ from AgentSyncer import AgentSyncer
 from AssetRelatiesSyncer import AssetRelatiesSyncer
 from AssetSyncer import AssetSyncer
 from BestekKoppelingSyncer import BestekKoppelingSyncer
+from BetrokkeneRelatieSyncer import BetrokkeneRelatieSyncer
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
 from Exceptions.AgentMissingError import AgentMissingError
@@ -39,7 +40,7 @@ class SyncerFactory:
         elif feed == 'assets':
             return AssetSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
         elif feed == 'assetrelaties':
-            return AssetRelatieSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
+            return AssetrelatieSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
         elif feed == 'betrokkenerelaties':
             return BetrokkeneRelatieSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
 
@@ -73,8 +74,10 @@ class SyncManager:
                     self.perform_syncing()
             except requests.exceptions.ConnectionError as exc:
                 print(exc)
+                time.sleep(10)
             except Exception as exc:
                 print(exc)
+                time.sleep(10)
 
     def start_sync_by_feed(self, feed):
         syncer = SyncerFactory.get_syncer_by_feed_name(feed, eminfra_importer=self.eminfra_importer,
@@ -86,7 +89,7 @@ class SyncManager:
         params = self.connector.get_params(self.connector.main_connection)
 
         feeds = ['assets', 'agents', 'assetrelaties', 'betrokkenerelaties']
-        feeds = ['agents']
+        feeds = ['agents', 'betrokkenerelaties']
 
         # use multithreading
         executor = ThreadPoolExecutor(4)
