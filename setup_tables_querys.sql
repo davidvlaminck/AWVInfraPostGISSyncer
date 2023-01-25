@@ -419,7 +419,7 @@ CREATE TABLE IF NOT EXISTS public.assetRelaties
     bronUuid uuid NOT NULL,
     doelUuid uuid NOT NULL,
     relatietype uuid NOT NULL,
-    attributen text COLLATE pg_catalog."default",
+    attributen json,
     actief boolean NOT NULL,
     CONSTRAINT assetRelaties_pkey PRIMARY KEY (uuid)
 );
