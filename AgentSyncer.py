@@ -29,7 +29,7 @@ class AgentSyncer:
             completed_event_id = params['event_uuid_agents']
             page_size = params['pagesize']
 
-            logging.info(f'starting a sync cycle, page: {str(current_page + 1)} event_uuid: {str(completed_event_id)}')
+            logging.info(f'starting a sync cycle for agents, page: {str(current_page + 1)} event_uuid: {str(completed_event_id)}')
             start = time.time()
 
             try:
@@ -38,7 +38,7 @@ class AgentSyncer:
 
                 total_events = sum(len(lists) for lists in eventsparams_to_process.event_dict.values())
                 if total_events == 0:
-                    logging.info(f"The database is fully synced. Continuing keep up to date in 30 seconds")
+                    logging.info(f"The database is fully synced for agents. Continuing keep up to date in 30 seconds")
                     self.postgis_connector.update_params(params={'last_update_utc_agents': datetime.utcnow()},
                                                          connection=connection)
                     time.sleep(30)  # wait 30 seconds to prevent overloading API

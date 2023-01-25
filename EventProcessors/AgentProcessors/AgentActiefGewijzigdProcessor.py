@@ -37,7 +37,7 @@ class AgentActiefGewijzigdProcessor(SpecificEventProcessor):
             agent_uuid = agent_dict['uuid']
             agent_actief = agent_dict['actief']
 
-            values += f"('{agent_uuid}','{agent_actief}'),"
+            values += f"('{agent_uuid}',{agent_actief}),"
 
         update_query = f"""
         WITH s (uuid, actief) 

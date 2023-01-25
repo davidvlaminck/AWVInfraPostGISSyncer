@@ -86,6 +86,9 @@ class EMInfraImporter:
                 zoek_params.size = page_size
                 yield from self.get_objects_from_non_oslo_endpoint(url_part=f'{resource}/search',
                                                                    zoek_payload=zoek_params)
+        elif resource == 'betrokkenerelaties':
+            yield from self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size,
+                                                                  filter_string=filter_string)
 
     def import_resource_from_webservice_page_by_page(self, page_size: int, resource: str) -> Iterator[dict]:
         if resource == 'agents':

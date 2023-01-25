@@ -43,7 +43,7 @@ class AgentVOIDGewijzigdProcessor(SpecificEventProcessor):
         WITH s (uuid, void) 
             AS (VALUES {values[:-1]}),
         t AS (
-            SELECT uuid::uuid AS uuid, void:uuid as void
+            SELECT uuid::uuid AS uuid, void::uuid as void
             FROM s),
         to_update AS (
             SELECT t.* 

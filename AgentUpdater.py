@@ -17,7 +17,7 @@ class AgentUpdater:
             counter += 1
             agent_uuid = agent_dict['@id'].split('/')[-1][0:36]
             agent_name = agent_dict['purl:Agent.naam'].replace("'", "''")
-            agent_actief = agent_dict['AIMDBStatus.isActief']
+            agent_actief = agent_dict.get('AIMDBStatus.isActief', True)
             contact_info_value = 'NULL'
             if 'purl:Agent.contactinfo' in agent_dict:
                 contact_info = agent_dict['purl:Agent.contactinfo']
