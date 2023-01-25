@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 from psycopg2 import connect
 
 from EMInfraImporter import EMInfraImporter
-from EventProcessors.ToezichtGewijzigdProcessor import ToezichtGewijzigdProcessor
+from EventProcessors.AssetProcessors.ToezichtGewijzigdProcessor import ToezichtGewijzigdProcessor
 from Exceptions.IdentiteitMissingError import IdentiteitMissingError
 from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 from PostGISConnector import PostGISConnector

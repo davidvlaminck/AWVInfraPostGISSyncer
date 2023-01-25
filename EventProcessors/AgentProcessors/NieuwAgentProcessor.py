@@ -2,7 +2,7 @@ import logging
 import time
 
 from AgentUpdater import AgentUpdater
-from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
+from EventProcessors.AssetProcessors.SpecificEventProcessor import SpecificEventProcessor
 
 from Helpers import chunked
 

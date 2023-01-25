@@ -3,7 +3,7 @@ import logging
 import time
 from typing import Iterator
 
-from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
+from EventProcessors.AssetProcessors.SpecificEventProcessor import SpecificEventProcessor
 from Helpers import chunked, peek_generator
 
 

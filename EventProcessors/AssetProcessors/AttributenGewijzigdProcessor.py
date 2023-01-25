@@ -4,9 +4,8 @@ import time
 import psycopg2
 
 from EMInfraImporter import EMInfraImporter
-from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
+from EventProcessors.AssetProcessors.SpecificEventProcessor import SpecificEventProcessor
 from Exceptions.AttribuutMissingError import AttribuutMissingError
-from PostGISConnector import PostGISConnector
 
 
 class AttributenGewijzigdProcessor(SpecificEventProcessor):

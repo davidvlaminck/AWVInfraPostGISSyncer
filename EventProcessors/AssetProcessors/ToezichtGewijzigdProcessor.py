@@ -2,7 +2,7 @@ import logging
 import time
 
 from EMInfraImporter import EMInfraImporter
-from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
+from EventProcessors.AssetProcessors.SpecificEventProcessor import SpecificEventProcessor
 from Exceptions.IdentiteitMissingError import IdentiteitMissingError
 from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 
