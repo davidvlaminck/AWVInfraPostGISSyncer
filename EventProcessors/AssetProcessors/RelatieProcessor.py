@@ -2,8 +2,8 @@ import json
 import logging
 import time
 
-from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
-from EventProcessors.RelationNotCreatedError import RelationNotCreatedError, AssetRelationNotCreatedError, \
+from EventProcessors.AssetProcessors.NieuwAssetProcessor import NieuwAssetProcessor
+from EventProcessors.AssetProcessors.RelationNotCreatedError import AssetRelationNotCreatedError, \
     BetrokkeneRelationNotCreatedError
 
 

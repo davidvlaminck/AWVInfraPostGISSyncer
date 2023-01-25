@@ -13,7 +13,7 @@ from AssetSyncer import AssetSyncer
 from BestekKoppelingSyncer import BestekKoppelingSyncer
 from BetrokkeneRelatieSyncer import BetrokkeneRelatieSyncer
 from EMInfraImporter import EMInfraImporter
-from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
+from EventProcessors.AssetProcessors.NieuwAssetProcessor import NieuwAssetProcessor
 from Exceptions.AgentMissingError import AgentMissingError
 from Exceptions.AssetMissingError import AssetMissingError
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError

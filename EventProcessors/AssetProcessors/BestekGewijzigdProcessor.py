@@ -2,8 +2,8 @@ import logging
 import time
 
 from BestekKoppelingSyncer import BestekKoppelingSyncer
-from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
-from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
+from EventProcessors.AssetProcessors.NieuwAssetProcessor import NieuwAssetProcessor
+from EventProcessors.AssetProcessors.SpecificEventProcessor import SpecificEventProcessor
 
 
 class BestekGewijzigdProcessor(SpecificEventProcessor):

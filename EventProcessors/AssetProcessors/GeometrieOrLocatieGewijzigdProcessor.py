@@ -1,7 +1,7 @@
 import logging
 import time
 
-from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
+from EventProcessors.AssetProcessors.SpecificEventProcessor import SpecificEventProcessor
 
 
 class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):

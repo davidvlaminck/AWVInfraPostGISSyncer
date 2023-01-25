@@ -3,13 +3,13 @@ import time
 
 import psycopg2
 
-from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
+from EventProcessors.AssetProcessors.SpecificEventProcessor import SpecificEventProcessor
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
 
 
 class NieuwAssetProcessor(SpecificEventProcessor):
-    def __init__(self, cursor, eminfra_importer):
-        super().__init__(cursor, eminfra_importer)
+    def __init__(self, eminfra_importer):
+        super().__init__(eminfra_importer)
 
     def process(self, uuids: [str]):
         logging.info(f'started creating assets')

@@ -2,7 +2,7 @@ import logging
 import time
 
 from BetrokkeneRelatiesUpdater import BetrokkeneRelatiesUpdater
-from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
+from EventProcessors.AssetProcessors.SpecificEventProcessor import SpecificEventProcessor
 
 from Helpers import chunked
 

@@ -1,15 +1,15 @@
 import logging
 import time
 
-from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
+from EventProcessors.AssetProcessors.SpecificEventProcessor import SpecificEventProcessor
 
 
-class ActiefGewijzigdProcessor(SpecificEventProcessor):
+class ToestandGewijzigdProcessor(SpecificEventProcessor):
     def __init__(self, cursor, eminfra_importer):
         super().__init__(cursor, eminfra_importer)
 
     def process(self, uuids: [str]):
-        logging.info(f'started updating actief')
+        logging.info(f'started updating toestand')
         start = time.time()
 
         asset_dicts = self.em_infra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
@@ -24,20 +24,29 @@ class ActiefGewijzigdProcessor(SpecificEventProcessor):
         values = ''
         for asset_dict in assets_dicts:
             uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]
-            actief = asset_dict['AIMDBStatus.isActief']
-            values += f"('{uuid}',{actief}),"
 
+            toestand = None
+            if 'AIMToestand.toestand' in asset_dict:
+                toestand = asset_dict['AIMToestand.toestand'].replace(
+                    'https://wegenenverkeer.data.vlaanderen.be/id/concept/KlAIMToestand/', '')
+            values += f"('{uuid}',"
+
+            if toestand is None:
+                values += 'NULL'
+            else:
+                values += f"'{toestand}'"
+            values = values + '),'
         return values
 
     @staticmethod
     def perform_update_with_values(cursor, values):
         update_query = f"""
-        WITH s (uuid, actief)  
+        WITH s (uuid, toestand)  
             AS (VALUES {values[:-1]}),
         to_update AS (
-            SELECT uuid::uuid AS uuid, actief FROM s)
+            SELECT uuid::uuid AS uuid, toestand FROM s)
         UPDATE assets 
-        SET actief = to_update.actief
+        SET toestand = to_update.toestand
         FROM to_update 
         WHERE to_update.uuid = assets.uuid;"""
         cursor.execute(update_query)

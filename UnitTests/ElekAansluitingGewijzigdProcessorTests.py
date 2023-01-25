@@ -5,7 +5,7 @@ from psycopg2 import connect
 from AssetSyncer import AssetSyncer
 from AssetTypeSyncer import AssetTypeSyncer
 from EMInfraImporter import EMInfraImporter
-from EventProcessors.ElekAansluitingGewijzigdProcessor import ElekAansluitingGewijzigdProcessor
+from EventProcessors.AssetProcessors.ElekAansluitingGewijzigdProcessor import ElekAansluitingGewijzigdProcessor
 from PostGISConnector import PostGISConnector
 from RequestHandler import RequestHandler
 from RequesterFactory import RequesterFactory
