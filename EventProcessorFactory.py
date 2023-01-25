@@ -4,15 +4,26 @@ from EventProcessors.AgentProcessors.AgentActiefGewijzigdProcessor import AgentA
 from EventProcessors.AgentProcessors.AgentContactInfoGewijzigdProcessor import AgentContactInfoGewijzigdProcessor
 from EventProcessors.AgentProcessors.AgentNaamGewijzigdProcessor import AgentNaamGewijzigdProcessor
 from EventProcessors.AgentProcessors.AgentVOIDGewijzigdProcessor import AgentVOIDGewijzigdProcessor
+from EventProcessors.AgentProcessors.NieuwAgentProcessor import NieuwAgentProcessor
 from EventProcessors.AssetRelatiesGewijzigdProcessor import AssetRelatiesGewijzigdProcessor
 from EventProcessors.AttributenGewijzigdProcessor import AttributenGewijzigdProcessor
 from EventProcessors.BestekGewijzigdProcessor import BestekGewijzigdProcessor
 from EventProcessors.BetrokkeneRelatiesGewijzigdProcessor import BetrokkeneRelatiesGewijzigdProcessor
+from EventProcessors.BetrokkenerelatieProcessors.BetrokkenerelatieContactInfoGewijzigdProcessor import \
+    BetrokkenerelatieContactInfoGewijzigdProcessor
+from EventProcessors.BetrokkenerelatieProcessors.BetrokkenerelatieGeldigheidGewijzigdProcessor import \
+    BetrokkenerelatieGeldigheidGewijzigdProcessor
+from EventProcessors.BetrokkenerelatieProcessors.BetrokkenerelatieRolGewijzigdProcessor import \
+    BetrokkenerelatieRolGewijzigdProcessor
+from EventProcessors.BetrokkenerelatieProcessors.BetrokkenerelatieVerwijderdOngedaanProcessor import \
+    BetrokkenerelatieVerwijderdOngedaanProcessor
+from EventProcessors.BetrokkenerelatieProcessors.BetrokkenerelatieVerwijderdProcessor import \
+    BetrokkenerelatieVerwijderdProcessor
+from EventProcessors.BetrokkenerelatieProcessors.NieuwBetrokkenerelatieProcessor import NieuwBetrokkenerelatieProcessor
 from EventProcessors.CommentaarGewijzigdProcessor import CommentaarGewijzigdProcessor
 from EventProcessors.ElekAansluitingGewijzigdProcessor import ElekAansluitingGewijzigdProcessor
 from EventProcessors.GeometrieOrLocatieGewijzigdProcessor import GeometrieOrLocatieGewijzigdProcessor
 from EventProcessors.NaamGewijzigdProcessor import NaamGewijzigdProcessor
-from EventProcessors.AgentProcessors.NieuwAgentProcessor import NieuwAgentProcessor
 from EventProcessors.NieuwAssetProcessor import NieuwAssetProcessor
 from EventProcessors.SchadebeheerderGewijzigdProcessor import SchadebeheerderGewijzigdProcessor
 from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
@@ -31,6 +42,7 @@ class EventProcessorFactory:
         elif resource == 'betrokkenerelaties':
             return EventProcessorFactory.create_betrokkene_relatie_event_processor(
                 event_type=event_type, eminfra_importer=eminfra_importer)
+
 
         raise NotImplementedError
 
@@ -89,6 +101,8 @@ class EventProcessorFactory:
             return AgentContactInfoGewijzigdProcessor(eminfra_importer=eminfra_importer)
         elif event_type == 'ACTIEF_GEWIJZIGD':
             return AgentActiefGewijzigdProcessor(eminfra_importer=eminfra_importer)
+        elif event_type == 'BETROKKENE_RELATIES_GEWIJZIGD':
+            pass  # using different feed instead
         else:
             raise NotImplementedError(f"can't create an agent event processor with type: {event_type}")
 
@@ -96,19 +110,16 @@ class EventProcessorFactory:
     def create_betrokkene_relatie_event_processor(cls, event_type: str, eminfra_importer: EMInfraImporter) -> \
             SpecificEventProcessor:
         if event_type == 'NIEUWE_RELATIE':
-            raise NotImplementedError
-            return NieuwAgentProcessor(eminfra_importer=eminfra_importer)
-        elif event_type in ['RELATIE_VERWIJDERD', 'RELATIE_VERWIJDERD_ONGEDAAN']:
-            raise NotImplementedError
-            return AgentNaamGewijzigdProcessor(eminfra_importer=eminfra_importer)
+            return NieuwBetrokkenerelatieProcessor(eminfra_importer=eminfra_importer)
+        elif event_type == 'RELATIE_VERWIJDERD_ONGEDAAN':
+            return BetrokkenerelatieVerwijderdOngedaanProcessor(eminfra_importer=eminfra_importer)
+        elif event_type == 'RELATIE_VERWIJDERD':
+            return BetrokkenerelatieVerwijderdProcessor(eminfra_importer=eminfra_importer)
         elif event_type == 'ROL_GEWIJZIGD':
-            raise NotImplementedError
-            return AgentVOIDGewijzigdProcessor(eminfra_importer=eminfra_importer)
+            return BetrokkenerelatieRolGewijzigdProcessor(eminfra_importer=eminfra_importer)
         elif event_type == 'CONTACT_INFO_GEWIJZIGD':
-            raise NotImplementedError
-            return AgentContactInfoGewijzigdProcessor(eminfra_importer=eminfra_importer)
+            return BetrokkenerelatieContactInfoGewijzigdProcessor(eminfra_importer=eminfra_importer)
         elif event_type == 'GELDIGHEID_GEWIJZIGD':
-            raise NotImplementedError
-            return AgentActiefGewijzigdProcessor(eminfra_importer=eminfra_importer)
+            return BetrokkenerelatieGeldigheidGewijzigdProcessor(eminfra_importer=eminfra_importer)
         else:
-            raise NotImplementedError(f"can't create an agent event processor with type: {event_type}")
+            raise NotImplementedError(f"can't create an betrokkenerelatie event processor with type: {event_type}")

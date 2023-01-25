@@ -43,12 +43,12 @@ class BetrokkeneRelatiesUpdater:
             start_datum = betrokkenerelatie_dict.get('HeeftBetrokkene.datumAanvang', None)
             eind_datum = betrokkenerelatie_dict.get('HeeftBetrokkene.datumEinde', None)
 
-            if start_datum is None:
+            if start_datum is None or start_datum == '':
                 values += 'NULL,'
             else:
                 values += f"'{start_datum}',"
 
-            if eind_datum is None:
+            if eind_datum is None or eind_datum == '':
                 values += 'NULL'
             else:
                 values += f"'{eind_datum}'"

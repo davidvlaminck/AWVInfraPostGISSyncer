@@ -1,4 +1,3 @@
-import json
 import logging
 import time
 from typing import Iterator
@@ -35,18 +34,15 @@ class AgentNaamGewijzigdProcessor(SpecificEventProcessor):
         for agent_dict in object_generator:
             counter += 1
             agent_uuid = agent_dict['@id'].split('/')[-1][0:36]
-            contact_info_value = 'NULL'
-            if 'purl:Agent.contactinfo' in agent_dict:
-                contact_info = agent_dict['purl:Agent.contactinfo']
-                contact_info_value = "'" + json.dumps(contact_info).replace("'", "''") + "'"
+            agent_name = agent_dict['purl:Agent.naam'].replace("'", "''")
 
-            values += f"('{agent_uuid}',{contact_info_value}),"
+            values += f"('{agent_uuid}','{agent_name}'),"
 
         update_query = f"""
-        WITH s (uuid, contact_info) 
+        WITH s (uuid, naam) 
             AS (VALUES {values[:-1]}),
         t AS (
-            SELECT uuid::uuid AS uuid, contact_info::json AS contact_info
+            SELECT uuid::uuid AS uuid, naam
             FROM s),
         to_update AS (
             SELECT t.* 
@@ -54,7 +50,7 @@ class AgentNaamGewijzigdProcessor(SpecificEventProcessor):
                 LEFT JOIN public.agents AS agents ON agents.uuid = t.uuid 
             WHERE agents.uuid IS NOT NULL)
         UPDATE agents 
-        SET contact_info = to_update.contact_info
+        SET naam = to_update.naam
         FROM to_update 
         WHERE to_update.uuid = agents.uuid;"""
 

@@ -94,7 +94,9 @@ class PostGISConnector:
         query = ''
         for key_name, value in params.items():
             param_type = self.param_type_map[key_name]
-            if param_type in ['int', 'bool']:
+            if value is None:
+                query += f"UPDATE public.params SET value_{param_type} = NULL WHERE key_name = '{key_name}';"
+            elif param_type in ['int', 'bool']:
                 query += f"UPDATE public.params SET value_{param_type} = {value} WHERE key_name = '{key_name}';"
             else:
                 query += f"UPDATE public.params SET value_{param_type} = '{value}' WHERE key_name = '{key_name}';"
@@ -116,7 +118,10 @@ class PostGISConnector:
         query = ''
         for key_name, value in params.items():
             param_type = self.param_type_map[key_name]
-            if param_type in ['int', 'bool']:
+            if value is None:
+                query += f"""INSERT INTO public.params(key_name, value_{param_type})
+                             VALUES ('{key_name}', NULL);"""
+            elif param_type in ['int', 'bool']:
                 query += f"""INSERT INTO public.params(key_name, value_{param_type})
                              VALUES ('{key_name}', {value});"""
             else:

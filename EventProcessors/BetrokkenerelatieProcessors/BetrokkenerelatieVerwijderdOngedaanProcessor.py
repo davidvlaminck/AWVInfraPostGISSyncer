@@ -6,23 +6,20 @@ from EventProcessors.SpecificEventProcessor import SpecificEventProcessor
 from Helpers import chunked, peek_generator
 
 
-class AgentActiefGewijzigdProcessor(SpecificEventProcessor):
+class BetrokkenerelatieVerwijderdOngedaanProcessor(SpecificEventProcessor):
     def __init__(self, eminfra_importer):
         super().__init__(eminfra_importer)
 
     def process(self, uuids: [str], connection):
-        logging.info(f'started changing isActief of agents')
+        logging.info(f'started undo of remove betrokkenerelaties')
         start = time.time()
 
-        agent_count = 0
+        betrokkenerelatie_count = 0
         for uuids in chunked(uuids, 100):
-            generator = self.em_infra_importer.import_resource_from_webservice_by_uuids(uuids=uuids, resource='agents',
-                                                                                        oslo_endpoint=False)
-
-            agent_count += self.update_actief(object_generator=generator, connection=connection)
+            betrokkenerelatie_count += self.update_actief(object_generator=iter(uuids), connection=connection)
 
         end = time.time()
-        logging.info(f'changed isActief of {agent_count} agents in {str(round(end - start, 2))} seconds.')
+        logging.info(f'completed undo removal of {betrokkenerelatie_count} betrokkenerelaties in {str(round(end - start, 2))} seconds.')
 
     @staticmethod
     def update_actief(object_generator: Iterator[dict], connection) -> int:
@@ -32,12 +29,11 @@ class AgentActiefGewijzigdProcessor(SpecificEventProcessor):
 
         values = ''
         counter = 0
-        for agent_dict in object_generator:
+        for betrokkenerelatie_uuid in object_generator:
             counter += 1
-            agent_uuid = agent_dict['uuid']
-            agent_actief = agent_dict['actief']
+            betrokkenerelatie_actief = True
 
-            values += f"('{agent_uuid}',{agent_actief}),"
+            values += f"('{betrokkenerelatie_uuid}',{betrokkenerelatie_actief}),"
 
         update_query = f"""
         WITH s (uuid, actief) 
@@ -48,12 +44,12 @@ class AgentActiefGewijzigdProcessor(SpecificEventProcessor):
         to_update AS (
             SELECT t.* 
             FROM t
-                LEFT JOIN public.agents AS agents ON agents.uuid = t.uuid 
-            WHERE agents.uuid IS NOT NULL)
-        UPDATE agents 
+                LEFT JOIN public.betrokkenerelaties AS betrokkenerelaties ON betrokkenerelaties.uuid = t.uuid 
+            WHERE betrokkenerelaties.uuid IS NOT NULL)
+        UPDATE betrokkenerelaties 
         SET actief = to_update.actief
         FROM to_update 
-        WHERE to_update.uuid = agents.uuid;"""
+        WHERE to_update.uuid = betrokkenerelaties.uuid;"""
 
         with connection.cursor() as cursor:
             cursor.execute(update_query)
