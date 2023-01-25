@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 from psycopg2 import connect
 
 from EMInfraImporter import EMInfraImporter
-from EventProcessors.AssetRelatiesGewijzigdProcessor import AssetRelatiesGewijzigdProcessor
+from EventProcessors.AssetProcessors.AssetRelatiesGewijzigdProcessor import AssetRelatiesGewijzigdProcessor
 from Exceptions.AssetMissingError import AssetMissingError
 from PostGISConnector import PostGISConnector
 from SettingsManager import SettingsManager
