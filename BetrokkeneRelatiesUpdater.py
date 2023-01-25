@@ -79,6 +79,7 @@ class BetrokkeneRelatiesUpdater:
                 if '\n' in str(exc):
                     logging.error(str(exc).split('\n')[1])
                 connection.rollback()
+                raise AgentMissingError()
                 cursor = connection.cursor()
                 agent_uuids = set(map(lambda x: x['RelatieObject.doel']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36], betrokkenerelatie_dicts_list))
                 more_agent_uuids = set(map(lambda x: x['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36],
@@ -93,6 +94,7 @@ class BetrokkeneRelatiesUpdater:
                 if '\n' in str(exc):
                     logging.error(str(exc).split('\n')[1])
                 connection.rollback()
+                raise AssetMissingError()
                 cursor = connection.cursor()
                 bron_uuids = set(map(lambda x: x['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36], betrokkenerelatie_dicts_list))
                 asset_uuids = set(
