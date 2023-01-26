@@ -89,6 +89,12 @@ class EMInfraImporter:
         elif resource == 'betrokkenerelaties':
             yield from self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size,
                                                                   filter_string=filter_string)
+        elif resource == 'assetrelaties':
+            yield from self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size,
+                                                                  filter_string=filter_string)
+        elif resource == 'assets':
+            yield from self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size,
+                                                                  filter_string=filter_string)
 
     def import_resource_from_webservice_page_by_page(self, page_size: int, resource: str) -> Iterator[dict]:
         if resource == 'agents':
@@ -97,6 +103,12 @@ class EMInfraImporter:
                                                                   expansions_string=expansions_string,
                                                                   cursor_name=resource)
         elif resource == 'betrokkenerelaties':
+            yield from self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size,
+                                                                  cursor_name=resource)
+        elif resource == 'assetrelaties':
+            yield from self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size,
+                                                                  cursor_name=resource)
+        elif resource == 'assets':
             yield from self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size,
                                                                   cursor_name=resource)
         elif resource == 'toezichtgroepen':

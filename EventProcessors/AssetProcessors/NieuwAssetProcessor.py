@@ -3,24 +3,30 @@ import time
 
 import psycopg2
 
+from AssetUpdater import AssetUpdater
 from EventProcessors.AssetProcessors.SpecificEventProcessor import SpecificEventProcessor
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
+from Helpers import chunked
 
 
 class NieuwAssetProcessor(SpecificEventProcessor):
     def __init__(self, eminfra_importer):
         super().__init__(eminfra_importer)
 
-    def process(self, uuids: [str]):
+    def process(self, uuids: [str], connection):
         logging.info(f'started creating assets')
         start = time.time()
 
-        asset_dicts = self.em_infra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
-        values = self.create_values_string_from_dicts(cursor=self.cursor, assets_dicts=asset_dicts)
-        self.perform_insert_with_values(cursor=self.cursor, values=values)
+        asset_count = 0
+        for uuids in chunked(uuids, 100):
+            generator = self.em_infra_importer.import_resource_from_webservice_by_uuids(uuids=uuids,
+                                                                                        resource='assets')
+
+            asset_count += AssetUpdater.update_objects(object_generator=generator, connection=connection,
+                                                       insert_only=True)
 
         end = time.time()
-        logging.info(f'created {len(asset_dicts)} assets in {str(round(end - start, 2))} seconds.')
+        logging.info(f'created {asset_count} assets in {str(round(end - start, 2))} seconds.')
 
     @staticmethod
     def perform_insert_with_values(cursor: psycopg2._psycopg.cursor, values):

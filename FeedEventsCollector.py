@@ -70,13 +70,4 @@ class FeedEventsCollector:
 
     @staticmethod
     def create_empty_event_dict() -> {}:
-        raise not NotImplementedError('implement this in the child class')
-        empty_dict = {}
-        for event_type in ["ACTIEF_GEWIJZIGD", "BESTEK_GEWIJZIGD", "BETROKKENE_RELATIES_GEWIJZIGD", "COMMENTAAR_GEWIJZIGD",
-                           "COMMUNICATIEAANSLUITING_GEWIJZIGD", "DOCUMENTEN_GEWIJZIGD", "EIGENSCHAPPEN_GEWIJZIGD",
-                           "ELEKTRICITEITSAANSLUITING_GEWIJZIGD", "GEOMETRIE_GEWIJZIGD", "LOCATIE_GEWIJZIGD", "NAAM_GEWIJZIGD",
-                           "NAAMPAD_GEWIJZIGD", "NIEUW_ONDERDEEL", "NIEUWE_INSTALLATIE", "PARENT_GEWIJZIGD", "POSTIT_GEWIJZIGD",
-                           "RELATIES_GEWIJZIGD", "SCHADEBEHEERDER_GEWIJZIGD", "TOEGANG_GEWIJZIGD", "TOESTAND_GEWIJZIGD",
-                           "TOEZICHT_GEWIJZIGD", "VPLAN_GEWIJZIGD"]:
-            empty_dict[event_type] = set()
-        return empty_dict
+        raise not NotImplementedError('implement this abstract method')
