@@ -9,35 +9,37 @@ from Exceptions.AttribuutMissingError import AttribuutMissingError
 
 
 class AttributenGewijzigdProcessor(SpecificEventProcessor):
-    def __init__(self, cursor, eminfra_importer: EMInfraImporter):
-        super().__init__(cursor, eminfra_importer)
+    def __init__(self, eminfra_importer: EMInfraImporter):
+        super().__init__(eminfra_importer)
 
-    def process(self, uuids: [str]):
+    def process(self, uuids: [str], connection):
         logging.info(f'started updating attributes')
         start = time.time()
 
         asset_dicts = self.em_infra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
-        self.process_dicts(cursor=self.cursor, asset_uuids=uuids, asset_dicts=asset_dicts)
+        self.process_dicts(connection=connection, asset_uuids=uuids, asset_dicts=asset_dicts)
 
         end = time.time()
         logging.info(f'updated {len(asset_dicts)} assets in {str(round(end - start, 2))} seconds.')
 
-    def process_dicts(self, cursor, asset_uuids, asset_dicts):
-        self.remove_existing_attributes(cursor=cursor, asset_uuids=asset_uuids)
-        values = self.create_values_string_from_dicts(assets_dicts=asset_dicts, cursor=cursor)
-        self.perform_update_with_values(cursor=cursor, values=values)
+    @staticmethod
+    def process_dicts(connection, asset_uuids, asset_dicts):
+        AttributenGewijzigdProcessor.remove_existing_attributes(connection=connection, asset_uuids=asset_uuids)
+        values = AttributenGewijzigdProcessor.create_values_string_from_dicts(assets_dicts=asset_dicts)
+        AttributenGewijzigdProcessor.perform_update_with_values(connection=connection, values=values)
 
     @staticmethod
-    def remove_existing_attributes(asset_uuids, cursor):
+    def remove_existing_attributes(asset_uuids, connection):
         if len(asset_uuids) == 0:
             return
         delete_query = "DELETE FROM public.attribuutWaarden WHERE assetUuid IN (VALUES ('" + "'::uuid),('".join(
             asset_uuids) + "'::uuid));"
 
-        cursor.execute(delete_query)
+        with connection.cursor() as cursor:
+            cursor.execute(delete_query)
 
     @staticmethod
-    def create_values_string_from_dicts(assets_dicts, cursor):
+    def create_values_string_from_dicts(assets_dicts):
         values = ''
         for asset_dict in assets_dicts:
             asset_uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]
@@ -67,7 +69,7 @@ class AttributenGewijzigdProcessor(SpecificEventProcessor):
         return values
 
     @staticmethod
-    def perform_update_with_values(cursor, values):
+    def perform_update_with_values(connection, values):
         insert_query = f"""
 WITH s (assetUuid, attribute_name, waarde) 
     AS (VALUES {values[:-2]}),
@@ -79,7 +81,8 @@ INSERT INTO public.attribuutWaarden (assetUuid, attribuutUuid, waarde)
 SELECT to_insert.assetUuid, to_insert.attribuutUuid, to_insert.waarde
 FROM to_insert;"""
         try:
-            cursor.execute(insert_query)
+            with connection.cursor() as cursor:
+                cursor.execute(insert_query)
         except psycopg2.Error as exc:
             if str(exc).split('\n')[0] == 'null value in column "attribuutuuid" violates not-null constraint':
                 raise AttribuutMissingError()
