@@ -16,8 +16,8 @@ class AgentVOIDGewijzigdProcessor(SpecificEventProcessor):
 
         agent_count = 0
         for uuids in chunked(uuids, 100):
-            generator = self.em_infra_importer.import_resource_from_webservice_by_uuids(uuids=uuids, resource='agents',
-                                                                                        oslo_endpoint=False)
+            generator = self.eminfra_importer.import_resource_from_webservice_by_uuids(uuids=uuids, resource='agents',
+                                                                                       oslo_endpoint=False)
 
             agent_count += self.update_vo_id(object_generator=generator, connection=connection)
 

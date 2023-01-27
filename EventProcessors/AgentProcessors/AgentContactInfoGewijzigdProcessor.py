@@ -17,7 +17,7 @@ class AgentContactInfoGewijzigdProcessor(SpecificEventProcessor):
 
         agent_count = 0
         for uuids in chunked(uuids, 100):
-            generator = self.em_infra_importer.import_resource_from_webservice_by_uuids(uuids=uuids, resource='agents')
+            generator = self.eminfra_importer.import_resource_from_webservice_by_uuids(uuids=uuids, resource='agents')
 
             agent_count += self.update_contact_info(object_generator=generator, connection=connection)
 

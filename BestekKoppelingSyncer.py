@@ -16,16 +16,17 @@ class BestekKoppelingSyncer:
         self.update_all_bestekkoppelingen(batch_size=batch_size)
 
     def update_all_bestekkoppelingen(self, batch_size: int):
+        connection = self.postGIS_connector.get_connection()
         self.eminfra_importer.pagingcursor = 'setting up sync of bestekkoppelingen'
         # create a temp table that holds all asset_uuid
-        self.create_temp_table_for_sync_bestekkoppelingen()
+        self.create_temp_table_for_sync_bestekkoppelingen(connection=connection)
 
         # go through all of the table and flag as sync'd when done, allow for parameter batch size
         self.eminfra_importer.pagingcursor = 'performing sync of bestekkoppelingen'
-        self.loop_using_temp_table_and_sync_koppelingen(batch_size=batch_size)
+        self.loop_using_temp_table_and_sync_koppelingen(batch_size=batch_size, connection=connection)
 
         # delete the temp table
-        self.delete_temp_table_for_sync_bestekkoppelingen()
+        self.delete_temp_table_for_sync_bestekkoppelingen(connection=connection)
         self.eminfra_importer.pagingcursor = ''
 
     def get_all_bestekkoppelingen_by_asset_uuids(self, asset_uuids: [str]) -> Generator[tuple]:
@@ -33,12 +34,13 @@ class BestekKoppelingSyncer:
             asset_uuids=asset_uuids)
 
     @staticmethod
-    def update_bestekkoppelingen_by_asset_uuids(cursor, asset_uuids: [str], bestek_koppelingen_dicts_list: [[dict]]) -> None:
+    def update_bestekkoppelingen_by_asset_uuids(connection, asset_uuids: [str], bestek_koppelingen_dicts_list: [[dict]]) -> None:
         if len(asset_uuids) == 0:
             return
 
         delete_query = "DELETE FROM public.bestekkoppelingen WHERE assetUuid IN (VALUES ('" + "'::uuid),('".join(asset_uuids)+"'::uuid));"
-        cursor.execute(delete_query)
+        with connection.cursor() as cursor:
+            cursor.execute(delete_query)
 
         for index, asset_uuid in enumerate(asset_uuids):
             values = ''
@@ -82,7 +84,8 @@ FROM to_insert;"""
                 else:
                     raise exc
 
-    def create_temp_table_for_sync_bestekkoppelingen(self):
+    @staticmethod
+    def create_temp_table_for_sync_bestekkoppelingen(connection):
         create_table_query = """
 CREATE TABLE IF NOT EXISTS public.temp_sync_bestekkoppelingen
 (
@@ -99,44 +102,45 @@ WITH bestek_assets AS (
 INSERT INTO public.temp_sync_bestekkoppelingen (assetUuid) 
 SELECT uuid FROM bestek_assets;"""
 
-        cursor = self.postGIS_connector.connection.cursor()
-        cursor.execute(create_table_query)
+        with connection.cursor() as cursor:
+            cursor.execute(create_table_query)
 
-        # only fill_table if the number of records in temp table with NULL for done == 0 (empty or done)
-        cursor.execute(check_table_query)
-        count_not_done = cursor.fetchone()[0]
-        if count_not_done > 0:
-            return
+            # only fill_table if the number of records in temp table with NULL for done == 0 (empty or done)
+            cursor.execute(check_table_query)
+            count_not_done = cursor.fetchone()[0]
+            if count_not_done > 0:
+                return
 
-        cursor.execute(fill_table_query)
-        self.postGIS_connector.connection.commit()
+            cursor.execute(fill_table_query)
+        connection.commit()
 
-    def delete_temp_table_for_sync_bestekkoppelingen(self):
+    @staticmethod
+    def delete_temp_table_for_sync_bestekkoppelingen(connection):
         delete_table_query = "DROP TABLE IF EXISTS public.temp_sync_bestekkoppelingen;"
 
-        cursor = self.postGIS_connector.connection.cursor()
-        cursor.execute(delete_table_query)
-        self.postGIS_connector.connection.commit()
+        with connection.cursor() as cursor:
+            cursor.execute(delete_table_query)
+        connection.commit()
 
-    def loop_using_temp_table_and_sync_koppelingen(self, batch_size: int):
+    def loop_using_temp_table_and_sync_koppelingen(self, batch_size: int, connection):
         select_from_temp_table_query = f"SELECT assetUuid FROM public.temp_sync_bestekkoppelingen WHERE done IS NULL LIMIT {batch_size};"
-        cursor = self.postGIS_connector.connection.cursor()
-        cursor.execute(select_from_temp_table_query)
-        assets_to_update = list(map(lambda x: x[0], cursor.fetchall()))
-        while len(assets_to_update) > 0:
-            koppelingen_list = []
-            asset_uuid_list = []
-            koppelingen_generator = self.get_all_bestekkoppelingen_by_asset_uuids(asset_uuids=assets_to_update)
-            for asset_uuid, koppelingen in koppelingen_generator:
-                asset_uuid_list.append(asset_uuid)
-                koppelingen_list.append(list(koppelingen))
-            self.update_bestekkoppelingen_by_asset_uuids(cursor=cursor, asset_uuids=asset_uuid_list,
-                                                         bestek_koppelingen_dicts_list=koppelingen_list)
-
-            update_temp_table_query = "UPDATE public.temp_sync_bestekkoppelingen SET done = TRUE WHERE " \
-                                      f"assetUuid IN (VALUES ('" + "'::uuid),('".join(assets_to_update)+"'::uuid));"
-            cursor.execute(update_temp_table_query)
-            self.postGIS_connector.connection.commit()
-
+        with connection.cursor() as cursor:
             cursor.execute(select_from_temp_table_query)
             assets_to_update = list(map(lambda x: x[0], cursor.fetchall()))
+            while len(assets_to_update) > 0:
+                koppelingen_list = []
+                asset_uuid_list = []
+                koppelingen_generator = self.get_all_bestekkoppelingen_by_asset_uuids(asset_uuids=assets_to_update)
+                for asset_uuid, koppelingen in koppelingen_generator:
+                    asset_uuid_list.append(asset_uuid)
+                    koppelingen_list.append(list(koppelingen))
+                BestekKoppelingSyncer.update_bestekkoppelingen_by_asset_uuids(connection=connection, asset_uuids=asset_uuid_list,
+                                                             bestek_koppelingen_dicts_list=koppelingen_list)
+
+                update_temp_table_query = "UPDATE public.temp_sync_bestekkoppelingen SET done = TRUE WHERE " \
+                                          f"assetUuid IN (VALUES ('" + "'::uuid),('".join(assets_to_update)+"'::uuid));"
+                cursor.execute(update_temp_table_query)
+                connection.commit()
+
+                cursor.execute(select_from_temp_table_query)
+                assets_to_update = list(map(lambda x: x[0], cursor.fetchall()))

@@ -6,6 +6,9 @@ from concurrent.futures import ThreadPoolExecutor
 from AgentFiller import AgentFiller
 from AgentSyncer import AgentSyncer
 from AssetRelatiesSyncer import AssetRelatiesSyncer
+
+from AssetFiller import AssetFiller
+from AssetRelatieFiller import AssetRelatieFiller
 from AssetSyncer import AssetSyncer
 from AssetTypeFiller import AssetTypeFiller
 from BeheerderFiller import BeheerderFiller
@@ -48,6 +51,8 @@ class Filler:
             self.fill_beheerders(page_size, cursor)
         elif table_to_fill == 'betrokkenerelaties':
             self.fill_betrokkenerelaties(page_size, cursor)
+        elif table_to_fill == 'assetrelaties':
+            self.fill_assetrelaties(page_size, cursor)
         elif table_to_fill == 'bestekken':
             self.fill_bestekken(page_size, cursor)
         elif table_to_fill == 'assettypes':
@@ -58,6 +63,8 @@ class Filler:
             self.fill_identiteiten(page_size, cursor)
         elif table_to_fill == 'relatietypes':
             self.fill_relatietypes(page_size, cursor)
+        elif table_to_fill == 'assets':
+            self.fill_assets(page_size, cursor)
 
     def fill(self, params: dict):
         logging.info('Filling the database with data')
@@ -129,26 +136,33 @@ class Filler:
             param_dict[table_to_fill + '_cursor'] = ''
         self.connector.create_params(param_dict, connection)
 
-    def sync_assetrelaties(self):
+    def fill_assetrelaties(self, page_size, pagingcursor):
+        logging.info(f'Filling assetrelaties table')
         start = time.time()
-        assetrelatie_syncer = AssetRelatiesSyncer(em_infra_importer=self.eminfra_importer,
-                                                  post_gis_connector=self.connector)
+        assetrelatie_syncer = AssetRelatieFiller(
+            eminfra_importer=self.eminfra_importer, postgis_connector=self.connector, resource='assetrelaties')
+        connection = self.connector.get_connection()
+        params = None
         while True:
             try:
-                params = self.connector.get_params()
-                assetrelatie_syncer.sync_assetrelaties(pagingcursor=params['pagingcursor'])
+                params = self.connector.get_params(connection)
+                assetrelatie_syncer.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
             except AssetMissingError as exc:
-                self.events_processor.postgis_connector.connection.rollback()
                 missing_assets = exc.args[0]
-                current_paging_cursor = self.eminfra_importer.pagingcursor
-                self.eminfra_importer.pagingcursor = ''
-                processor = NieuwAssetProcessor(cursor=self.connector.connection.cursor(),
-                                                eminfra_importer=self.eminfra_importer)
-                processor.process(missing_assets)
-                self.eminfra_importer.pagingcursor = current_paging_cursor
-                self.events_processor.postgis_connector.save_props_to_params({'pagingcursor': current_paging_cursor})
+                params = self.connector.get_params(connection)
+                if 'assets_fill' in params and params['assets_fill']:
+                    time.sleep(30)
+                    continue
 
-            if self.eminfra_importer.pagingcursor == '':
+                # logging.info(f'Syncing {len(missing_assets)} assets first.')
+                # self.connector.create_params(params={'assets_ad_hoc': ''}, connection=connection)
+                # asset_syncer = AssetSyncer(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
+                #                            resource='assets')
+                # asset_syncer.sync_ad_hoc(missing_assets, connection=connection)
+                # self.connector.delete_params(params={'assets_ad_hoc': ''}, connection=connection)
+                # continue
+
+            if self.eminfra_importer.paging_cursors['assetrelaties_cursor'] == '':
                 break
 
         end = time.time()
@@ -172,27 +186,26 @@ class Filler:
                     time.sleep(30)
                     continue
 
-                logging.info(f'Syncing {len(missing_agents)} agents first.')
-                self.connector.create_params(params={'agents_ad_hoc': ''}, connection=connection)
-                agent_syncer = AgentSyncer(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector)
-                agent_syncer.sync_by_uuids(missing_agents, connection=connection)
-                self.connector.delete_params(params={'agents_ad_hoc': ''}, connection=connection)
-                continue
+                # logging.info(f'Syncing {len(missing_agents)} agents first.')
+                # self.connector.create_params(params={'agents_ad_hoc': ''}, connection=connection)
+                # agent_syncer = AgentSyncer(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector)
+                # agent_syncer.sync_by_uuids(missing_agents, connection=connection)
+                # self.connector.delete_params(params={'agents_ad_hoc': ''}, connection=connection)
+                # continue
             except AssetMissingError as exc:
-                raise NotImplementedError()
                 missing_assets = exc.args[0]
                 params = self.connector.get_params(connection)
                 if 'assets_fill' in params and params['assets_fill']:
                     time.sleep(30)
                     continue
 
-                logging.info(f'Syncing {len(missing_assets)} assets first.')
-                self.connector.create_params(params={'assets_ad_hoc': ''}, connection=connection)
-                asset_syncer = AssetSyncer(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
-                                           resource='assets')
-                asset_syncer.sync_ad_hoc(missing_assets, connection=connection)
-                self.connector.delete_params(params={'assets_ad_hoc': ''}, connection=connection)
-                continue
+                # logging.info(f'Syncing {len(missing_assets)} assets first.')
+                # self.connector.create_params(params={'assets_ad_hoc': ''}, connection=connection)
+                # asset_syncer = AssetSyncer(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
+                #                            resource='assets')
+                # asset_syncer.sync_ad_hoc(missing_assets, connection=connection)
+                # self.connector.delete_params(params={'assets_ad_hoc': ''}, connection=connection)
+                # continue
 
                 # Updater : updates objects
                 #   logic how to update/create/delete objects
@@ -209,7 +222,7 @@ class Filler:
         end = time.time()
         logging.info(f'time for all betrokkenerelaties: {round(end - start, 2)}')
 
-    def sync_bestekkoppelingen(self):
+    def fill_bestekkoppelingen(self):
         start = time.time()
         bestek_koppeling_syncer = BestekKoppelingSyncer(em_infra_importer=self.eminfra_importer,
                                                         postGIS_connector=self.connector)
@@ -217,37 +230,51 @@ class Filler:
         end = time.time()
         logging.info(f'time for all bestekkoppelingen: {round(end - start, 2)}')
 
-    def sync_assets(self, page_size, pagingcursor):
+    def fill_assets(self, page_size, pagingcursor):
+        logging.info(f'Filling assets table')
         start = time.time()
-        asset_syncer = AssetSyncer(em_infra_importer=self.eminfra_importer,
-                                   postgis_connector=self.connector)
-        params = None
-        while True:
-            try:
-                params = self.connector.get_params()
-                asset_syncer.sync_assets(pagingcursor=params['pagingcursor'])
-            except (AssetTypeMissingError, AttribuutMissingError):
-                self.connector.connection.rollback()
-                print('refreshing assettypes')
-                current_paging_cursor = self.eminfra_importer.pagingcursor
-                self.eminfra_importer.pagingcursor = ''
-                self.fill_assettypes(page_size=params['pagesize'], pagingcursor='')
-                self.eminfra_importer.pagingcursor = current_paging_cursor
-                self.connector.save_props_to_params({'pagingcursor': current_paging_cursor})
-            except (ToezichtgroepMissingError):
-                self.connector.connection.rollback()
-                print('refreshing toezichtgroepen')
-                current_paging_cursor = self.eminfra_importer.pagingcursor
-                self.eminfra_importer.pagingcursor = ''
-                self.fill_toezichtgroepen(page_size=params['pagesize'], pagingcursor='')
-                self.eminfra_importer.pagingcursor = current_paging_cursor
-                self.connector.save_props_to_params({'pagingcursor': current_paging_cursor})
-
-            if self.eminfra_importer.pagingcursor == '':
-                break
-
+        asset_filler = AssetFiller(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
+                                   resource='assets')
+        connection = self.connector.get_connection()
+        asset_filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
+        self.connector.update_params(params={'assets_fill': False}, connection=connection)
+        self.connector.kill_connection(connection)
         end = time.time()
-        logging.info(f'time for all assets: {round(end - start, 2)}')
+        logging.info(f'Time for all assets: {round(end - start, 2)}')
+
+        # bestekkoppelingen
+        self.fill_bestekkoppelingen()
+
+        # start = time.time()
+        # asset_syncer = AssetSyncer(em_infra_importer=self.eminfra_importer,
+        #                            postgis_connector=self.connector)
+        # params = None
+        # while True:
+        #     try:
+        #         params = self.connector.get_params()
+        #         asset_syncer.sync_assets(pagingcursor=params['pagingcursor'])
+        #     except (AssetTypeMissingError, AttribuutMissingError):
+        #         self.connector.connection.rollback()
+        #         print('refreshing assettypes')
+        #         current_paging_cursor = self.eminfra_importer.pagingcursor
+        #         self.eminfra_importer.pagingcursor = ''
+        #         self.fill_assettypes(page_size=params['pagesize'], pagingcursor='')
+        #         self.eminfra_importer.pagingcursor = current_paging_cursor
+        #         self.connector.save_props_to_params({'pagingcursor': current_paging_cursor})
+        #     except (ToezichtgroepMissingError):
+        #         self.connector.connection.rollback()
+        #         print('refreshing toezichtgroepen')
+        #         current_paging_cursor = self.eminfra_importer.pagingcursor
+        #         self.eminfra_importer.pagingcursor = ''
+        #         self.fill_toezichtgroepen(page_size=params['pagesize'], pagingcursor='')
+        #         self.eminfra_importer.pagingcursor = current_paging_cursor
+        #         self.connector.save_props_to_params({'pagingcursor': current_paging_cursor})
+        #
+        #     if self.eminfra_importer.pagingcursor == '':
+        #         break
+        #
+        # end = time.time()
+        # logging.info(f'time for all assets: {round(end - start, 2)}')
 
     def fill_relatietypes(self, page_size, pagingcursor):
         logging.info(f'Filling relatietypes table')

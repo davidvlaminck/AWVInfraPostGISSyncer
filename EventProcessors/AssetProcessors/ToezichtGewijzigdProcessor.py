@@ -15,7 +15,7 @@ class ToezichtGewijzigdProcessor(SpecificEventProcessor):
         logging.info(f'started updating toezicht')
         start = time.time()
 
-        asset_dicts = self.em_infra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
+        asset_dicts = self.eminfra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
         self.process_dicts(connection=connection, asset_uuids=uuids, asset_dicts=asset_dicts)
 
         end = time.time()

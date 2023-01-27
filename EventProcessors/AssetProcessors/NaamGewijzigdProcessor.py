@@ -5,16 +5,16 @@ from EventProcessors.AssetProcessors.SpecificEventProcessor import SpecificEvent
 
 
 class NaamGewijzigdProcessor(SpecificEventProcessor):
-    def __init__(self, cursor, eminfra_importer):
-        super().__init__(cursor, eminfra_importer)
+    def __init__(self, eminfra_importer):
+        super().__init__(eminfra_importer)
 
-    def process(self, uuids: [str]):
+    def process(self, uuids: [str], connection):
         logging.info(f'started changing naam/naampad/parent')
         start = time.time()
 
-        asset_dicts = self.em_infra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
+        asset_dicts = self.eminfra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
         values = self.create_values_string_from_dicts(assets_dicts=asset_dicts)
-        self.perform_update_with_values(cursor=self.cursor, values=values)
+        self.perform_update_with_values(connection=connection, values=values)
         # TODO change parent uuid as well
 
         end = time.time()
@@ -53,7 +53,7 @@ class NaamGewijzigdProcessor(SpecificEventProcessor):
         return values
 
     @staticmethod
-    def perform_update_with_values(cursor, values):
+    def perform_update_with_values(connection, values):
         update_query = f"""
         WITH s (uuid, naam, naampad)  
             AS (VALUES {values[:-1]}),
@@ -63,4 +63,6 @@ class NaamGewijzigdProcessor(SpecificEventProcessor):
         SET naam = to_update.naam, naampad = to_update.naampad
         FROM to_update 
         WHERE to_update.uuid = assets.uuid;"""
-        cursor.execute(update_query)
+
+        with connection.cursor() as cursor:
+            cursor.execute(update_query)
