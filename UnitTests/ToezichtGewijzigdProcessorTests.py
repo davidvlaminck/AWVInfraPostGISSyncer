@@ -44,7 +44,7 @@ class ToezichtGewijzigdProcessorTests(TestCase):
         self.set_up_assets(cursor)
 
         processor = ToezichtGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer)
-        processor.em_infra_importer.import_assets_from_webservice_by_uuids = self.return_assets
+        processor.eminfra_importer.import_assets_from_webservice_by_uuids = self.return_assets
 
         select_toezichter_query = "SELECT toezichter FROM assets WHERE uuid = '{uuid}'"
         select_toezichtgroep_query = "SELECT toezichtgroep FROM assets WHERE uuid = '{uuid}'"
@@ -108,7 +108,7 @@ class ToezichtGewijzigdProcessorTests(TestCase):
         self.connector.commit_transaction()
 
         processor = ToezichtGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer)
-        processor.em_infra_importer.import_assets_from_webservice_by_uuids = self.return_assets
+        processor.eminfra_importer.import_assets_from_webservice_by_uuids = self.return_assets
 
         with self.assertRaises(ToezichtgroepMissingError):
             processor.process(['00000000-0000-1000-0000-000000000000'])
@@ -123,7 +123,7 @@ class ToezichtGewijzigdProcessorTests(TestCase):
         self.connector.commit_transaction()
 
         processor = ToezichtGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer)
-        processor.em_infra_importer.import_assets_from_webservice_by_uuids = self.return_assets
+        processor.eminfra_importer.import_assets_from_webservice_by_uuids = self.return_assets
 
         with self.assertRaises(IdentiteitMissingError):
             processor.process(['00000000-0000-1000-0000-000000000000'])

@@ -12,7 +12,7 @@ class ElekAansluitingGewijzigdProcessor(SpecificEventProcessor):
         logging.info(f'started updating elek aansluiting')
         start = time.time()
 
-        aansluitingen_generator = self.em_infra_importer.get_all_elek_aansluitingen_from_webservice_by_asset_uuids(
+        aansluitingen_generator = self.eminfra_importer.get_all_elek_aansluitingen_from_webservice_by_asset_uuids(
             asset_uuids=uuids)
         for asset_uuid, aansluiting_dict in aansluitingen_generator:
             self.update_aansluiting_by_asset_uuid(connection=connection, asset_uuid=asset_uuid,

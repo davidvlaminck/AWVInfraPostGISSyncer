@@ -43,7 +43,7 @@ class BetrokkeneRelatieProcessorTests(TestCase):
 
         processor = BetrokkeneRelatiesGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer,
                                                          connector=self.connector)
-        processor.em_infra_importer.import_betrokkenerelaties_from_webservice_by_assetuuids = self.return_betrokkenerelaties
+        processor.eminfra_importer.import_betrokkenerelaties_from_webservice_by_assetuuids = self.return_betrokkenerelaties
 
         create_betrokkenerelatie_query = """
         INSERT INTO betrokkeneRelaties (uuid, doelUuid, bronUuid, rol, actief) 
@@ -102,7 +102,7 @@ class BetrokkeneRelatieProcessorTests(TestCase):
 
         processor = BetrokkeneRelatiesGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer,
                                                          connector=self.connector)
-        processor.em_infra_importer.import_betrokkenerelaties_from_webservice_by_assetuuids = self.return_betrokkenerelaties
+        processor.eminfra_importer.import_betrokkenerelaties_from_webservice_by_assetuuids = self.return_betrokkenerelaties
 
         with self.assertRaises(AgentMissingError) as exc:
             processor.process(['00000000-0000-1000-0000-000000000000', '00000000-0000-2000-0000-000000000000',

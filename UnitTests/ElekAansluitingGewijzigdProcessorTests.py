@@ -63,7 +63,7 @@ class ElekAansluitingGewijzigdProcessorTests(TestCase):
             result = cursor.fetchone()[0]
             self.assertEqual(1, result)
 
-        self.processor.em_infra_importer.get_all_elek_aansluitingen_from_webservice_by_asset_uuids = self.return_elek_aansluiting_dicts
+        self.processor.eminfra_importer.get_all_elek_aansluitingen_from_webservice_by_asset_uuids = self.return_elek_aansluiting_dicts
 
         self.processor.process(['00114756-9f8b-4c8c-b905-93da6c0b26cd', '89daf088-2900-11ed-a261-0242ac120002'])
 

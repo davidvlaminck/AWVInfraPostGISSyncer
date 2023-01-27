@@ -8,7 +8,7 @@ from datetime import datetime
 import requests
 
 from AgentSyncer import AgentSyncer
-from AssetRelatiesSyncer import AssetRelatiesSyncer
+from AssetRelatieSyncer import AssetRelatieSyncer
 from AssetSyncer import AssetSyncer
 from BestekKoppelingSyncer import BestekKoppelingSyncer
 from BetrokkeneRelatieSyncer import BetrokkeneRelatieSyncer
@@ -40,7 +40,7 @@ class SyncerFactory:
         elif feed == 'assets':
             return AssetSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
         elif feed == 'assetrelaties':
-            return AssetrelatieSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
+            return AssetRelatieSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
         elif feed == 'betrokkenerelaties':
             return BetrokkeneRelatieSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
 
@@ -99,7 +99,7 @@ class SyncManager:
 
     def sync_assetrelaties(self):
         start = time.time()
-        assetrelatie_syncer = AssetRelatiesSyncer(em_infra_importer=self.eminfra_importer,
+        assetrelatie_syncer = AssetRelatieSyncer(em_infra_importer=self.eminfra_importer,
                                                   post_gis_connector=self.connector)
         while True:
             try:

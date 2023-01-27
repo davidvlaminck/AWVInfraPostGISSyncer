@@ -66,7 +66,7 @@ class AssetRelatieProcessorTests(TestCase):
 
         processor = AssetRelatiesGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer,
                                                     connector=self.connector)
-        processor.em_infra_importer.import_assetrelaties_from_webservice_by_assetuuids = self.return_assetrelaties
+        processor.eminfra_importer.import_assetrelaties_from_webservice_by_assetuuids = self.return_assetrelaties
 
         processor.process(['10000000-0000-0000-0000-000000000000', '20000000-0000-0000-0000-000000000000',
                            '30000000-0000-0000-0000-000000000000', '40000000-0000-0000-0000-000000000000'])
@@ -102,7 +102,7 @@ class AssetRelatieProcessorTests(TestCase):
 
         processor = AssetRelatiesGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer,
                                                     connector=self.connector)
-        processor.em_infra_importer.import_assetrelaties_from_webservice_by_assetuuids = self.return_assetrelaties
+        processor.eminfra_importer.import_assetrelaties_from_webservice_by_assetuuids = self.return_assetrelaties
 
         with self.assertRaises(AssetMissingError) as exc:
             processor.process(['10000000-0000-0000-0000-000000000000', '20000000-0000-0000-0000-000000000000',

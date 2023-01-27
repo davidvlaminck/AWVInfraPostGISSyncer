@@ -59,7 +59,7 @@ class CommentaarGewijzigdProcessorTests(TestCase):
             result = cursor.fetchone()[0]
             self.assertEqual('notitie voor aanpassing', result)
 
-        self.processor.em_infra_importer.import_assets_from_webservice_by_uuids = self.return_new_asset_dicts
+        self.processor.eminfra_importer.import_assets_from_webservice_by_uuids = self.return_new_asset_dicts
 
         self.processor.process(['00000453-56ce-4f8b-af44-960df526cb30', '00088892-53a8-4dfc-a2c9-875cab2d7e11'])
 
