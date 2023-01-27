@@ -4,24 +4,16 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 from AgentFiller import AgentFiller
-from AgentSyncer import AgentSyncer
-from AssetRelatiesSyncer import AssetRelatiesSyncer
-
 from AssetFiller import AssetFiller
 from AssetRelatieFiller import AssetRelatieFiller
-from AssetSyncer import AssetSyncer
 from AssetTypeFiller import AssetTypeFiller
 from BeheerderFiller import BeheerderFiller
 from BestekFiller import BestekFiller
 from BestekKoppelingSyncer import BestekKoppelingSyncer
 from BetrokkeneRelatieFiller import BetrokkeneRelatieFiller
 from EMInfraImporter import EMInfraImporter
-from EventProcessors.AssetProcessors.NieuwAssetProcessor import NieuwAssetProcessor
 from Exceptions.AgentMissingError import AgentMissingError
 from Exceptions.AssetMissingError import AssetMissingError
-from Exceptions.AssetTypeMissingError import AssetTypeMissingError
-from Exceptions.AttribuutMissingError import AttribuutMissingError
-from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 from FeedEventsCollector import FeedEventsCollector
 from FeedEventsProcessor import FeedEventsProcessor
 from IdentiteitFiller import IdentiteitFiller
@@ -69,13 +61,10 @@ class Filler:
     def fill(self, params: dict):
         logging.info('Filling the database with data')
         page_size = params['pagesize']
-        # TODO change to or when all feeds work
-        # if 'page_assets' not in params or 'page_assetrelaties' not in params or \
-        #         'page_agents' not in params or 'page_betrokkenerelaties' not in params:
-        if 'page_agents' not in params or 'page_betrokkenerelaties' not in params:
+        if 'page_assets' not in params or 'page_assetrelaties' not in params or \
+                'page_agents' not in params or 'page_betrokkenerelaties' not in params:
             logging.info('Getting the last pages for feeds')
             feeds = ['assets', 'agents', 'assetrelaties', 'betrokkenerelaties']
-            feeds = ['agents', 'betrokkenerelaties']
 
             # use multithreading
             executor = ThreadPoolExecutor()
@@ -86,11 +75,12 @@ class Filler:
         tables_to_fill = []
         while True:
             try:
-                # tables_to_fill = ['agents', 'toezichtgroepen', 'beheerders'] # , 'betrokkenerelaties'
-                tables_to_fill = ['agents']  # 'bestekken', 'toezichtgroepen', 'identiteiten', 'relatietypes', 'assettypes'
+                # tables_to_fill = ['agents', 'toezichtgroepen', 'beheerders'] # , ''
+                tables_to_fill = ['agents', 'bestekken', 'toezichtgroepen', 'identiteiten', 'relatietypes',
+                                  'assettypes', 'beheerders', 'betrokkenerelaties', 'assetrelaties', 'assets']
 
                 params = self.connector.get_params(self.connector.main_connection)
-                if 'agents_fill' not in params:
+                if 'assets_fill' not in params:
                     self.create_params_for_table_fill(tables_to_fill, self.connector.main_connection)
                     params = self.connector.get_params(self.connector.main_connection)
 

@@ -2,17 +2,13 @@ import logging
 import time
 from typing import Iterator
 
-import psycopg2
-
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.AssetProcessors.AttributenGewijzigdProcessor import AttributenGewijzigdProcessor
 from EventProcessors.AssetProcessors.ElekAansluitingGewijzigdProcessor import ElekAansluitingGewijzigdProcessor
 from EventProcessors.AssetProcessors.GeometrieOrLocatieGewijzigdProcessor import GeometrieOrLocatieGewijzigdProcessor
-from EventProcessors.AssetProcessors.NieuwAssetProcessor import NieuwAssetProcessor
 from EventProcessors.AssetProcessors.SchadebeheerderGewijzigdProcessor import SchadebeheerderGewijzigdProcessor
 from EventProcessors.AssetProcessors.ToezichtGewijzigdProcessor import ToezichtGewijzigdProcessor
 from Helpers import peek_generator
-from PostGISConnector import PostGISConnector
 
 
 class AssetUpdater:

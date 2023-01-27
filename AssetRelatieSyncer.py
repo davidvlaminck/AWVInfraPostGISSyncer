@@ -5,9 +5,8 @@ from datetime import datetime
 
 from AssetRelatieFeedEventsCollector import AssetRelatieFeedEventsCollector
 from AssetRelatieFeedEventsProcessor import AssetRelatieFeedEventsProcessor
-from assetrelatiesUpdater import assetrelatiesUpdater
+from AssetRelatiesUpdater import AssetRelatiesUpdater
 from EMInfraImporter import EMInfraImporter
-from Exceptions.AgentMissingError import AgentMissingError
 from Exceptions.AssetMissingError import AssetMissingError
 from PostGISConnector import PostGISConnector
 from SyncTimer import SyncTimer
@@ -17,7 +16,7 @@ class AssetRelatieSyncer:
     def __init__(self, postgis_connector: PostGISConnector, eminfra_importer: EMInfraImporter):
         self.postgis_connector: PostGISConnector = postgis_connector
         self.eminfra_importer: EMInfraImporter = eminfra_importer
-        self.updater: assetrelatiesUpdater = assetrelatiesUpdater()
+        self.updater: AssetRelatiesUpdater = AssetRelatiesUpdater()
         self.events_collector: AssetRelatieFeedEventsCollector = AssetRelatieFeedEventsCollector(
             eminfra_importer=eminfra_importer)
         self.events_processor: AssetRelatieFeedEventsProcessor = AssetRelatieFeedEventsProcessor(
