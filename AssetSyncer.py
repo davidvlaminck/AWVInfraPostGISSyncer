@@ -71,7 +71,8 @@ class AssetSyncer:
         object_generator = self.eminfra_importer.import_resource_from_webservice_by_uuids(
             resource='assets', uuids=uuids, cursor_name='assets_ad_hoc')
 
-        self.updater.update_objects(object_generator=object_generator, connection=connection)
+        self.updater.update_objects(object_generator=object_generator, connection=connection,
+                                    eminfra_importer=self.eminfra_importer)
 
     @staticmethod
     def log_eventparams(event_dict, timespan: float):
