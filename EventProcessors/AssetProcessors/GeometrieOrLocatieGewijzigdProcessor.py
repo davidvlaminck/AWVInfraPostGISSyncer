@@ -5,29 +5,32 @@ from EventProcessors.AssetProcessors.SpecificEventProcessor import SpecificEvent
 
 
 class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
-    def __init__(self, cursor, eminfra_importer):
-        super().__init__(cursor, eminfra_importer)
+    def __init__(self, eminfra_importer):
+        super().__init__(eminfra_importer)
 
-    def process(self, uuids: [str]):
+    def process(self, uuids: [str], connection):
         logging.info(f'started updating geometrie and locatie')
         start = time.time()
 
         asset_dicts = self.em_infra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
 
-        self.process_dicts(uuids, asset_dicts)
+        self.process_dicts(connection=connection, asset_uuids=uuids, asset_dicts=asset_dicts)
 
         end = time.time()
-        logging.info(f'updated {len(asset_dicts)} assets in {str(round(end - start, 2))} seconds.')
+        logging.info(f'updated geometrie/locatie of {len(asset_dicts)} assets in {str(round(end - start, 2))} seconds.')
 
-    def process_dicts(self, uuids, asset_dicts):
-        geometrie_values = self.create_geometrie_values_string_from_dicts(assets_dicts=asset_dicts)
-        self.delete_geometrie_records(cursor=self.cursor, uuids=uuids)
-        self.perform_geometrie_update_with_values(cursor=self.cursor, values=geometrie_values)
-        locatie_insert_values, locatie_update_values = self.create_locatie_values_string_from_dicts(cursor=self.cursor,
-                                                                                                    uuids=uuids,
-                                                                                                    assets_dicts=asset_dicts)
-        self.perform_locatie_update_with_values(cursor=self.cursor, insert_values=locatie_insert_values,
-                                                update_values=locatie_update_values)
+    @staticmethod
+    def process_dicts(connection, asset_uuids: [str], asset_dicts: [dict]):
+        with connection.cursor() as cursor:
+            geometrie_values = GeometrieOrLocatieGewijzigdProcessor.create_geometrie_values_string_from_dicts(
+                assets_dicts=asset_dicts)
+            GeometrieOrLocatieGewijzigdProcessor.delete_geometrie_records(cursor=cursor, uuids=asset_uuids)
+            GeometrieOrLocatieGewijzigdProcessor.perform_geometrie_update_with_values(cursor=cursor,
+                                                                                      values=geometrie_values)
+            locatie_insert_values, locatie_update_values = GeometrieOrLocatieGewijzigdProcessor.\
+                create_locatie_values_string_from_dicts(cursor=cursor, uuids=asset_uuids, assets_dicts=asset_dicts)
+            GeometrieOrLocatieGewijzigdProcessor.perform_locatie_update_with_values(
+                cursor=cursor, insert_values=locatie_insert_values, update_values=locatie_update_values)
 
     @staticmethod
     def create_geometrie_values_string_from_dicts(assets_dicts):
