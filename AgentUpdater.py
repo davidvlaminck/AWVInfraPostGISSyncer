@@ -6,7 +6,7 @@ from Helpers import peek_generator
 
 class AgentUpdater:
     @staticmethod
-    def update_objects(object_generator: Iterator[dict], connection, insert_only: bool = False) -> int:
+    def update_objects(object_generator: Iterator[dict], connection, insert_only: bool = False, safe_insert: bool = False) -> int:
         object_generator = peek_generator(object_generator)
         if object_generator is None:
             return 0

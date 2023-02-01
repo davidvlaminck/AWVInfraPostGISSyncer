@@ -6,7 +6,7 @@ from Helpers import peek_generator
 
 class ToezichtgroepUpdater:
     @staticmethod
-    def update_objects(object_generator: Iterator[dict], connection):
+    def update_objects(object_generator: Iterator[dict], connection, safe_insert: bool = False):
         object_generator = peek_generator(object_generator)
         if object_generator is None:
             return

@@ -10,7 +10,7 @@ class AssetTypeUpdater:
         self.postgis_connector = postgis_connector
         self.eminfra_importer = eminfra_importer
 
-    def update_objects(self, object_generator: Iterator[dict], connection):
+    def update_objects(self, object_generator: Iterator[dict], connection, safe_insert: bool = False):
         object_generator = peek_generator(object_generator)
         if object_generator is None:
             return
