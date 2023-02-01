@@ -10,13 +10,15 @@ class BestekGewijzigdProcessor(SpecificEventProcessor):
         super().__init__(eminfra_importer)
 
     def process(self, uuids: [str], connection):
-        logging.info(f'started updating bestekken')
+        logging.info(f'started updating bestekkoppelingen')
         start = time.time()
 
         koppelingen_list = []
         asset_uuid_list = []
         koppelingen_generator = self.eminfra_importer.get_all_bestekkoppelingen_from_webservice_by_asset_uuids(asset_uuids=uuids)
+        amount = 0
         for asset_uuid, koppelingen in koppelingen_generator:
+            amount += 1
             asset_uuid_list.append(asset_uuid)
             koppelingen_list.append(list(koppelingen))
         BestekKoppelingSyncer.update_bestekkoppelingen_by_asset_uuids(connection=connection, asset_uuids=asset_uuid_list,
@@ -27,4 +29,4 @@ class BestekGewijzigdProcessor(SpecificEventProcessor):
         # NieuwAssetProcessor.perform_insert_with_values(connection=connection, values=values)
 
         end = time.time()
-        logging.info(f'updated {len(uuids)} assets in {str(round(end - start, 2))} seconds.')
+        logging.info(f'updated bestekkoppelingen of {amount} asset(s) in {str(round(end - start, 2))} seconds.')

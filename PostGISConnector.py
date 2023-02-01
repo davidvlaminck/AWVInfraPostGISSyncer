@@ -65,6 +65,8 @@ class PostGISConnector:
             query = ' '.join(queries)
             cursor.execute(query)
             self.main_connection.commit()
+
+        cursor.execute('CREATE SCHEMA IF NOT EXISTS asset_views;')
         cursor.close()
 
     def get_params(self, connection):

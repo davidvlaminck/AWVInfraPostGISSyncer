@@ -16,25 +16,24 @@ class ToezichtGewijzigdProcessor(SpecificEventProcessor):
         start = time.time()
 
         asset_dicts = self.eminfra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
-        self.process_dicts(connection=connection, asset_uuids=uuids, asset_dicts=asset_dicts)
+        amount = self.process_dicts(connection=connection, asset_uuids=uuids, asset_dicts=asset_dicts)
 
         end = time.time()
-        logging.info(f'updated {len(asset_dicts)} toezicht in {str(round(end - start, 2))} seconds.')
+        logging.info(f'updated toezicht of {amount} asset(s) in {str(round(end - start, 2))} seconds.')
 
     @staticmethod
     def process_dicts(connection, asset_uuids: [str], asset_dicts: [dict]):
-        logging.info(f'started changing toezicht of {len(asset_dicts)} assets')
-
         toezichter_null_assets = []
         toezichter_update_values = ''
         toezichtgroep_null_assets = []
         toezichtgroep_update_values = ''
         toezichter_gebruikersnamen = set()
         toezichtgroepen_referenties = set()
-
+        counter = 0
         # TODO refactor to set null if 'tz:..' not in asset_dict, else just the value
         with connection.cursor() as cursor:
             for asset_dict in asset_dicts:
+                counter += 1
                 uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]
                 if 'tz:Toezicht.toezichtgroep' not in asset_dict:
                     toezichtgroep_null_assets.append(uuid)
@@ -99,4 +98,4 @@ class ToezichtGewijzigdProcessor(SpecificEventProcessor):
                     WHERE to_update.assetUuid = assets.uuid"""
                 cursor.execute(update_toezichtgroep_query)
 
-        logging.info('done changing toezicht')
+        return counter

@@ -301,8 +301,8 @@ class AssetTypeUpdater:
                 geometry_part2 = 'LEFT JOIN public.geometrie ON geometrie.assetuuid = assets.uuid'
 
             create_view_query = f"""
-            DROP VIEW IF EXISTS public.{view_name} CASCADE;
-            CREATE VIEW public.{view_name} AS
+            DROP VIEW IF EXISTS asset_views.{view_name} CASCADE;
+            CREATE VIEW asset_views.{view_name} AS
                 SELECT assets.uuid as uuid, assets.toestand as toestand_asset, assets.actief as actief_asset, 
                     assets.naam as naam_asset{geometry_part1} {attribute_columns}
                 FROM assets

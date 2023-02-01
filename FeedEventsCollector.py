@@ -19,6 +19,11 @@ class FeedEventsCollector:
             resource = 'betrokkene-relaties'
         elif resource == 'assetrelaties':
             resource = 'asset-relaties'
+
+        uuids_string = f'{resource[:-1]}-uuids'
+        if uuids_string == 'asset-uuids':
+            uuids_string = 'uuids'
+
         while True:
             page = self.eminfra_importer.get_events_from_proxyfeed(
                 page_num=completed_page_number, page_size=page_size, resource=self.resource)
@@ -39,7 +44,8 @@ class FeedEventsCollector:
                     searching_where_stopped = False
                     continue
                 event_type = entry_value['event-type']
-                event_uuids = entry_value[f'{resource[:-1]}-uuids']
+
+                event_uuids = entry_value[uuids_string]
                 event_dict[event_type].update(event_uuids)
 
                 next_page = next((link for link in page['links'] if link['rel'] == 'previous'), None)

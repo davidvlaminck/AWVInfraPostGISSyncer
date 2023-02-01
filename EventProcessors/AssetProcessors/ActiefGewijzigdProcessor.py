@@ -14,21 +14,23 @@ class ActiefGewijzigdProcessor(SpecificEventProcessor):
         start = time.time()
 
         asset_dicts = self.eminfra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
-        values = self.create_values_string_from_dicts(assets_dicts=asset_dicts)
+        values, amount = self.create_values_string_from_dicts(assets_dicts=asset_dicts)
         self.perform_update_with_values(connection=connection, values=values)
 
         end = time.time()
-        logging.info(f'updated {len(asset_dicts)} assets in {str(round(end - start, 2))} seconds.')
+        logging.info(f'updated actief of {amount} asset(s) in {str(round(end - start, 2))} seconds.')
 
     @staticmethod
     def create_values_string_from_dicts(assets_dicts):
         values = ''
+        counter = 0
         for asset_dict in assets_dicts:
+            counter += 1
             uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]
             actief = asset_dict['AIMDBStatus.isActief']
             values += f"('{uuid}',{actief}),"
 
-        return values
+        return values, counter
 
     @staticmethod
     def perform_update_with_values(connection, values):

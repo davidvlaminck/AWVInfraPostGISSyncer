@@ -15,21 +15,21 @@ class SchadebeheerderGewijzigdProcessor(SpecificEventProcessor):
         start = time.time()
 
         asset_dicts = self.eminfra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
-        self.process_dicts(connection=connection, asset_uuids=uuids, asset_dicts=asset_dicts)
+        amount = self.process_dicts(connection=connection, asset_uuids=uuids, asset_dicts=asset_dicts)
 
         end = time.time()
-        logging.info(f'updated {len(asset_dicts)} schadebeheerder in {str(round(end - start, 2))} seconds.')
+        logging.info(f'updated schadebeheerder of {amount} asset(s) in {str(round(end - start, 2))} seconds.')
 
     @staticmethod
     def process_dicts(connection, asset_uuids: [str], asset_dicts: [dict]):
-        logging.info(f'started changing schadebeheerder of {len(asset_dicts)} assets')
-
         beheerder_null_assets = []
         beheerder_update_values = ''
         beheerders_referenties = set()
 
         # TODO refactor to set null if 'tz:Schadebeheerder.schadebeheerder' not in asset_dict, else just the value
+        counter = 0
         with connection.cursor() as cursor:
+            counter += 1
             for asset_dict in asset_dicts:
                 uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]
                 if 'tz:Schadebeheerder.schadebeheerder' not in asset_dict:
@@ -65,4 +65,4 @@ class SchadebeheerderGewijzigdProcessor(SpecificEventProcessor):
                     WHERE to_update.assetUuid = assets.uuid"""
                 cursor.execute(update_beheerder_query)
 
-        logging.info('done changing schadebeheerder')
+        return counter

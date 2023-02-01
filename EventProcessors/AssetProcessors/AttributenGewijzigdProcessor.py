@@ -17,16 +17,17 @@ class AttributenGewijzigdProcessor(SpecificEventProcessor):
         start = time.time()
 
         asset_dicts = self.eminfra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
-        self.process_dicts(connection=connection, asset_uuids=uuids, asset_dicts=asset_dicts)
+        amount = self.process_dicts(connection=connection, asset_uuids=uuids, asset_dicts=asset_dicts)
 
         end = time.time()
-        logging.info(f'updated {len(asset_dicts)} assets in {str(round(end - start, 2))} seconds.')
+        logging.info(f'updated attributes of {amount} asset(s) in {str(round(end - start, 2))} seconds.')
 
     @staticmethod
     def process_dicts(connection, asset_uuids, asset_dicts):
         AttributenGewijzigdProcessor.remove_existing_attributes(connection=connection, asset_uuids=asset_uuids)
-        values = AttributenGewijzigdProcessor.create_values_string_from_dicts(assets_dicts=asset_dicts)
+        values, amount = AttributenGewijzigdProcessor.create_values_string_from_dicts(assets_dicts=asset_dicts)
         AttributenGewijzigdProcessor.perform_update_with_values(connection=connection, values=values)
+        return amount
 
     @staticmethod
     def remove_existing_attributes(asset_uuids, connection):
@@ -41,7 +42,9 @@ class AttributenGewijzigdProcessor(SpecificEventProcessor):
     @staticmethod
     def create_values_string_from_dicts(assets_dicts):
         values = ''
+        counter = 0
         for asset_dict in assets_dicts:
+            counter += 1
             asset_uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]
             for key, value in asset_dict.items():
                 if key in ['@type', '@id', 'NaampadObject.naampad', 'AIMObject.notitie', 'AIMObject.typeURI',
@@ -66,7 +69,7 @@ class AttributenGewijzigdProcessor(SpecificEventProcessor):
                 value = value.replace("'", "''")
                 values += f"('{asset_uuid}','{key}', '{value}'),\n"
 
-        return values
+        return values, counter
 
     @staticmethod
     def perform_update_with_values(connection, values):

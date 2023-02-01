@@ -29,7 +29,7 @@ class AgentSyncer:
             completed_event_id = params['event_uuid_agents']
             page_size = params['pagesize']
 
-            logging.info(f'starting a sync cycle for agents, page: {str(current_page + 1)} event_uuid: {str(completed_event_id)}')
+            logging.info(f'starting a sync cycle for agents, page: {str(current_page)} event_uuid: {str(completed_event_id)}')
             start = time.time()
 
             eventsparams_to_process = None

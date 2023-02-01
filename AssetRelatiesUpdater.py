@@ -19,8 +19,9 @@ class AssetRelatiesUpdater:
         counter = 0
         for assetrelatie_dict in object_generator:
             counter += 1
-            values += f"('{assetrelatie_dict['@id'].replace('https://data.awvvlaanderen.be/id/assetrelatie/','')[0:36]}', '{assetrelatie_dict['RelatieObject.doel']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36]}', " \
-                      f"'{assetrelatie_dict['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36]}',"
+            values += f"('{assetrelatie_dict['@id'].replace('https://data.awvvlaanderen.be/id/assetrelatie/','')[0:36]}'," \
+                      f" '{assetrelatie_dict['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36]}', " \
+                      f"'{assetrelatie_dict['RelatieObject.doel']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36]}',"
 
             if 'RelatieObject.typeURI' in assetrelatie_dict:
                 relatie_type_uri = assetrelatie_dict['RelatieObject.typeURI']

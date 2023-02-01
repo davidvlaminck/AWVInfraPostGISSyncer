@@ -31,7 +31,7 @@ class AssetRelatieSyncer:
             completed_event_id = params['event_uuid_assetrelaties']
             page_size = params['pagesize']
 
-            logging.info(f'starting a sync cycle for assetrelaties, page: {str(current_page + 1)} event_uuid: {str(completed_event_id)}')
+            logging.info(f'starting a sync cycle for assetrelaties, page: {str(current_page)} event_uuid: {str(completed_event_id)}')
             start = time.time()
 
             eventsparams_to_process = None

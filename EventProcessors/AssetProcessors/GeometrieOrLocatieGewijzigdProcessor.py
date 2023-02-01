@@ -14,33 +14,36 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
 
         asset_dicts = self.eminfra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
 
-        self.process_dicts(connection=connection, asset_uuids=uuids, asset_dicts=asset_dicts)
+        amount, amount2 = self.process_dicts(connection=connection, asset_uuids=uuids, asset_dicts=asset_dicts)
 
         end = time.time()
-        logging.info(f'updated geometrie/locatie of {len(asset_dicts)} assets in {str(round(end - start, 2))} seconds.')
+        logging.info(f'updated geometrie of {amount} asset(s) and locatie of {amount2} asset(s) in {str(round(end - start, 2))} seconds.')
 
     @staticmethod
     def process_dicts(connection, asset_uuids: [str], asset_dicts: [dict]):
         with connection.cursor() as cursor:
-            geometrie_values = GeometrieOrLocatieGewijzigdProcessor.create_geometrie_values_string_from_dicts(
+            geometrie_values, amount = GeometrieOrLocatieGewijzigdProcessor.create_geometrie_values_string_from_dicts(
                 assets_dicts=asset_dicts)
             GeometrieOrLocatieGewijzigdProcessor.delete_geometrie_records(cursor=cursor, uuids=asset_uuids)
             GeometrieOrLocatieGewijzigdProcessor.perform_geometrie_update_with_values(cursor=cursor,
                                                                                       values=geometrie_values)
-            locatie_insert_values, locatie_update_values = GeometrieOrLocatieGewijzigdProcessor.\
+            locatie_insert_values, locatie_update_values, amount2 = GeometrieOrLocatieGewijzigdProcessor.\
                 create_locatie_values_string_from_dicts(cursor=cursor, uuids=asset_uuids, assets_dicts=asset_dicts)
             GeometrieOrLocatieGewijzigdProcessor.perform_locatie_update_with_values(
                 cursor=cursor, insert_values=locatie_insert_values, update_values=locatie_update_values)
+            return amount, amount2
 
     @staticmethod
     def create_geometrie_values_string_from_dicts(assets_dicts):
         values = ''
+        counter = 0
         for asset_dict in assets_dicts:
             uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]
 
             if 'geo:Geometrie.log' not in asset_dict:
                 continue
 
+            counter += 1
             for geometrie_dict in asset_dict['geo:Geometrie.log']:
                 niveau = geometrie_dict.get('geo:DtcLog.niveau')
                 niveau = niveau.replace('https://geo.data.wegenenverkeer.be/id/concept/KlLogNiveau/', '')
@@ -75,7 +78,7 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
                         value = value.replace("'", "''")
                         values += f"'{value}',"
                 values = values[:-1] + '),'
-        return values
+        return values, counter
 
     @staticmethod
     def perform_geometrie_update_with_values(cursor, values):
@@ -104,7 +107,9 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
 
         insert_values = ''
         update_values = ''
+        counter = 0
         for asset_dict in assets_dicts:
+            counter += 1
             uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]
 
             values = f"('{uuid}',"
@@ -199,7 +204,7 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
                 else:
                     update_values += values
 
-        return insert_values[:-1], update_values[:-1]
+        return insert_values[:-1], update_values[:-1], counter
 
     @staticmethod
     def perform_locatie_update_with_values(cursor, insert_values, update_values):
