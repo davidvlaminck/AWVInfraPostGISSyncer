@@ -12,22 +12,29 @@ class BestekKoppelingSyncer:
         self.postGIS_connector = postGIS_connector
         self.eminfra_importer = em_infra_importer
 
-    def sync_bestekkoppelingen(self, batch_size: int = 20):
+    def sync_bestekkoppelingen(self, batch_size: int = 100):
         self.update_all_bestekkoppelingen(batch_size=batch_size)
 
     def update_all_bestekkoppelingen(self, batch_size: int):
         connection = self.postGIS_connector.get_connection()
-        self.eminfra_importer.pagingcursor = 'setting up sync of bestekkoppelingen'
-        # create a temp table that holds all asset_uuid
-        self.create_temp_table_for_sync_bestekkoppelingen(connection=connection)
+        params = self.postGIS_connector.get_params(connection)
 
-        # go through all of the table and flag as sync'd when done, allow for parameter batch size
-        self.eminfra_importer.pagingcursor = 'performing sync of bestekkoppelingen'
-        self.loop_using_temp_table_and_sync_koppelingen(batch_size=batch_size, connection=connection)
+        if params['bestekkoppelingen_cursor'] == '':
+            # create a temp table that holds all asset_uuid
+            self.create_temp_table_for_sync_bestekkoppelingen(connection=connection)
+            self.postGIS_connector.update_params(params={'bestekkoppelingen_cursor': 'setup done'}, connection=connection)
+            params = self.postGIS_connector.get_params(connection)
 
-        # delete the temp table
-        self.delete_temp_table_for_sync_bestekkoppelingen(connection=connection)
-        self.eminfra_importer.pagingcursor = ''
+        if params['bestekkoppelingen_cursor'] == 'setup done':
+            # go through all of the table and flag as sync'd when done, allow for parameter batch size
+            self.loop_using_temp_table_and_sync_koppelingen(batch_size=batch_size, connection=connection)
+            self.postGIS_connector.update_params(params={'bestekkoppelingen_cursor': 'syncing done'}, connection=connection)
+            params = self.postGIS_connector.get_params(connection)
+
+        if params['bestekkoppelingen_cursor'] == 'syncing done':
+            # delete the temp table
+            self.delete_temp_table_for_sync_bestekkoppelingen(connection=connection)
+            self.postGIS_connector.update_params(params={'bestekkoppelingen_fill': False}, connection=connection)
 
     def get_all_bestekkoppelingen_by_asset_uuids(self, asset_uuids: [str]) -> Generator[tuple]:
         yield from self.eminfra_importer.get_all_bestekkoppelingen_from_webservice_by_asset_uuids(
@@ -42,47 +49,47 @@ class BestekKoppelingSyncer:
         with connection.cursor() as cursor:
             cursor.execute(delete_query)
 
-        for index, asset_uuid in enumerate(asset_uuids):
-            values = ''
-            bestek_koppelingen_dicts = bestek_koppelingen_dicts_list[index]
+            for index, asset_uuid in enumerate(asset_uuids):
+                values = ''
+                bestek_koppelingen_dicts = bestek_koppelingen_dicts_list[index]
 
-            if len(bestek_koppelingen_dicts) == 0:
-                continue
+                if len(bestek_koppelingen_dicts) == 0:
+                    continue
 
-            for bestek_koppeling_dict in bestek_koppelingen_dicts:
-                bestek_uuid = bestek_koppeling_dict['bestekRef']['uuid']
-                start_datum = bestek_koppeling_dict['startDatum']
-                eind_datum = bestek_koppeling_dict.get('eindDatum', None)
-                koppeling_status = bestek_koppeling_dict['status']
+                for bestek_koppeling_dict in bestek_koppelingen_dicts:
+                    bestek_uuid = bestek_koppeling_dict['bestekRef']['uuid']
+                    start_datum = bestek_koppeling_dict['startDatum']
+                    eind_datum = bestek_koppeling_dict.get('eindDatum', None)
+                    koppeling_status = bestek_koppeling_dict['status']
 
-                values += f"('{asset_uuid}','{bestek_uuid}','{start_datum}',"
-                if eind_datum is None:
-                    values += 'NULL'
-                else:
-                    values += f"'{eind_datum}'"
-                values += f", '{koppeling_status}'),"
+                    values += f"('{asset_uuid}','{bestek_uuid}','{start_datum}',"
+                    if eind_datum is None:
+                        values += 'NULL'
+                    else:
+                        values += f"'{eind_datum}'"
+                    values += f", '{koppeling_status}'),"
 
-            if values == '':
-                continue
+                if values == '':
+                    continue
 
-            insert_query = f"""
-WITH s (assetUuid, bestekUuid, startDatum, eindDatum, koppelingStatus) 
-    AS (VALUES {values[:-1]}),
-to_insert AS (
-    SELECT assetUuid::uuid AS assetUuid, bestekUuid::uuid AS bestekUuid, startDatum::TIMESTAMP as startDatum, eindDatum::TIMESTAMP as eindDatum, koppelingStatus
-    FROM s)
-INSERT INTO public.bestekkoppelingen (assetUuid, bestekUuid, startDatum, eindDatum, koppelingStatus) 
-SELECT to_insert.assetUuid, to_insert.bestekUuid, to_insert.startDatum, to_insert.eindDatum, to_insert.koppelingStatus
-FROM to_insert;"""
+                insert_query = f"""
+    WITH s (assetUuid, bestekUuid, startDatum, eindDatum, koppelingStatus) 
+        AS (VALUES {values[:-1]}),
+    to_insert AS (
+        SELECT assetUuid::uuid AS assetUuid, bestekUuid::uuid AS bestekUuid, startDatum::TIMESTAMP as startDatum, eindDatum::TIMESTAMP as eindDatum, koppelingStatus
+        FROM s)
+    INSERT INTO public.bestekkoppelingen (assetUuid, bestekUuid, startDatum, eindDatum, koppelingStatus) 
+    SELECT to_insert.assetUuid, to_insert.bestekUuid, to_insert.startDatum, to_insert.eindDatum, to_insert.koppelingStatus
+    FROM to_insert;"""
 
-            try:
-                cursor.execute(insert_query)
-            except psycopg2.Error as exc:
-                if str(exc).split('\n')[0] == 'insert or update on table "bestekkoppelingen" violates foreign key ' \
-                                              'constraint "bestekkoppelingen_bestekken_fkey"':
-                    raise BestekMissingError()
-                else:
-                    raise exc
+                try:
+                    cursor.execute(insert_query)
+                except psycopg2.Error as exc:
+                    if str(exc).split('\n')[0] == 'insert or update on table "bestekkoppelingen" violates foreign key ' \
+                                                  'constraint "bestekkoppelingen_bestekken_fkey"':
+                        raise BestekMissingError()
+                    else:
+                        raise exc
 
     @staticmethod
     def create_temp_table_for_sync_bestekkoppelingen(connection):

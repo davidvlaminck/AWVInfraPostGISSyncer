@@ -1,6 +1,10 @@
+import logging
+import time
 from abc import ABC
 
 from EMInfraImporter import EMInfraImporter
+from Exceptions.AgentMissingError import AgentMissingError
+from Exceptions.AssetMissingError import AssetMissingError
 from PostGISConnector import PostGISConnector
 
 
@@ -14,15 +18,37 @@ class FastFiller(ABC):
     def fill(self, connection, pagingcursor: str = '', page_size: int = 100):
         self.eminfra_importer.paging_cursors[self.resource] = pagingcursor
         while True:
-            object_generator = self.eminfra_importer.import_resource_from_webservice_page_by_page(
-                resource=self.resource, page_size=page_size)
+            try:
+                object_generator = self.eminfra_importer.import_resource_from_webservice_page_by_page(
+                    resource=self.resource, page_size=page_size)
+                if self.resource == 'assets':
+                    self.updater.update_objects(object_generator=object_generator, connection=connection,
+                                                eminfra_importer=self.eminfra_importer)
+                else:
+                    params = self.postgis_connector.get_params(connection)
+                    safe_insert = 'assets_fill' in params and not params['assets_fill']
+                    self.updater.update_objects(object_generator=object_generator, connection=connection,
+                                                safe_insert=safe_insert)
+                self.postgis_connector.update_params(
+                    params={f'{self.resource}_cursor': self.eminfra_importer.paging_cursors[self.resource]},
+                    connection=connection)
 
-            self.updater.update_objects(object_generator=object_generator, connection=connection)
-            self.postgis_connector.update_params(
-                params={f'{self.resource}_cursor': self.eminfra_importer.paging_cursors[self.resource]},
-                connection=connection)
-
-            connection.commit()
+                connection.commit()
+            except AssetMissingError:
+                params = self.postgis_connector.get_params(connection)
+                if 'assets_fill' in params and params['assets_fill']:
+                    logging.info('Asset(s) missing while filling. Trying again in 60 seconds')
+                    time.sleep(60)
+                    continue
+            except AgentMissingError:
+                params = self.postgis_connector.get_params(connection)
+                if 'agents_fill' in params and params['agents_fill']:
+                    logging.info('Agent(s) missing while filling. Trying again in 60 seconds')
+                    time.sleep(60)
+                    continue
+            except Exception as ex:
+                print(ex)
+                raise ex
 
             if self.eminfra_importer.paging_cursors[self.resource] == '':
                 break

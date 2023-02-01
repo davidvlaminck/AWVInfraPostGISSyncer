@@ -11,7 +11,7 @@ from Helpers import peek_generator
 
 class BetrokkeneRelatiesUpdater:
     @staticmethod
-    def update_objects(object_generator: Iterator[dict], connection) -> int:
+    def update_objects(object_generator: Iterator[dict], connection, safe_insert: bool = False) -> int:
         object_generator = peek_generator(object_generator)
         if object_generator is None:
             return 0
@@ -32,7 +32,10 @@ class BetrokkeneRelatiesUpdater:
             else:
                 values += f"NULL, '{betrokkenerelatie_dict['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36]}', "
 
-            values += f"{betrokkenerelatie_dict['AIMDBStatus.isActief']},"
+            if 'AIMDBStatus.isActief' in betrokkenerelatie_dict:
+                values += f"{betrokkenerelatie_dict['AIMDBStatus.isActief']},"
+            else:
+                values += 'TRUE,'
 
             contact_info_value = 'NULL'
             if 'HeeftBetrokkene.specifiekeContactinfo' in betrokkenerelatie_dict:
@@ -74,11 +77,13 @@ class BetrokkeneRelatiesUpdater:
             with connection.cursor() as cursor:
                 cursor.execute(insert_query)
         except psycopg2.Error as exc:
-            if str(exc).split('\n')[0] in ['insert or update on table "betrokkenerelaties" violates foreign key constraint "betrokkenerelaties_agents_fkey"',
-                                           'insert or update on table "betrokkenerelaties" violates foreign key constraint "betrokkenerelaties_bron_agents_fkey"']:
+            first_line = exc.args[0].split('\n')[0]
+            if first_line in ['insert or update on table "betrokkenerelaties" violates foreign key constraint "betrokkenerelaties_agents_fkey"',
+                              'insert or update on table "betrokkenerelaties" violates foreign key constraint "betrokkenerelaties_bron_agents_fkey"']:
                 if '\n' in str(exc):
                     logging.error(str(exc).split('\n')[1])
                 connection.rollback()
+                logging.error('raising AgentMissingError')
                 raise AgentMissingError()
                 cursor = connection.cursor()
                 agent_uuids = set(map(lambda x: x['RelatieObject.doel']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36], betrokkenerelatie_dicts_list))
@@ -90,10 +95,11 @@ class BetrokkeneRelatiesUpdater:
                 existing_agent_uuids = set(map(lambda x: x[0], cursor.fetchall()))
                 nonexisting_agents = list(agent_uuids - existing_agent_uuids)
                 raise AgentMissingError(nonexisting_agents)
-            elif str(exc).split('\n')[0] == 'insert or update on table "betrokkenerelaties" violates foreign key constraint "betrokkenerelaties_bron_assets_fkey"':
+            elif first_line == 'insert or update on table "betrokkenerelaties" violates foreign key constraint "betrokkenerelaties_bron_assets_fkey"':
                 if '\n' in str(exc):
                     logging.error(str(exc).split('\n')[1])
                 connection.rollback()
+                logging.error('raising AssetMissingError')
                 raise AssetMissingError()
                 cursor = connection.cursor()
                 bron_uuids = set(map(lambda x: x['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36], betrokkenerelatie_dicts_list))

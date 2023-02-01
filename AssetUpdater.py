@@ -2,19 +2,22 @@ import logging
 import time
 from typing import Iterator
 
+import psycopg2
+
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.AssetProcessors.AttributenGewijzigdProcessor import AttributenGewijzigdProcessor
 from EventProcessors.AssetProcessors.ElekAansluitingGewijzigdProcessor import ElekAansluitingGewijzigdProcessor
 from EventProcessors.AssetProcessors.GeometrieOrLocatieGewijzigdProcessor import GeometrieOrLocatieGewijzigdProcessor
 from EventProcessors.AssetProcessors.SchadebeheerderGewijzigdProcessor import SchadebeheerderGewijzigdProcessor
 from EventProcessors.AssetProcessors.ToezichtGewijzigdProcessor import ToezichtGewijzigdProcessor
+from Exceptions.AssetTypeMissingError import AssetTypeMissingError
 from Helpers import peek_generator
 
 
 class AssetUpdater:
     @staticmethod
     def update_objects(object_generator: Iterator[dict], connection, eminfra_importer: EMInfraImporter,
-                       insert_only: bool = False) -> int:
+                       insert_only: bool = False, safe_insert: bool = False) -> int:
         object_generator = peek_generator(object_generator)
         if object_generator is None:
             return 0
@@ -69,7 +72,7 @@ class AssetUpdater:
 WITH s (uuid, assetTypeUri, actief, toestand, naampad, naam, commentaar) 
     AS (VALUES {values[:-1]}),
 t AS (
-    SELECT uuid::uuid AS uuid, assettypes.uuid as assettype, actief, toestand, naampad, naam, commentaar
+    SELECT s.uuid::uuid AS uuid, assettypes.uuid as assettype, s.actief, toestand, naampad, s.naam, commentaar
     FROM s
         LEFT JOIN assettypes ON assettypes.uri = s.assetTypeUri),
 to_insert AS (
@@ -87,7 +90,7 @@ FROM to_insert;"""
 WITH s (uuid, assetTypeUri, actief, toestand, naampad, naam, commentaar)  
     AS (VALUES {values[:-1]}),
 t AS (
-    SELECT uuid::uuid AS uuid, assettypes.uuid as assettype, actief, toestand, naampad, naam, commentaar
+    SELECT s.uuid::uuid AS uuid, assettypes.uuid as assettype, s.actief, toestand, naampad, s.naam, commentaar
     FROM s
         LEFT JOIN assettypes ON assettypes.uri = s.assetTypeUri),
 to_update AS (
@@ -100,11 +103,24 @@ SET actief = to_update.actief, toestand = to_update.toestand, naampad = to_updat
     commentaar = to_update.commentaar
 FROM to_update 
 WHERE to_update.uuid = assets.uuid;"""
-        with connection.cursor() as cursor:
-            cursor.execute(insert_query)
-        if not insert_only:
+
+        try:
             with connection.cursor() as cursor:
-                cursor.execute(update_query)
+                cursor.execute(insert_query)
+                if not insert_only:
+                    cursor.execute(update_query)
+        except psycopg2.errors.NotNullViolation as exc:
+            first_line = exc.args[0].split('\n')[0]
+            if first_line == 'null value in column "assettype" violates not-null constraint':
+                if '\n' in str(exc):
+                    logging.error(str(exc).split('\n')[1])
+                connection.rollback()
+                logging.error('raising AssetTypeMissingError')
+                raise AssetTypeMissingError()
+        except psycopg2.Error as exc:
+            print(exc)
+            raise exc
+
 
     @staticmethod
     def append_values(asset_dict, asset_uuid, values):

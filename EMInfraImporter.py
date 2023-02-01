@@ -21,8 +21,8 @@ class EMInfraImporter:
                                               size: int = 100, contact_info: bool = False,
                                               expansions_string: str = '{}') -> [dict]:
         url = f'core/api/otl/{url_part}/search'
-        if contact_info:
-            url += '?expand=contactInfo'
+        # if contact_info:
+        #     url += '?expand=contactInfo'
         body_fixed_part = '{"size": ' + f'{size}' + ''
         if filter_string != '{}':
             body_fixed_part += ', "filters": ' + filter_string
