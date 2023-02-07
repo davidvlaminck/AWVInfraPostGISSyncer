@@ -68,6 +68,7 @@ class PostGISConnector:
 
         cursor.execute('CREATE SCHEMA IF NOT EXISTS asset_views;')
         cursor.close()
+        self.main_connection.commit()
 
     def get_params(self, connection):
         cursor = connection.cursor()
@@ -135,12 +136,6 @@ class PostGISConnector:
         connection.commit()
         cursor.close()
 
-    def close(self):
-        self.connection.close()
-
-    def commit_transaction(self):
-        self.connection.commit()
-
     def add_params_entry(self, params_dict, raw_param_record):
         param_type = self.param_type_map[raw_param_record[0]]
         if param_type == 'int':
@@ -155,7 +150,9 @@ class PostGISConnector:
             raise NotImplementedError
 
     def get_connection(self):
-        return self.pool.getconn()
+        connection = self.pool.getconn()
+        connection.autocommit = False
+        return connection
 
     def kill_connection(self, connection):
         self.pool.putconn(connection)

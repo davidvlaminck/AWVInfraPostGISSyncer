@@ -175,6 +175,7 @@ class Filler:
                 # continue
 
             if self.eminfra_importer.paging_cursors['assetrelaties_cursor'] == '':
+
                 break
 
         self.connector.update_params(params={'assetrelaties_fill': False}, connection=connection)
@@ -277,8 +278,8 @@ class Filler:
                 continue
             except Exception as exc:
                 logging.error(exc)
-                logging.info('Unknown error, escalating it.')
-                raise exc
+                logging.info('Unknown error')
+                continue
 
             if self.eminfra_importer.paging_cursors['assets_cursor'] == '':
                 break

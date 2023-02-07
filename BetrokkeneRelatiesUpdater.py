@@ -113,6 +113,7 @@ class BetrokkeneRelatiesUpdater:
                 nonexisting_assets = list(asset_uuids - existing_asset_uuids)
                 raise AssetMissingError(nonexisting_assets)
             else:
+                connection.rollback()
                 raise exc
 
         logging.info(f'done batch of {counter} betrokkenerelaties')

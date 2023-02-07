@@ -21,9 +21,14 @@ class AssetSyncer:
                                                                                    eminfra_importer=eminfra_importer)
 
     def sync(self, connection):
-        sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
-
-        while sync_allowed_by_time:
+        self.update_view_tables(connection)
+        while True:
+            sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
+            if not sync_allowed_by_time:
+                self.update_view_tables(connection)
+                logging.info(f'syncing is not allowed at this time. Trying again in 5 minutes')
+                time.sleep(300)
+                continue
             params = self.postgis_connector.get_params(connection)
             current_page = params['page_assets']
             completed_event_id = params['event_uuid_assets']
@@ -63,13 +68,11 @@ class AssetSyncer:
                 connection.rollback()
                 time.sleep(10)
 
-            sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
-
     def sync_by_uuids(self, uuids: [str], connection):
         self.eminfra_importer.paging_cursors['assets_ad_hoc'] = ''
 
         object_generator = self.eminfra_importer.import_resource_from_webservice_by_uuids(
-            resource='assets', uuids=uuids, cursor_name='assets_ad_hoc')
+            resource='assets', uuids=uuids)
 
         self.updater.update_objects(object_generator=object_generator, connection=connection,
                                     eminfra_importer=self.eminfra_importer)
@@ -81,3 +84,14 @@ class AssetSyncer:
         for k, v in event_dict.items():
             if len(v) > 0:
                 logging.info(f'number of events of type {k}: {len(v)}')
+
+    def update_view_tables(self, connection):
+        # check if it this has been run today, if yes: skip
+        return
+
+        # get all views
+        "select viewname from pg_catalog.pg_views where schemaname = 'asset_views'"
+
+        # create a table from a view
+        "DROP IF EXISTS table_onderdeel_voedingskabel"
+        "CREATE TABLE table_onderdeel_voedingskabel AS SELECT * FROM onderdeel_voedingskabel;"

@@ -3,7 +3,6 @@ from unittest import TestCase
 from psycopg2 import connect
 
 from AssetSyncer import AssetSyncer
-from AssetTypeSyncer import AssetTypeSyncer
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.AssetProcessors.ActiefGewijzigdProcessor import ActiefGewijzigdProcessor
 from PostGISConnector import PostGISConnector
@@ -24,8 +23,8 @@ class ActiefGewijzigdProcessorTests(TestCase):
         conn.autocommit = True
 
         cursor = conn.cursor()
-        cursor.execute('DROP DATABASE IF EXISTS unittests;')
-        cursor.execute('CREATE DATABASE unittests;')
+        cursor.execute('DROP DATABASE IF EXISTS cursors;')
+        cursor.execute('CREATE DATABASE cursors;')
 
         conn.close()
 

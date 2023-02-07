@@ -33,8 +33,17 @@ class FastFiller(ABC):
                     params={f'{self.resource}_cursor': self.eminfra_importer.paging_cursors[self.resource]},
                     connection=connection)
 
+                if self.eminfra_importer.paging_cursors[self.resource] == '':
+                    count = self.get_count(self.resource, connection)
+                    if count > 0:
+                        self.postgis_connector.update_params(
+                            params={f'{self.resource}_fill': False},
+                            connection=connection)
+                        connection.commit()
+                        break
                 connection.commit()
             except AssetMissingError:
+                connection.rollback()
                 params = self.postgis_connector.get_params(connection)
                 if 'assets_fill' in params and params['assets_fill']:
                     logging.info('Asset(s) missing while filling. Trying again in 60 seconds')
@@ -50,5 +59,9 @@ class FastFiller(ABC):
                 print(ex)
                 raise ex
 
-            if self.eminfra_importer.paging_cursors[self.resource] == '':
-                break
+    def get_count(self, resource, connection) -> int:
+        with connection.cursor() as cursor:
+            cursor.execute(f'SELECT count(*) FROM (SELECT uuid FROM {resource} a LIMIT 1) s;')
+            count = cursor.fetchone()[0]
+        return count
+

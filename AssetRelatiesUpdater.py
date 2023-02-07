@@ -49,18 +49,6 @@ class AssetRelatiesUpdater:
             else:
                 values += f"'{attributen}'),"
 
-        insert_query = f"""
-        WITH s (uuid, bronUuid, doelUuid, relatieTypeUri, actief, attributen) 
-            AS (VALUES {values[:-1]}),
-        to_insert AS (
-            SELECT s.uuid::uuid AS uuid, bronUuid::uuid AS bronUuid, doelUuid::uuid AS doelUuid, 
-                relatietypes.uuid as relatietype, s.actief, attributen::json as attributen
-            FROM s
-                LEFT JOIN relatietypes ON relatietypes.uri = s.relatieTypeUri)        
-        INSERT INTO public.assetrelaties (uuid, bronUuid, doelUuid, relatietype, actief, attributen) 
-        SELECT to_insert.uuid, to_insert.bronUuid, to_insert.doelUuid, to_insert.relatietype, to_insert.actief, to_insert.attributen
-        FROM to_insert;"""
-
         if safe_insert:
             insert_query = f"""
             WITH s (uuid, bronUuid, doelUuid, relatieTypeUri, actief, attributen) 
@@ -72,6 +60,20 @@ class AssetRelatiesUpdater:
                     LEFT JOIN relatietypes ON relatietypes.uri = s.relatieTypeUri
                     INNER JOIN assets a1 on bronUuid::uuid = a1.uuid
                     INNER JOIN assets a2 on doelUuid::uuid = a2.uuid)        
+            INSERT INTO public.assetrelaties (uuid, bronUuid, doelUuid, relatietype, actief, attributen) 
+            SELECT to_insert.uuid, to_insert.bronUuid, to_insert.doelUuid, to_insert.relatietype, to_insert.actief, to_insert.attributen
+            FROM to_insert;"""
+        else:
+            insert_query = f"""
+            WITH s (uuid, bronUuid, doelUuid, relatieTypeUri, actief, attributen) 
+                AS (VALUES {values[:-1]}),
+            to_insert AS (
+                SELECT s.uuid::uuid AS uuid, s.bronUuid::uuid AS bronUuid, s.doelUuid::uuid AS doelUuid, 
+                    relatietypes.uuid as relatietype, s.actief, s.attributen::json as attributen
+                FROM s
+                    LEFT JOIN relatietypes ON relatietypes.uri = s.relatieTypeUri
+                    LEFT JOIN assetrelaties ar ON ar.uuid = s.uuid::uuid
+                WHERE ar.uuid IS NULL)        
             INSERT INTO public.assetrelaties (uuid, bronUuid, doelUuid, relatietype, actief, attributen) 
             SELECT to_insert.uuid, to_insert.bronUuid, to_insert.doelUuid, to_insert.relatietype, to_insert.actief, to_insert.attributen
             FROM to_insert;"""
@@ -98,6 +100,7 @@ class AssetRelatiesUpdater:
                 nonexisting_assets = list(asset_uuids - existing_asset_uuids)
                 raise AssetMissingError(nonexisting_assets)
             else:
+                connection.rollback()
                 raise exc
 
         logging.info(f'done batch of {counter} assetrelaties')

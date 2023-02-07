@@ -17,11 +17,9 @@ class FeedEventsCollector:
         searching_where_stopped = True
         if resource == 'betrokkenerelaties':
             resource = 'betrokkene-relaties'
-        elif resource == 'assetrelaties':
-            resource = 'asset-relaties'
 
         uuids_string = f'{resource[:-1]}-uuids'
-        if uuids_string == 'asset-uuids':
+        if uuids_string in ['asset-uuids', 'assetrelatie-uuids']:
             uuids_string = 'uuids'
 
         while True:

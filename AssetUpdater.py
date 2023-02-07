@@ -119,6 +119,7 @@ WHERE to_update.uuid = assets.uuid;"""
                 raise AssetTypeMissingError()
         except psycopg2.Error as exc:
             print(exc)
+            connection.rollback()
             raise exc
 
 
