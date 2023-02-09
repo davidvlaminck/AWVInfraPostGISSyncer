@@ -17,8 +17,8 @@ class AssetSyncer:
         self.eminfra_importer: EMInfraImporter = eminfra_importer
         self.updater: AssetUpdater = AssetUpdater()
         self.events_collector: AssetFeedEventsCollector = AssetFeedEventsCollector(eminfra_importer)
-        self.events_processor: AssetFeedEventsProcessor = AssetFeedEventsProcessor(postgis_connector,
-                                                                                   eminfra_importer=eminfra_importer)
+        self.events_processor: AssetFeedEventsProcessor = AssetFeedEventsProcessor(
+            postgis_connector=postgis_connector, eminfra_importer=eminfra_importer)
 
     def sync(self, connection):
         self.update_view_tables(connection)
@@ -34,7 +34,8 @@ class AssetSyncer:
             completed_event_id = params['event_uuid_assets']
             page_size = params['pagesize']
 
-            logging.info(f'starting a sync cycle for assets, page: {str(current_page)} event_uuid: {str(completed_event_id)}')
+            logging.info(
+                f'starting a sync cycle for assets, page: {str(current_page)} event_uuid: {str(completed_event_id)}')
             start = time.time()
 
             eventsparams_to_process = None
@@ -86,12 +87,20 @@ class AssetSyncer:
                 logging.info(f'number of events of type {k}: {len(v)}')
 
     def update_view_tables(self, connection):
-        # check if it this has been run today, if yes: skip
-        return
+        params = self.postgis_connector.get_params(connection)
+        last_update_views_date = params['last_update_utc_views'].date()
+        today_date = (datetime.utcnow()).date()
 
-        # get all views
-        "select viewname from pg_catalog.pg_views where schemaname = 'asset_views'"
+        if today_date <= last_update_views_date:
+            return
 
-        # create a table from a view
-        "DROP IF EXISTS table_onderdeel_voedingskabel"
-        "CREATE TABLE table_onderdeel_voedingskabel AS SELECT * FROM onderdeel_voedingskabel;"
+        select_view_names_query = "select viewname from pg_catalog.pg_views where schemaname = 'asset_views'"
+        with connection.cursor() as cursor:
+            cursor.execute(select_view_names_query)
+
+            for view_name in cursor.fetchall():
+                view_query = f"DROP IF EXISTS table_{view_name}; CREATE TABLE table_{view_name} AS SELECT * FROM {view_name};"
+                cursor.execute(view_query)
+
+        self.postgis_connector.update_params(params={'last_update_utc_views': datetime.utcnow()},
+                                             connection=connection)

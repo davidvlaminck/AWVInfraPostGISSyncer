@@ -75,12 +75,16 @@ class Filler:
                        for feed in feeds]
             concurrent.futures.wait(futures)
 
-        tables_to_fill = []
+        if 'last_update_utc_views' not in params:
+            self.connector.create_params(params={'last_update_utc_views': '2023-01-01 00:00:00.000+01'},
+                                         connection=self.connector.main_connection)
+
         while True:
             try:
                 # tables_to_fill = ['agents', 'toezichtgroepen', 'beheerders'] # , ''
                 tables_to_fill = ['agents', 'bestekken', 'toezichtgroepen', 'identiteiten', 'relatietypes',
-                                  'assettypes', 'beheerders', 'betrokkenerelaties', 'assetrelaties', 'assets', 'bestekkoppelingen']
+                                  'assettypes', 'beheerders', 'betrokkenerelaties', 'assetrelaties', 'assets',
+                                  'bestekkoppelingen']
 
                 params = self.connector.get_params(self.connector.main_connection)
                 if 'assets_fill' not in params:
@@ -175,7 +179,6 @@ class Filler:
                 # continue
 
             if self.eminfra_importer.paging_cursors['assetrelaties_cursor'] == '':
-
                 break
 
         self.connector.update_params(params={'assetrelaties_fill': False}, connection=connection)

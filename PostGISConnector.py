@@ -24,6 +24,7 @@ class PostGISConnector:
             'page_betrokkenerelaties': 'int',
             'event_uuid_betrokkenerelaties': 'text',
             'last_update_utc_betrokkenerelaties': 'timestamp',
+            'last_update_utc_views' : 'timestamp',
             'agents_fill': 'bool',
             'agents_cursor': 'text',
             'toezichtgroepen_fill': 'bool',
