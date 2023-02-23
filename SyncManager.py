@@ -11,23 +11,26 @@ from BetrokkeneRelatieSyncer import BetrokkeneRelatieSyncer
 from EMInfraImporter import EMInfraImporter
 from FeedEventsCollector import FeedEventsCollector
 from FeedEventsProcessor import FeedEventsProcessor
-from Filler import Filler
+from FillManager import FillManager
 from PostGISConnector import PostGISConnector
 from RequestHandler import RequestHandler
 from SyncTimer import SyncTimer
 
 
 class SyncerFactory:
-
     @classmethod
     def get_syncer_by_feed_name(cls, feed, eminfra_importer: EMInfraImporter, postgis_connector: PostGISConnector):
         if feed == 'agents':
+            time.sleep(1)
             return AgentSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
         elif feed == 'assets':
+            time.sleep(2)
             return AssetSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
         elif feed == 'assetrelaties':
+            time.sleep(3)
             return AssetRelatieSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
         elif feed == 'betrokkenerelaties':
+            time.sleep(4)
             return BetrokkeneRelatieSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
 
 
@@ -53,11 +56,11 @@ class SyncManager:
                     params = self.connector.get_params(self.connector.main_connection)
 
                 if params['fresh_start']:
-                    filler = Filler(connector=self.connector, request_handler=self.request_handler,
-                                    eminfra_importer=self.eminfra_importer)
+                    filler = FillManager(connector=self.connector, request_handler=self.request_handler,
+                                         eminfra_importer=self.eminfra_importer)
                     filler.fill(params)
                 else:
-                    self.perform_syncing()
+                    self.perform_multiprocessing_syncing()
             except requests.exceptions.ConnectionError as exc:
                 print(exc)
                 time.sleep(10)
@@ -71,7 +74,7 @@ class SyncManager:
         connection = self.connector.get_connection()
         syncer.sync(connection=connection)
 
-    def perform_syncing(self):
+    def perform_multiprocessing_syncing(self):
         feeds = ['assets', 'agents', 'assetrelaties', 'betrokkenerelaties']
 
         # use multithreading

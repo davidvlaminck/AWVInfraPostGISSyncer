@@ -111,3 +111,12 @@ class JWTRequester(requests.Session):
             raise RuntimeError("Could not get the acces token")
 
         return response.json()["access_token"]
+
+
+class SingletonJWTRequester(JWTRequester):
+    instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls.instance is None:
+            cls.instance = super(SingletonJWTRequester, cls).__new__(cls)
+        return cls.instance

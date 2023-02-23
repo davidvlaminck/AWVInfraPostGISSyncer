@@ -24,7 +24,7 @@ from RequestHandler import RequestHandler
 from ToezichtgroepFiller import ToezichtgroepFiller
 
 
-class Filler:
+class FillManager:
     def __init__(self, connector: PostGISConnector, request_handler: RequestHandler,
                  eminfra_importer: EMInfraImporter, ):
         self.connector = connector

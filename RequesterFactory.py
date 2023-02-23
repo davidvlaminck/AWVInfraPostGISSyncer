@@ -1,7 +1,7 @@
 import requests
 
 from CertRequester import CertRequester
-from JWTRequester import JWTRequester
+from JWTRequester import SingletonJWTRequester
 
 
 class RequesterFactory:
@@ -21,9 +21,9 @@ class RequesterFactory:
             first_part_url = 'https://services.apps-dev.mow.vlaanderen.be/'
 
         if auth_info['type'] == 'JWT':
-            return JWTRequester(private_key_path=auth_info['key_path'],
-                                client_id=auth_info['client_id'],
-                                first_part_url=first_part_url)
+            return SingletonJWTRequester(private_key_path=auth_info['key_path'],
+                                         client_id=auth_info['client_id'],
+                                         first_part_url=first_part_url)
         if auth_info['type'] == 'cert':
             return CertRequester(cert_path=auth_info['cert_path'],
                                  key_path=auth_info['key_path'],
