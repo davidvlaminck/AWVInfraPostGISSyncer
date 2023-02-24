@@ -5,6 +5,7 @@ from EMInfraImporter import EMInfraImporter
 from EventProcessors.AssetProcessors.SpecificEventProcessor import SpecificEventProcessor
 from Exceptions.IdentiteitMissingError import IdentiteitMissingError
 from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
+from Helpers import turn_list_of_lists_into_string
 
 
 class ToezichtGewijzigdProcessor(SpecificEventProcessor):
@@ -23,79 +24,70 @@ class ToezichtGewijzigdProcessor(SpecificEventProcessor):
 
     @staticmethod
     def process_dicts(connection, asset_uuids: [str], asset_dicts: [dict]):
-        toezichter_null_assets = []
-        toezichter_update_values = ''
-        toezichtgroep_null_assets = []
-        toezichtgroep_update_values = ''
-        toezichter_gebruikersnamen = set()
-        toezichtgroepen_referenties = set()
         counter = 0
-        # TODO refactor to set null if 'tz:..' not in asset_dict, else just the value
+        values_array = []
         with connection.cursor() as cursor:
+            counter += 1
             for asset_dict in asset_dicts:
-                counter += 1
                 uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]
+
+                record_array = [f"'{uuid}'"]
+
                 if 'tz:Toezicht.toezichtgroep' not in asset_dict:
-                    toezichtgroep_null_assets.append(uuid)
+                    record_array.append('NULL')
                 else:
-                    toezichtgroepen_referenties.add(asset_dict['tz:Toezicht.toezichtgroep']['tz:DtcToezichtGroep.referentie'])
-                    toezichtgroep_update_values += f"('{uuid}', '{asset_dict['tz:Toezicht.toezichtgroep']['tz:DtcToezichtGroep.referentie']}'),"
+                    record_array.append(
+                        f"'{asset_dict['tz:Toezicht.toezichtgroep']['tz:DtcToezichtGroep.referentie']}'")
 
                 if 'tz:Toezicht.toezichter' not in asset_dict:
-                    toezichter_null_assets.append(uuid)
+                    record_array.append('NULL')
                 else:
-                    toezichter_gebruikersnamen.add(asset_dict['tz:Toezicht.toezichter']['tz:DtcToezichter.gebruikersnaam'])
-                    toezichter_update_values += f"('{uuid}', '{asset_dict['tz:Toezicht.toezichter']['tz:DtcToezichter.gebruikersnaam']}'),"
+                    record_array.append(
+                        f"'{asset_dict['tz:Toezicht.toezichter']['tz:DtcToezichter.gebruikersnaam']}'")
 
-            if len(toezichter_gebruikersnamen) > 0:
-                lookup_toezichter_query = f"""SELECT count(*) FROM public.identiteiten WHERE identiteiten.gebruikersnaam IN
-                    ('{"','".join(list(toezichter_gebruikersnamen))}')"""
-                cursor.execute(lookup_toezichter_query)
-                toezichter_count = cursor.fetchone()[0]
-                if toezichter_count != len(toezichter_gebruikersnamen):
+                values_array.append(record_array)
+
+            values_string = turn_list_of_lists_into_string(values_array)
+
+            if values_string != '':
+                check_toezicht_missing_query = f"""
+        WITH s (assetUuid, toezichtgroepReferentie, toezichterGebruikersnaam) 
+            AS (VALUES {values_string}),
+        to_update AS (    
+            SELECT s.assetUuid::uuid AS assetUuid, toezichtgroepReferentie, toezichtgroepen.uuid as toezichtgroepUuid, 
+                toezichterGebruikersnaam, identiteiten.uuid as toezichterUuid
+            FROM s
+                LEFT JOIN public.toezichtgroepen on s.toezichtgroepReferentie = toezichtgroepen.referentie
+                LEFT JOIN public.identiteiten on s.toezichterGebruikersnaam = identiteiten.gebruikersnaam)    
+        SELECT SUM(CASE WHEN toezichtgroepReferentie IS NOT NULL AND toezichtgroepUuid IS NULL THEN 1 else 0 END) 
+            as toezichtgroep_missing, 
+            SUM(CASE WHEN toezichterGebruikersnaam IS NOT NULL AND toezichterUuid IS NULL THEN 1 else 0 END) 
+            as toezichter_missing
+        FROM to_update;"""
+                cursor.execute(check_toezicht_missing_query)
+                count_toezichtgroep_missing, count_toezichter_missing = cursor.fetchone()
+                if count_toezichtgroep_missing > 0:
+                    logging.error('raising ToezichtgroepMissingError')
+                    connection.rollback()
+                    raise ToezichtgroepMissingError()
+                if count_toezichter_missing > 0:
+                    logging.error('raising IdentiteitMissingError')
+                    connection.rollback()
                     raise IdentiteitMissingError()
 
-            if len(toezichtgroepen_referenties) > 0:
-                lookup_toezichtgroep_query = f"""SELECT count(*) FROM public.toezichtgroepen WHERE toezichtgroepen.referentie IN
-                    ('{"','".join(list(toezichtgroepen_referenties))}')"""
-                cursor.execute(lookup_toezichtgroep_query)
-                toezichtgroep_count = cursor.fetchone()[0]
-                if toezichtgroep_count != len(toezichtgroepen_referenties):
-                    raise ToezichtgroepMissingError()
-
-            if len(toezichter_null_assets) > 0:
-                delete_toezichter_query = f"""UPDATE public.assets SET toezichter = NULL WHERE uuid IN ('{"'::uuid,'".join(toezichter_null_assets)}'::uuid)"""
-                cursor.execute(delete_toezichter_query)
-            if len(toezichtgroep_null_assets) > 0:
-                delete_toezichtgroep_query = f"""UPDATE public.assets SET toezichtgroep = NULL WHERE uuid IN ('{"'::uuid,'".join(toezichtgroep_null_assets)}'::uuid)"""
-                cursor.execute(delete_toezichtgroep_query)
-
-            if toezichter_update_values != '':
-                update_toezichter_query = f"""
-                    WITH s (assetUuid, toezichterGebruikersnaam) 
-                        AS (VALUES {toezichter_update_values[:-1]}),
-                    to_update AS (
-                        SELECT s.assetUuid::uuid AS assetUuid, identiteiten.uuid as toezichterUuid
-                        FROM s
-                            LEFT JOIN public.identiteiten on s.toezichterGebruikersnaam = identiteiten.gebruikersnaam)        
-                    UPDATE assets 
-                    SET toezichter = to_update.toezichterUuid
-                    FROM to_update 
-                    WHERE to_update.assetUuid = assets.uuid"""
-                cursor.execute(update_toezichter_query)
-
-            if toezichtgroep_update_values != '':
-                update_toezichtgroep_query = f"""
-                    WITH s (assetUuid, toezichtgroepReferentie) 
-                        AS (VALUES {toezichtgroep_update_values[:-1]}),
-                    to_update AS (
-                        SELECT s.assetUuid::uuid AS assetUuid, toezichtgroepen.uuid as toezichtgroepUuid
-                        FROM s
-                            LEFT JOIN public.toezichtgroepen on s.toezichtgroepReferentie = toezichtgroepen.referentie)        
-                    UPDATE assets 
-                    SET toezichtgroep = to_update.toezichtgroepUuid
-                    FROM to_update 
-                    WHERE to_update.assetUuid = assets.uuid"""
-                cursor.execute(update_toezichtgroep_query)
+                update_toezicht_query = f"""
+            WITH s (assetUuid, toezichtgroepReferentie, toezichterGebruikersnaam) 
+                AS (VALUES {values_string}),
+            to_update AS (
+                SELECT s.assetUuid::uuid AS assetUuid, toezichtgroepen.uuid as toezichtgroepUuid, 
+                    identiteiten.uuid as toezichterUuid
+                FROM s
+                    LEFT JOIN public.identiteiten on s.toezichterGebruikersnaam = identiteiten.gebruikersnaam
+                    LEFT JOIN public.toezichtgroepen on s.toezichtgroepReferentie = toezichtgroepen.referentie)                
+            UPDATE assets 
+            SET toezichtgroep = to_update.toezichtgroepUuid, toezichter = to_update.toezichterUuid
+            FROM to_update 
+            WHERE to_update.assetUuid = assets.uuid"""
+                cursor.execute(update_toezicht_query)
 
         return counter

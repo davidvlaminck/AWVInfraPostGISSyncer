@@ -1,2 +1,0 @@
-class ResetFillError(Exception):
-    pass

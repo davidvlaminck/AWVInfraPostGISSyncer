@@ -5,6 +5,7 @@ from typing import Iterator
 import psycopg2
 
 from Exceptions.AssetMissingError import AssetMissingError
+from Exceptions.RelatieTypeMissingError import RelatieTypeMissingError
 from Helpers import peek_generator, turn_list_of_lists_into_string
 
 
@@ -92,6 +93,12 @@ class AssetRelatiesUpdater:
                 connection.rollback()
                 logging.error('raising AssetMissingError')
                 raise AssetMissingError()
+            elif first_line == 'insert or update on table "assetrelaties" violates foreign key constraint "assetrelaties_relatietype_fkey"':
+                if '\n' in str(exc):
+                    logging.error(str(exc).split('\n')[1])
+                connection.rollback()
+                logging.error('raising RelatieTypeMissingError')
+                raise RelatieTypeMissingError()
             else:
                 connection.rollback()
                 raise exc

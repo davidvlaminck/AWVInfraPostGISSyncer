@@ -120,7 +120,6 @@ WHERE to_update.uuid = assets.uuid;"""
             connection.rollback()
             raise exc
 
-
     @staticmethod
     def append_values(asset_dict, asset_uuid, values):
         if 'AIMDBStatus.isActief' in asset_dict:

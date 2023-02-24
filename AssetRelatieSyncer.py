@@ -8,6 +8,7 @@ from AssetRelatieFeedEventsProcessor import AssetRelatieFeedEventsProcessor
 from AssetRelatiesUpdater import AssetRelatiesUpdater
 from EMInfraImporter import EMInfraImporter
 from Exceptions.AssetMissingError import AssetMissingError
+from Exceptions.RelatieTypeMissingError import RelatieTypeMissingError
 from PostGISConnector import PostGISConnector
 from SyncTimer import SyncTimer
 
@@ -64,6 +65,11 @@ class AssetRelatieSyncer:
                 except AssetMissingError:
                     logging.warning(f"Tried to add assetrelaties but a source or target is missing. "
                                     f"Trying again in 60 seconds to allow other feeds to create the missing objects.")
+                    time.sleep(60)
+                    continue
+                except RelatieTypeMissingError:
+                    # TODO
+                    raise NotImplementedError
                     time.sleep(60)
                     continue
                 except Exception as exc:

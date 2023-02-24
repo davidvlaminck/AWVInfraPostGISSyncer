@@ -1,6 +1,7 @@
 import logging
 import time
 from abc import ABC
+import global_vars
 
 from EMInfraImporter import EMInfraImporter
 from Exceptions.AgentMissingError import AgentMissingError
@@ -8,7 +9,8 @@ from Exceptions.AssetMissingError import AssetMissingError
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
 from Exceptions.AttribuutMissingError import AttribuutMissingError
 from Exceptions.BeheerderMissingError import BeheerderMissingError
-from Exceptions.ResetFillError import ResetFillError
+from Exceptions.IdentiteitMissingError import IdentiteitMissingError
+from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 from PostGISConnector import PostGISConnector
 
 
@@ -25,6 +27,8 @@ class FastFiller(ABC):
 
         self.eminfra_importer.paging_cursors[self.resource] = pagingcursor
         while True:
+            if global_vars.FILL_MANAGER_RESET_CALLED:
+                return
             try:
                 object_generator = self.eminfra_importer.import_resource_from_webservice_page_by_page(
                     resource=self.resource, page_size=page_size)
@@ -49,7 +53,6 @@ class FastFiller(ABC):
                             connection=connection)
                         connection.commit()
                         break
-                connection.commit()
             except AssetMissingError:
                 connection.rollback()
                 params = self.postgis_connector.get_params(connection)
@@ -64,20 +67,19 @@ class FastFiller(ABC):
                     logging.info('Agent(s) missing while filling. This is normal behaviour. Trying again in 60 seconds')
                     time.sleep(60)
                     continue
-            except AssetTypeMissingError:
+            except (AssetTypeMissingError, AttribuutMissingError):
                 connection.rollback()
                 params = self.postgis_connector.get_params(connection)
                 if 'assettypes_fill' in params and params['assettypes_fill']:
-                    logging.info('AssetType(s) missing while filling. This is normal behaviour. Trying again in 60 seconds')
+                    logging.info('AssetType(s) or attribute(s) missing while filling. This is normal behaviour. Trying again in 60 seconds')
                     time.sleep(60)
                     continue
-            except AttribuutMissingError:
-                connection.rollback()
-                params = self.postgis_connector.get_params(connection)
-                if 'assettypes_fill' in params and params['assettypes_fill']:
-                    logging.info('Attribute(s) missing while filling. This is normal behaviour. Trying again in 60 seconds')
-                    time.sleep(60)
-                    continue
+                else:
+                    logging.info('Refilling assettypes and attributes. Sending reset signal to all processes.')
+                    self.postgis_connector.update_params(
+                        params={'assettypes_fill': True, 'assettypes_cursor': ''},
+                        connection=connection)
+                    global_vars.FILL_MANAGER_RESET_CALLED = True
             except BeheerderMissingError:
                 connection.rollback()
                 params = self.postgis_connector.get_params(connection)
@@ -90,7 +92,33 @@ class FastFiller(ABC):
                     self.postgis_connector.update_params(
                         params={'beheerders_fill': True, 'beheerders_cursor': ''},
                         connection=connection)
-                    raise ResetFillError()
+                    global_vars.FILL_MANAGER_RESET_CALLED = True
+            except ToezichtgroepMissingError:
+                connection.rollback()
+                params = self.postgis_connector.get_params(connection)
+                if 'toezichtgroepen_fill' in params and params['toezichtgroepen_fill']:
+                    logging.info('Toezichtgroep(en) missing while filling. This is normal behaviour. Trying again in 60 seconds')
+                    time.sleep(60)
+                    continue
+                else:
+                    logging.info('Refilling Toezichtgroepen. Sending reset signal to all processes.')
+                    self.postgis_connector.update_params(
+                        params={'toezichtgroepen_fill': True, 'toezichtgroepen_cursor': ''},
+                        connection=connection)
+                    global_vars.FILL_MANAGER_RESET_CALLED = True
+            except IdentiteitMissingError:
+                connection.rollback()
+                params = self.postgis_connector.get_params(connection)
+                if 'identiteiten_fill' in params and params['identiteiten_fill']:
+                    logging.info('Identiteit(en) missing while filling. This is normal behaviour. Trying again in 60 seconds')
+                    time.sleep(60)
+                    continue
+                else:
+                    logging.info('Refilling identiteiten. Sending reset signal to all processes.')
+                    self.postgis_connector.update_params(
+                        params={'identiteiten_fill': True, 'identiteiten_cursor': ''},
+                        connection=connection)
+                    global_vars.FILL_MANAGER_RESET_CALLED = True
 
             except Exception as ex:
                 connection.rollback()

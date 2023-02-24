@@ -7,6 +7,12 @@ from AssetFeedEventsCollector import AssetFeedEventsCollector
 from AssetFeedEventsProcessor import AssetFeedEventsProcessor
 from AssetUpdater import AssetUpdater
 from EMInfraImporter import EMInfraImporter
+from Exceptions.AssetTypeMissingError import AssetTypeMissingError
+from Exceptions.AttribuutMissingError import AttribuutMissingError
+from Exceptions.BeheerderMissingError import BeheerderMissingError
+from Exceptions.BestekMissingError import BestekMissingError
+from Exceptions.IdentiteitMissingError import IdentiteitMissingError
+from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 from PostGISConnector import PostGISConnector
 from SyncTimer import SyncTimer
 
@@ -64,6 +70,24 @@ class AssetSyncer:
 
                 try:
                     self.events_processor.process_events(eventsparams_to_process, connection)
+                except AssetTypeMissingError:
+                    # TODO
+                    raise NotImplementedError
+                except AttribuutMissingError:
+                    # TODO
+                    raise NotImplementedError
+                except BeheerderMissingError:
+                    # TODO
+                    raise NotImplementedError
+                except ToezichtgroepMissingError:
+                    # TODO
+                    raise NotImplementedError
+                except IdentiteitMissingError:
+                    # TODO
+                    raise NotImplementedError
+                except BestekMissingError:
+                    # TODO
+                    raise NotImplementedError
                 except Exception as exc:
                     traceback.print_exception(exc)
                     connection.rollback()

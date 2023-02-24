@@ -66,8 +66,8 @@ class SchadebeheerderGewijzigdProcessor(SpecificEventProcessor):
                 count_beheerders_missing = cursor.fetchone()[0]
                 if count_beheerders_missing > 0:
                     logging.error('raising BeheerderMissingError')
-                    # connection.rollback()
-                    # raise BeheerderMissingError()
+                    connection.rollback()
+                    raise BeheerderMissingError()
 
                 cursor.execute(update_beheerder_query)
 

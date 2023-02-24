@@ -1,10 +1,11 @@
 import concurrent
 import logging
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import urllib3
 
+import global_vars
 from AgentFiller import AgentFiller
 from AssetFiller import AssetFiller
 from AssetRelatieFiller import AssetRelatieFiller
@@ -32,6 +33,7 @@ class FillManager:
         self.eminfra_importer = eminfra_importer
         self.events_collector = FeedEventsCollector(eminfra_importer)
         self.events_processor = FeedEventsProcessor(connector, eminfra_importer)
+        global_vars.init()
 
     def fill_table(self, table_to_fill, page_size, fill, cursor):
         if not fill:
@@ -81,7 +83,6 @@ class FillManager:
 
         while True:
             try:
-                # tables_to_fill = ['agents', 'toezichtgroepen', 'beheerders'] # , ''
                 tables_to_fill = ['agents', 'bestekken', 'toezichtgroepen', 'identiteiten', 'relatietypes',
                                   'assettypes', 'beheerders', 'betrokkenerelaties', 'assetrelaties', 'assets',
                                   'bestekkoppelingen']
@@ -91,10 +92,8 @@ class FillManager:
                     self.create_params_for_table_fill(tables_to_fill, self.connector.main_connection)
                     params = self.connector.get_params(self.connector.main_connection)
 
-                tables_to_fill_filtered = []
-                for table_to_fill in tables_to_fill:
-                    if params[table_to_fill + '_fill']:
-                        tables_to_fill_filtered.append(table_to_fill)
+                tables_to_fill_filtered = [table_to_fill for table_to_fill in tables_to_fill
+                                           if params[table_to_fill + '_fill']]
 
                 # use multithreading
                 logging.info(f'filling {len(tables_to_fill_filtered)} tables ...')
@@ -104,6 +103,8 @@ class FillManager:
                                                cursor=params[table_to_fill + '_cursor'], page_size=params['pagesize'])
                                for table_to_fill in tables_to_fill_filtered]
                     concurrent.futures.wait(futures)
+
+                global_vars.FILL_MANAGER_RESET_CALLED = False
 
                 params = self.connector.get_params(self.connector.main_connection)
                 done = True

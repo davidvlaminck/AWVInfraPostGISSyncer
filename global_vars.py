@@ -1,0 +1,3 @@
+def init():
+    global FILL_MANAGER_RESET_CALLED
+    FILL_MANAGER_RESET_CALLED = False
