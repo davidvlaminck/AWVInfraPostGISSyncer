@@ -22,7 +22,8 @@ if __name__ == '__main__':
 
     connector = PostGISConnector(**db_settings)
 
-    requester = RequesterFactory.create_requester(settings=settings_manager.settings, auth_type='JWT', env=environment)
+    requester = RequesterFactory.create_requester(settings=settings_manager.settings, auth_type='JWT', env=environment,
+                                                  multiprocessing_safe=True)
     request_handler = RequestHandler(requester)
 
     eminfra_importer = EMInfraImporter(request_handler)
@@ -33,3 +34,5 @@ if __name__ == '__main__':
 
     # set up database users
     # install postgis: CREATE EXTENSION postgis;
+
+    # too many connections: https://www.cybertec-postgresql.com/en/terminating-database-connections-in-postgresql/

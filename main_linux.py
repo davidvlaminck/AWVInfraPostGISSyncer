@@ -21,7 +21,8 @@ if __name__ == '__main__':
 
     connector = PostGISConnector(**db_settings)
 
-    requester = RequesterFactory.create_requester(settings=settings_manager.settings, auth_type='JWT', env=environment)
+    requester = RequesterFactory.create_requester(settings=settings_manager.settings, auth_type='JWT', env=environment,
+                                                  multiprocessing_safe=True)
     request_handler = RequestHandler(requester)
 
     eminfra_importer = EMInfraImporter(request_handler)

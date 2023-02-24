@@ -47,11 +47,11 @@ class AssetUpdater:
         AssetUpdater.update_elek_aansluiting_of_synced_assets(connection=connection, asset_uuids=asset_uuids,
                                                               eminfra_importer=eminfra_importer)
 
+        logging.info(f'Updated or inserted {counter} assets, including legacy info.')
         return counter
 
     @staticmethod
     def update_elek_aansluiting_of_synced_assets(connection, asset_uuids, eminfra_importer):
-        start = time.time()
         joined_uuids = "','".join(asset_uuids)
         select_assets_for_elek_aansluiting_query = f"""SELECT assets.uuid 
             FROM assets 
@@ -63,8 +63,6 @@ class AssetUpdater:
             assets_for_elek_aansluiting = list(map(lambda x: x[0], cursor.fetchall()))
             elek_aansluiting_processor = ElekAansluitingGewijzigdProcessor(eminfra_importer=eminfra_importer)
             elek_aansluiting_processor.process(uuids=assets_for_elek_aansluiting, connection=connection)
-            end = time.time()
-            logging.info(f'updated elek aansluiting of {len(assets_for_elek_aansluiting)} assets in {str(round(end - start, 2))} seconds.')
 
     @staticmethod
     def perform_insert_update_from_values(connection, insert_only, values):

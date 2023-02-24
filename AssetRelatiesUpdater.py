@@ -89,19 +89,12 @@ class AssetRelatiesUpdater:
                 connection.rollback()
                 logging.error('raising AssetMissingError')
                 raise AssetMissingError()
-                cursor = connection.cursor()
-                bron_uuids = set(map(lambda x: x['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36], betrokkenerelatie_dicts_list))
-                asset_uuids = set(
-                    filter(lambda x: x['RelatieObject.bron']['@type'] != 'http://purl.org/dc/terms/Agent', bron_uuids))
-
-                select_assets_query = f"""SELECT uuid FROM public.assets WHERE uuid IN ('{"'::uuid,'".join(asset_uuids)}'::uuid);"""
-                cursor.execute(select_assets_query)
-                existing_asset_uuids = set(map(lambda x: x[0], cursor.fetchall()))
-                nonexisting_assets = list(asset_uuids - existing_asset_uuids)
-                raise AssetMissingError(nonexisting_assets)
             else:
                 connection.rollback()
                 raise exc
+        except Exception as exc:
+            logging.error(f'raising unhandled error: {exc}')
+            raise exc
 
         logging.info(f'done batch of {counter} assetrelaties')
         return counter

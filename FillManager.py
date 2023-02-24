@@ -349,51 +349,48 @@ class FillManager:
 
     def fill_bestekken(self, page_size, pagingcursor):
         logging.info(f'Filling bestekken table')
-        start = time.time()
+        connection = self.connector.get_connection()
+
         bestek_filler = BestekFiller(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
                                      resource='bestekken')
-        connection = self.connector.get_connection()
         bestek_filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
+
         self.connector.update_params(params={'bestekken_fill': False}, connection=connection)
         self.connector.kill_connection(connection)
-        end = time.time()
-        logging.info(f'Time for all bestekken: {round(end - start, 2)}')
 
     def fill_beheerders(self, page_size, pagingcursor):
         logging.info(f'Filling beheerders table')
-        start = time.time()
+        connection = self.connector.get_connection()
+
         beheerder_filler = BeheerderFiller(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
                                            resource='beheerders')
-        connection = self.connector.get_connection()
         beheerder_filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
+
         self.connector.update_params(params={'beheerders_fill': False}, connection=connection)
         self.connector.kill_connection(connection)
-        end = time.time()
-        logging.info(f'Time for all beheerders: {round(end - start, 2)}')
+
 
     def fill_identiteiten(self, page_size, pagingcursor):
         logging.info(f'Filling identiteiten table')
-        start = time.time()
+        connection = self.connector.get_connection()
+
         identiteit_filler = IdentiteitFiller(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
                                              resource='identiteiten')
-        connection = self.connector.get_connection()
         identiteit_filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
+
         self.connector.update_params(params={'identiteiten_fill': False}, connection=connection)
         self.connector.kill_connection(connection)
-        end = time.time()
-        logging.info(f'time for all identiteiten: {round(end - start, 2)}')
 
     def fill_toezichtgroepen(self, page_size, pagingcursor):
         logging.info(f'Filling toezichtgroepen table')
-        start = time.time()
+        connection = self.connector.get_connection()
+
         toezichtgroep_filler = ToezichtgroepFiller(eminfra_importer=self.eminfra_importer,
                                                    postgis_connector=self.connector, resource='toezichtgroepen')
-        connection = self.connector.get_connection()
         toezichtgroep_filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
+
         self.connector.update_params(params={'toezichtgroepen_fill': False}, connection=connection)
         self.connector.kill_connection(connection)
-        end = time.time()
-        logging.info(f'Time for all toezichtgroepen: {round(end - start, 2)}')
 
     def fill_agents(self, page_size, pagingcursor):
         logging.info(f'Filling agents table')

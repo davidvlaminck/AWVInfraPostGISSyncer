@@ -86,35 +86,19 @@ class BetrokkeneRelatiesUpdater:
                 connection.rollback()
                 logging.error('raising AgentMissingError')
                 raise AgentMissingError()
-                cursor = connection.cursor()
-                agent_uuids = set(map(lambda x: x['RelatieObject.doel']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36], betrokkenerelatie_dicts_list))
-                more_agent_uuids = set(map(lambda x: x['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36],
-                    filter(lambda x: x['RelatieObject.bron']['@type'] == 'http://purl.org/dc/terms/Agent', betrokkenerelatie_dicts_list)))
-                agent_uuids.union(more_agent_uuids)
-                select_agents_query = f"""SELECT uuid FROM public.agents WHERE uuid IN ('{"'::uuid,'".join(agent_uuids)}'::uuid);"""
-                cursor.execute(select_agents_query)
-                existing_agent_uuids = set(map(lambda x: x[0], cursor.fetchall()))
-                nonexisting_agents = list(agent_uuids - existing_agent_uuids)
-                raise AgentMissingError(nonexisting_agents)
+
             elif first_line == 'insert or update on table "betrokkenerelaties" violates foreign key constraint "betrokkenerelaties_bron_assets_fkey"':
                 if '\n' in str(exc):
                     logging.error(str(exc).split('\n')[1])
                 connection.rollback()
                 logging.error('raising AssetMissingError')
                 raise AssetMissingError()
-                cursor = connection.cursor()
-                bron_uuids = set(map(lambda x: x['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36], betrokkenerelatie_dicts_list))
-                asset_uuids = set(
-                    filter(lambda x: x['RelatieObject.bron']['@type'] != 'http://purl.org/dc/terms/Agent', bron_uuids))
-
-                select_assets_query = f"""SELECT uuid FROM public.assets WHERE uuid IN ('{"'::uuid,'".join(asset_uuids)}'::uuid);"""
-                cursor.execute(select_assets_query)
-                existing_asset_uuids = set(map(lambda x: x[0], cursor.fetchall()))
-                nonexisting_assets = list(asset_uuids - existing_asset_uuids)
-                raise AssetMissingError(nonexisting_assets)
             else:
                 connection.rollback()
                 raise exc
+        except Exception as exc:
+            logging.error(f'raising unhandled error: {exc}')
+            raise exc
 
         logging.info(f'done batch of {counter} betrokkenerelaties')
         return counter
