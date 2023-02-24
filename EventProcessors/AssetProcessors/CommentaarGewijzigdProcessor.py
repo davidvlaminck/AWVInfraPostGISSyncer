@@ -35,7 +35,7 @@ class CommentaarGewijzigdProcessor(SpecificEventProcessor):
             if notitie is None:
                 values += 'NULL'
             else:
-                notitie = notitie.replace("'","''")
+                notitie = notitie.replace("'", "''")
                 values += f"'{notitie}'"
             values = values + '),'
         return values, counter

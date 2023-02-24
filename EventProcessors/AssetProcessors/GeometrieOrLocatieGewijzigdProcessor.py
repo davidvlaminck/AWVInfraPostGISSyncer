@@ -2,6 +2,7 @@ import logging
 import time
 
 from EventProcessors.AssetProcessors.SpecificEventProcessor import SpecificEventProcessor
+from Helpers import turn_list_of_lists_into_string
 
 
 class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
@@ -35,11 +36,9 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
 
     @staticmethod
     def create_geometrie_values_string_from_dicts(assets_dicts):
-        values = ''
         counter = 0
+        values_array = []
         for asset_dict in assets_dicts:
-            uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]
-
             if 'geo:Geometrie.log' not in asset_dict:
                 continue
 
@@ -47,7 +46,8 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
             for geometrie_dict in asset_dict['geo:Geometrie.log']:
                 niveau = geometrie_dict.get('geo:DtcLog.niveau')
                 niveau = niveau.replace('https://geo.data.wegenenverkeer.be/id/concept/KlLogNiveau/', '')
-                values += f"('{uuid}',{niveau},"
+                record_array = [f"'{asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]}'",
+                                f"'{niveau}'"]
 
                 bron = None
                 if 'geo:DtcLog.bron' in geometrie_dict:
@@ -73,19 +73,22 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
 
                 for value in [gaVersie, nauwkeurigheid, bron, geometrie, overerving]:
                     if value is None or value == '':
-                        values += 'NULL,'
+                        record_array.append('NULL')
                     else:
                         value = value.replace("'", "''")
-                        values += f"'{value}',"
-                values = values[:-1] + '),'
-        return values, counter
+                        record_array.append(f"'{value}'")
+
+                values_array.append(record_array)
+
+        values_string = turn_list_of_lists_into_string(values_array)
+        return values_string, counter
 
     @staticmethod
     def perform_geometrie_update_with_values(cursor, values):
         if values != '':
             insert_query = f"""
             WITH s (assetUuid, geo_niveau, ga_versie, nauwkeurigheid, bron, wkt_string, overerving_ids) 
-                AS (VALUES {values[:-1]}),
+                AS (VALUES {values}),
             to_insert AS (
                 SELECT assetUuid::uuid AS assetUuid, geo_niveau::integer, ga_versie, nauwkeurigheid, bron, wkt_string, overerving_ids
                 FROM s)        
@@ -105,19 +108,19 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
 
         assets_to_update = set(map(lambda a: a[0], cursor.fetchall()))
 
-        insert_values = ''
-        update_values = ''
+        insert_values_array = []
+        update_values_array = []
+
         counter = 0
         for asset_dict in assets_dicts:
             counter += 1
             uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]
-
-            values = f"('{uuid}',"
+            record_array = [f"'{uuid}'"]
 
             omschrijving = asset_dict.get('loc:Locatie.omschrijving')
             geometrie = asset_dict.get('loc:Locatie.geometrie')
-
             locatie_dict = asset_dict.get('loc:Locatie.puntlocatie')
+
             if locatie_dict is not None and locatie_dict != '':
                 bron = None
                 if 'loc:DtcPuntlocatie.bron' in locatie_dict:
@@ -160,51 +163,50 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
 
                 for value in [omschrijving, geometrie, bron, precisie]:
                     if value is None or value == '':
-                        values += 'NULL,'
+                        record_array.append("NULL")
                     else:
                         value = value.replace("'", "''")
-                        values += f"'{value}',"
+                        record_array.append(f"'{value}'")
                 for value in [x, y, z]:
                     if value is None or value == '':
-                        values += 'NULL,'
+                        record_array.append("NULL")
                     else:
-                        values += f"{value},"
+                        record_array.append(f"{value}")
                 for value in [straat, nummer, bus, postcode, gemeente, provincie, ident8, ident2]:
                     if value is None or value == '':
-                        values += 'NULL,'
+                        record_array.append("NULL")
                     else:
                         value = value.replace("'", "''")
-                        values += f"'{value}',"
+                        record_array.append(f"'{value}'")
                 for value in [referentiepaal_opschrift, referentiepaal_afstand]:
                     if value is None or value == '':
-                        values += 'NULL,'
+                        record_array.append("NULL")
                     else:
-                        values += f"{value},"
+                        record_array.append(f"{value}")
                 for value in [straatnaam, weg_gemeente]:
                     if value is None or value == '':
-                        values += 'NULL,'
+                        record_array.append("NULL")
                     else:
                         value = value.replace("'", "''")
-                        values += f"'{value}',"
-                values = values[:-1] + '),'
-                if uuid not in assets_to_update:
-                    insert_values += values
-                else:
-                    update_values += values
+                        record_array.append(f"'{value}'")
             else:
                 for value in [omschrijving, geometrie]:
                     if value is None or value == '':
-                        values += 'NULL,'
+                        record_array.append("NULL")
                     else:
                         value = value.replace("'", "''")
-                        values += f"'{value}',"
-                values = values + ' NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),'
-                if uuid not in assets_to_update:
-                    insert_values += values
-                else:
-                    update_values += values
+                        record_array.append(f"'{value}'")
+                for i in range(17):
+                    record_array.append("NULL")
 
-        return insert_values[:-1], update_values[:-1], counter
+            if uuid not in assets_to_update:
+                insert_values_array.append(record_array)
+            else:
+                update_values_array.append(record_array)
+
+        insert_values = turn_list_of_lists_into_string(insert_values_array)
+        update_values = turn_list_of_lists_into_string(update_values_array)
+        return insert_values, update_values, counter
 
     @staticmethod
     def perform_locatie_update_with_values(cursor, insert_values, update_values):

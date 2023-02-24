@@ -1,11 +1,13 @@
 import logging
 import time
+from typing import Dict
 
 import psycopg2
 
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.AssetProcessors.SpecificEventProcessor import SpecificEventProcessor
 from Exceptions.AttribuutMissingError import AttribuutMissingError
+from Helpers import turn_list_of_lists_into_string
 
 
 class AttributenGewijzigdProcessor(SpecificEventProcessor):
@@ -25,12 +27,12 @@ class AttributenGewijzigdProcessor(SpecificEventProcessor):
     @staticmethod
     def process_dicts(connection, asset_uuids, asset_dicts):
         AttributenGewijzigdProcessor.remove_existing_attributes(connection=connection, asset_uuids=asset_uuids)
-        values, amount = AttributenGewijzigdProcessor.create_values_string_from_dicts(assets_dicts=asset_dicts)
-        AttributenGewijzigdProcessor.perform_update_with_values(connection=connection, values=values)
+        values_string, amount = AttributenGewijzigdProcessor.create_values_string_from_dicts(assets_dicts=asset_dicts)
+        AttributenGewijzigdProcessor.perform_update_with_values(connection=connection, values_string=values_string)
         return amount
 
     @staticmethod
-    def remove_existing_attributes(asset_uuids, connection):
+    def remove_existing_attributes(asset_uuids: [str], connection):
         if len(asset_uuids) == 0:
             return
         delete_query = "DELETE FROM public.attribuutWaarden WHERE assetUuid IN (VALUES ('" + "'::uuid),('".join(
@@ -40,9 +42,9 @@ class AttributenGewijzigdProcessor(SpecificEventProcessor):
             cursor.execute(delete_query)
 
     @staticmethod
-    def create_values_string_from_dicts(assets_dicts):
-        values = ''
+    def create_values_string_from_dicts(assets_dicts: [Dict]):
         counter = 0
+        values_array = []
         for asset_dict in assets_dicts:
             counter += 1
             asset_uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]
@@ -67,15 +69,17 @@ class AttributenGewijzigdProcessor(SpecificEventProcessor):
                 if not isinstance(value, str):
                     value = str(value)
                 value = value.replace("'", "''")
-                values += f"('{asset_uuid}','{key}', '{value}'),\n"
+                values_array.append([f"'{asset_uuid}'", f"'{key}'", f"'{value}'"])
 
-        return values, counter
+        values_string = turn_list_of_lists_into_string(values_array)
+
+        return values_string, counter
 
     @staticmethod
-    def perform_update_with_values(connection, values):
+    def perform_update_with_values(connection, values_string: str):
         insert_query = f"""
 WITH s (assetUuid, attribute_name, waarde) 
-    AS (VALUES {values[:-2]}),
+    AS (VALUES {values_string}),
 to_insert AS (
     SELECT assetUuid::uuid, waarde, attributen.uuid::uuid AS attribuutUuid 
     FROM s 
@@ -91,4 +95,3 @@ FROM to_insert;"""
                 raise AttribuutMissingError()
             else:
                 raise exc
-
