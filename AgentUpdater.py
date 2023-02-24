@@ -1,33 +1,42 @@
 import json
 from typing import Iterator
 
-from Helpers import peek_generator
+from Helpers import peek_generator, turn_list_of_lists_into_string
 
 
 class AgentUpdater:
     @staticmethod
-    def update_objects(object_generator: Iterator[dict], connection, insert_only: bool = False, safe_insert: bool = False) -> int:
+    def update_objects(object_generator: Iterator[dict], connection, insert_only: bool = False,
+                       safe_insert: bool = False) -> int:
         object_generator = peek_generator(object_generator)
         if object_generator is None:
             return 0
 
-        values = ''
+        values_array = []
+
         counter = 0
         for agent_dict in object_generator:
             counter += 1
-            agent_uuid = agent_dict['@id'].split('/')[-1][0:36]
+            record_array = [f"'{agent_dict['@id'].split('/')[-1][0:36]}'"]
+
             agent_name = agent_dict['purl:Agent.naam'].replace("'", "''")
-            agent_actief = agent_dict.get('AIMDBStatus.isActief', True)
+            record_array.append(f"'{agent_name}'")
+
+            record_array.append(f"{agent_dict.get('AIMDBStatus.isActief', True)}")
+
             contact_info_value = 'NULL'
             if 'purl:Agent.contactinfo' in agent_dict:
                 contact_info = agent_dict['purl:Agent.contactinfo']
                 contact_info_value = "'" + json.dumps(contact_info).replace("'", "''") + "'"
 
-            values += f"('{agent_uuid}','{agent_name}',{agent_actief},{contact_info_value}),"
+            record_array.append(f"{contact_info_value}")
+            values_array.append(record_array)
+
+        values_string = turn_list_of_lists_into_string(values_array)
 
         insert_query = f"""
         WITH s (uuid, naam, actief, contact_info) 
-            AS (VALUES {values[:-1]}),
+            AS (VALUES {values_string}),
         t AS (
             SELECT uuid::uuid AS uuid, naam, actief, contact_info::json AS contact_info
             FROM s),
@@ -44,7 +53,7 @@ class AgentUpdater:
         if not insert_only:
             update_query = f"""
             WITH s (uuid, naam, actief, contact_info) 
-                AS (VALUES {values[:-1]}),
+                AS (VALUES {values_string}),
             t AS (
                 SELECT uuid::uuid AS uuid, naam, actief, contact_info::json AS contact_info
                 FROM s),

@@ -1,6 +1,6 @@
 from typing import Iterator
 
-from Helpers import peek_generator
+from Helpers import peek_generator, turn_list_of_lists_into_string
 
 
 class RelatieTypeUpdater:
@@ -10,28 +10,32 @@ class RelatieTypeUpdater:
         if object_generator is None:
             return
 
-        values = ''
+        values_array = []
         for relatietype_dict in object_generator:
-            uuid = relatietype_dict['uuid']
-            naam = relatietype_dict['naam']
+            record_array = [f"'{relatietype_dict['uuid']}'",
+                            f"'{relatietype_dict['naam']}'"]
+
             label = relatietype_dict.get('label', '')
             definitie = relatietype_dict.get('definitie', '').replace("'", "''")
-            actief = relatietype_dict['actief']
-            gericht = relatietype_dict['gericht']
             uri = relatietype_dict.get('uri', '')
 
-            values += f"('{uuid}','{naam}',"
-            null_values = [uri, label, definitie]
-            for null_value in null_values:
-                if null_value != '':
-                    values += f"'{null_value}',"
+            nullables_values = [uri, label, definitie]
+            for nullable_value in nullables_values:
+                if nullable_value != '':
+                    record_array.append(f"'{nullable_value}'")
                 else:
-                    values += "NULL,"
-            values += f"{actief},{gericht}),"
+                    record_array.append("NULL")
+
+            record_array.append(f"{relatietype_dict['actief']}")
+            record_array.append(f"{relatietype_dict['gericht']}")
+
+            values_array.append(record_array)
+
+        values_string = turn_list_of_lists_into_string(values_array)
 
         insert_query = f"""
 WITH s (uuid, naam, uri, label, definitie, actief, gericht) 
-    AS (VALUES {values[:-1]}),
+    AS (VALUES {values_string}),
 t AS (
     SELECT uuid::uuid AS uuid, naam, uri, label, definitie, actief, gericht
     FROM s),
@@ -46,7 +50,7 @@ FROM to_insert;"""
 
         update_query = f"""
 WITH s (uuid, naam, uri, label, definitie, actief, gericht)
-    AS (VALUES {values[:-1]}),
+    AS (VALUES {values_string}),
 t AS (
     SELECT uuid::uuid AS uuid, naam, uri, label, definitie, actief, gericht
     FROM s),

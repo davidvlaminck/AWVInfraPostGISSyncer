@@ -5,7 +5,7 @@ from typing import Iterator
 import psycopg2
 
 from Exceptions.AssetMissingError import AssetMissingError
-from Helpers import peek_generator
+from Helpers import peek_generator, turn_list_of_lists_into_string
 
 
 class AssetRelatiesUpdater:
@@ -15,25 +15,24 @@ class AssetRelatiesUpdater:
         if object_generator is None:
             return 0
 
-        values = ''
+        values_array = []
         counter = 0
         for assetrelatie_dict in object_generator:
             counter += 1
-            values += f"('{assetrelatie_dict['@id'].replace('https://data.awvvlaanderen.be/id/assetrelatie/','')[0:36]}'," \
-                      f" '{assetrelatie_dict['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36]}', " \
-                      f"'{assetrelatie_dict['RelatieObject.doel']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36]}',"
+            record_array = [
+                f"'{assetrelatie_dict['@id'].replace('https://data.awvvlaanderen.be/id/assetrelatie/', '')[0:36]}'",
+                f"'{assetrelatie_dict['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]}'",
+                f"'{assetrelatie_dict['RelatieObject.doel']['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]}'"]
 
             if 'RelatieObject.typeURI' in assetrelatie_dict:
-                relatie_type_uri = assetrelatie_dict['RelatieObject.typeURI']
+                record_array.append(f"'{assetrelatie_dict['RelatieObject.typeURI']}'")
             else:
-                relatie_type_uri = assetrelatie_dict['@type']
-
-            values += f"'{relatie_type_uri}',"
+                record_array.append(f"'{assetrelatie_dict['@type']}'")
 
             if 'AIMDBStatus.isActief' in assetrelatie_dict:
-                values += f"{assetrelatie_dict['AIMDBStatus.isActief']},"
+                record_array.append(f"'{assetrelatie_dict['AIMDBStatus.isActief']}'")
             else:
-                values += 'TRUE,'
+                record_array.append("TRUE")
 
             attributen_dict = assetrelatie_dict.copy()
             for key in ['@type', '@id', "RelatieObject.doel", "RelatieObject.assetId", "AIMDBStatus.isActief",
@@ -45,14 +44,18 @@ class AssetRelatiesUpdater:
                 attributen = ''
 
             if attributen == '':
-                values += "NULL),"
+                record_array.append("NULL")
             else:
-                values += f"'{attributen}'),"
+                record_array.append(f"'{attributen}'")
+
+            values_array.append(record_array)
+
+        values_string = turn_list_of_lists_into_string(values_array)
 
         if safe_insert:
             insert_query = f"""
             WITH s (uuid, bronUuid, doelUuid, relatieTypeUri, actief, attributen) 
-                AS (VALUES {values[:-1]}),
+                AS (VALUES {values_string}),
             to_insert AS (
                 SELECT s.uuid::uuid AS uuid, bronUuid::uuid AS bronUuid, doelUuid::uuid AS doelUuid, 
                     relatietypes.uuid as relatietype, s.actief, attributen::json as attributen
@@ -66,7 +69,7 @@ class AssetRelatiesUpdater:
         else:
             insert_query = f"""
             WITH s (uuid, bronUuid, doelUuid, relatieTypeUri, actief, attributen) 
-                AS (VALUES {values[:-1]}),
+                AS (VALUES {values_string}),
             to_insert AS (
                 SELECT s.uuid::uuid AS uuid, s.bronUuid::uuid AS bronUuid, s.doelUuid::uuid AS doelUuid, 
                     relatietypes.uuid as relatietype, s.actief, s.attributen::json as attributen

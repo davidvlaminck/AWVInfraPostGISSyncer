@@ -2,6 +2,10 @@ import itertools
 from itertools import chain, islice
 
 
+def turn_list_of_lists_into_string(arr: [[]]) -> str:
+    return ','.join('(' + ','.join(row) + ')' for row in arr)
+
+
 def peek_generator(iterable):
     try:
         first = next(iterable)

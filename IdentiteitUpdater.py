@@ -1,6 +1,6 @@
 from typing import Iterator
 
-from Helpers import peek_generator
+from Helpers import peek_generator, turn_list_of_lists_into_string
 
 
 class IdentiteitUpdater:
@@ -10,32 +10,34 @@ class IdentiteitUpdater:
         if object_generator is None:
             return
 
-        values = ''
+        values_array = []
         for identiteit_dict in object_generator:
-            identiteit_uuid = identiteit_dict['uuid']
+            record_array = [f"'{identiteit_dict['uuid']}'"]
+
             identiteit_naam = identiteit_dict.get('naam', '').replace("'", "''")
             identiteit_voornaam = identiteit_dict.get('voornaam', '').replace("'", "''")
             identiteit_gebruikersnaam = identiteit_dict.get('gebruikersnaam', '').replace("'", "''")
             identiteit_type = identiteit_dict.get('_type', '')
             identiteit_vo_id = identiteit_dict.get('voId', '')
             identiteit_bron = identiteit_dict.get('bron', '')
-            identiteit_actief = identiteit_dict['actief']
-            identiteit_systeem = identiteit_dict['systeem']
-
-            values += f"('{identiteit_uuid}',"
 
             for val in [identiteit_naam, identiteit_voornaam, identiteit_gebruikersnaam, identiteit_type,
                         identiteit_vo_id, identiteit_bron]:
                 if val == '':
-                    values += 'NULL,'
+                    record_array.append(f"NULL")
                 else:
-                    values += f"'{val}',"
+                    record_array.append(f"'{val}'")
 
-            values += f"{identiteit_actief},{identiteit_systeem}),"
+            record_array.append(f"{identiteit_dict['actief']}")
+            record_array.append(f"{identiteit_dict['systeem']}")
+
+            values_array.append(record_array)
+
+        values_string = turn_list_of_lists_into_string(values_array)
 
         insert_query = f"""
 WITH s (uuid, naam, voornaam, gebruikersnaam, typeIdentiteit, voId, bron, actief, systeem) 
-    AS (VALUES {values[:-1]}),
+    AS (VALUES {values_string}),
 t AS (
     SELECT uuid::uuid AS uuid, naam, voornaam, gebruikersnaam, typeIdentiteit, voId, bron, actief, systeem
     FROM s),
@@ -51,7 +53,7 @@ FROM to_insert;"""
 
         update_query = f"""
 WITH s (uuid, naam, voornaam, gebruikersnaam, typeIdentiteit, voId, bron, actief, systeem) 
-    AS (VALUES {values[:-1]}),
+    AS (VALUES {values_string}),
 t AS (
     SELECT uuid::uuid AS uuid, naam, voornaam, gebruikersnaam, typeIdentiteit, voId, bron, actief, systeem
     FROM s),

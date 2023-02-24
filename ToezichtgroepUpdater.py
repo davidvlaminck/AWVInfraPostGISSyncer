@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Iterator
 
-from Helpers import peek_generator
+from Helpers import peek_generator, turn_list_of_lists_into_string
 
 
 class ToezichtgroepUpdater:
@@ -11,12 +11,17 @@ class ToezichtgroepUpdater:
         if object_generator is None:
             return
 
-        values = ''
+        values_array = []
         for toezichtgroep_dict in object_generator:
-            toezichtgroep_uuid = toezichtgroep_dict['uuid']
+            record_array = [f"'{toezichtgroep_dict['uuid']}'"]
+
             toezichtgroep_naam = toezichtgroep_dict['naam'].replace("'", "''")
+            record_array.append(f"'{toezichtgroep_naam}'")
             toezichtgroep_ref = toezichtgroep_dict['referentie'].replace("'", "''")
-            toezichtgroep_type = toezichtgroep_dict['_type']
+            record_array.append(f"'{toezichtgroep_ref}'")
+
+            record_array.append(f"'{toezichtgroep_dict['_type']}'")
+
             toezichtgroep_actief = True
             if 'actiefInterval' not in toezichtgroep_dict:
                 toezichtgroep_actief = False
@@ -34,11 +39,15 @@ class ToezichtgroepUpdater:
                             if tot_date < datetime.now():
                                 toezichtgroep_actief = False
 
-            values += f"('{toezichtgroep_uuid}','{toezichtgroep_naam}','{toezichtgroep_ref}','{toezichtgroep_type}',{toezichtgroep_actief}),"
+            record_array.append(f"{toezichtgroep_actief}")
+
+            values_array.append(record_array)
+
+        values_string = turn_list_of_lists_into_string(values_array)
 
         insert_query = f"""
 WITH s (uuid, naam, referentie, typeGroep, actief) 
-    AS (VALUES {values[:-1]}),
+    AS (VALUES {values_string}),
 t AS (
     SELECT uuid::uuid AS uuid, naam, referentie, typeGroep, actief
     FROM s),
@@ -53,7 +62,7 @@ FROM to_insert;"""
 
         update_query = f"""
 WITH s (uuid, naam, referentie, typeGroep, actief) 
-    AS (VALUES {values[:-1]}),
+    AS (VALUES {values_string}),
 t AS (
     SELECT uuid::uuid AS uuid, naam, referentie, typeGroep, actief
     FROM s),

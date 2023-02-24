@@ -6,7 +6,7 @@ import psycopg2
 
 from Exceptions.AgentMissingError import AgentMissingError
 from Exceptions.AssetMissingError import AssetMissingError
-from Helpers import peek_generator
+from Helpers import peek_generator, turn_list_of_lists_into_string
 
 
 class BetrokkeneRelatiesUpdater:
@@ -16,52 +16,59 @@ class BetrokkeneRelatiesUpdater:
         if object_generator is None:
             return 0
 
-        values = ''
+        values_array = []
         counter = 0
         for betrokkenerelatie_dict in object_generator:
             counter += 1
-            values += f"('{betrokkenerelatie_dict['@id'].replace('https://data.awvvlaanderen.be/id/assetrelatie/','')[0:36]}', " \
-                      f"'{betrokkenerelatie_dict['RelatieObject.doel']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36]}', " \
-                      f"'{betrokkenerelatie_dict['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36]}',"
+
+            record_array = [
+                f"'{betrokkenerelatie_dict['@id'].replace('https://data.awvvlaanderen.be/id/assetrelatie/', '')[0:36]}'",
+                f"'{betrokkenerelatie_dict['RelatieObject.doel']['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]}'",
+                f"'{betrokkenerelatie_dict['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]}'"]
+
             if 'HeeftBetrokkene.rol' in betrokkenerelatie_dict:
-                values += f"'{betrokkenerelatie_dict['HeeftBetrokkene.rol'].replace('https://wegenenverkeer.data.vlaanderen.be/id/concept/KlBetrokkenheidRol/','')}',"
+                record_array.append(f"'{betrokkenerelatie_dict['HeeftBetrokkene.rol'].replace('https://wegenenverkeer.data.vlaanderen.be/id/concept/KlBetrokkenheidRol/','')}'")
             else:
-                values += "NULL,"
+                record_array.append("NULL")
 
             if betrokkenerelatie_dict['RelatieObject.bron']['@type'] == 'http://purl.org/dc/terms/Agent':
-                values += f"'{betrokkenerelatie_dict['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36]}', NULL, "
+                record_array.append(f"'{betrokkenerelatie_dict['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36]}'")
+                record_array.append("NULL")
             else:
-                values += f"NULL, '{betrokkenerelatie_dict['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36]}', "
+                record_array.append("NULL")
+                record_array.append(f"'{betrokkenerelatie_dict['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36]}'")
 
             if 'AIMDBStatus.isActief' in betrokkenerelatie_dict:
-                values += f"{betrokkenerelatie_dict['AIMDBStatus.isActief']},"
+                record_array.append(f"{betrokkenerelatie_dict['AIMDBStatus.isActief']}")
             else:
-                values += 'TRUE,'
+                record_array.append("TRUE")
 
             contact_info_value = 'NULL'
             if 'HeeftBetrokkene.specifiekeContactinfo' in betrokkenerelatie_dict:
                 contact_info = betrokkenerelatie_dict['HeeftBetrokkene.specifiekeContactinfo']
                 contact_info_value = "'" + json.dumps(contact_info).replace("'", "''") + "'"
-            values += f"{contact_info_value},"
+            record_array.append(contact_info_value)
             
             start_datum = betrokkenerelatie_dict.get('HeeftBetrokkene.datumAanvang', None)
             eind_datum = betrokkenerelatie_dict.get('HeeftBetrokkene.datumEinde', None)
 
             if start_datum is None or start_datum == '':
-                values += 'NULL,'
+                record_array.append("NULL")
             else:
-                values += f"'{start_datum}',"
+                record_array.append(f"'{start_datum}'")
 
             if eind_datum is None or eind_datum == '':
-                values += 'NULL'
+                record_array.append("NULL")
             else:
-                values += f"'{eind_datum}'"
+                record_array.append(f"'{eind_datum}'")
 
-            values += "),"
+            values_array.append(record_array)
+
+        values_string = turn_list_of_lists_into_string(values_array)
 
         insert_query = f"""
         WITH s (uuid, doelUuid, bronUuid, rol, bronAgentUuid, bronAssetUuid, actief, contact_info, startDatum, 
-            eindDatum) AS (VALUES {values[:-1]}),
+            eindDatum) AS (VALUES {values_string}),
         to_insert AS (
             SELECT uuid::uuid AS uuid, doelUuid::uuid AS doelUuid, bronUuid::uuid AS bronUuid, rol, 
                 bronAgentUuid::uuid AS bronAgentUuid, bronAssetUuid::uuid AS bronAssetUuid, actief, 

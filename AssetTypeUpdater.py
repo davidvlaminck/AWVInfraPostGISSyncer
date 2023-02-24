@@ -1,7 +1,7 @@
 from typing import Iterator
 
 from EMInfraImporter import EMInfraImporter
-from Helpers import peek_generator
+from Helpers import peek_generator, turn_list_of_lists_into_string
 from PostGISConnector import PostGISConnector
 
 
@@ -15,20 +15,28 @@ class AssetTypeUpdater:
         if object_generator is None:
             return
 
+        values_array = []
         values = ''
         for assettype_dict in object_generator:
-            uuid = assettype_dict['uuid']
-            name = assettype_dict['naam'].replace("'", "''")
-            label = assettype_dict['afkorting'].replace("'", "''")
-            uri = assettype_dict['uri'].replace("'", "''")
-            definitie = assettype_dict['definitie'].replace("'", "''")
-            actief = assettype_dict['actief']
+            record_array = [f"'{assettype_dict['uuid']}'"]
 
-            values += f"('{uuid}','{name}','{label}','{uri}','{definitie}',{actief}),"
+            name = assettype_dict['naam'].replace("'", "''")
+            record_array.append(f"'{name}'")
+            label = assettype_dict['afkorting'].replace("'", "''")
+            record_array.append(f"'{label}'")
+            uri = assettype_dict['uri'].replace("'", "''")
+            record_array.append(f"'{uri}'")
+            definitie = assettype_dict['definitie'].replace("'", "''")
+            record_array.append(f"'{definitie}'")
+            record_array.append(f"{assettype_dict['actief']}")
+
+            values_array.append(record_array)
+
+        values_string = turn_list_of_lists_into_string(values_array)
 
         insert_query = f"""
             WITH s (uuid, naam, label, uri, definitie, actief) 
-                AS (VALUES {values[:-1]}),
+                AS (VALUES {values_string}),
             t AS (
                 SELECT uuid::uuid AS uuid, naam, label, uri, definitie, actief
                 FROM s),
@@ -43,7 +51,7 @@ class AssetTypeUpdater:
 
         update_query = f"""
             WITH s (uuid, naam, label, uri, definitie, actief)  
-                AS (VALUES {values[:-1]}),
+                AS (VALUES {values_string}),
             t AS (
                 SELECT uuid::uuid AS uuid, naam, label, uri, definitie, actief
                 FROM s),
@@ -326,28 +334,36 @@ class AssetTypeUpdater:
         self.create_koppeling(assettype_uuid=assettype_uuid, attribuut=attribuut, cursor=cursor)
 
     @staticmethod
-    def update_attribuut(attribuut, cursor):
+    def create_values_string_from_attribuut(attribuut):
         eig = attribuut['eigenschap']
-        uuid = eig['uuid']
-        actief = eig['actief']
-        uri = eig['uri']
+        values_array = []
+        record_array = [f"'{eig['uuid']}'", f"{eig['actief']}", f"'{eig['uri']}'"]
         naam = eig['naam'].replace("'", "''")
+        record_array.append(f"'{naam}'")
         label = eig.get('label', '').replace("'", "''")
+        record_array.append(f"'{label}'")
         definitie = eig['definitie'].replace("'", "''")
-        categorie = eig['categorie']
-
+        record_array.append(f"'{definitie}'")
+        record_array.append(f"'{eig['categorie']}'")
         if 'datatype' in eig['type']:
-            datatype_naam = eig['type']['datatype']['naam']
-            datatype_type = eig['type']['datatype']['type']['_type']
+            record_array.append(f"'{eig['type']['datatype']['naam']}'")
+            record_array.append(f"'{eig['type']['datatype']['type']['_type']}'")
         else:
-            datatype_naam = 'legacy' + eig['type']['_type']
-            datatype_type = 'legacy' + eig['type']['_type']
-        kardinaliteit_min = eig['kardinaliteitMin']
-        kardinaliteit_max = eig.get('kardinaliteitMax', '*')
-        values = f"('{uuid}',{actief},'{uri}','{naam}','{label}','{definitie}','{categorie}','{datatype_naam}','{datatype_type}','{kardinaliteit_min}','{kardinaliteit_max}') "
+            record_array.append(f"'{'legacy' + eig['type']['_type']}'")
+            record_array.append(f"'{'legacy' + eig['type']['_type']}'")
+        record_array.append(f"'{eig['kardinaliteitMin']}'")
+        record_array.append(f"'{eig.get('kardinaliteitMax', '*')}'")
+        values_array.append(record_array)
+        values_string = turn_list_of_lists_into_string(values_array)
+        return values_string
+
+    @staticmethod
+    def update_attribuut(attribuut, cursor):
+        values_string = AssetTypeUpdater.create_values_string_from_attribuut(attribuut)
+
         update_query = f"""
     WITH s (uuid, actief, uri, naam, label, definitie, categorie, datatypeNaam, datatypeType, kardinaliteitMin, kardinaliteitMax) 
-        AS (VALUES {values}),
+        AS (VALUES {values_string}),
     to_update AS (
         SELECT uuid::uuid AS uuid, actief, uri, naam, label, definitie, categorie, datatypeNaam, datatypeType, kardinaliteitMin, kardinaliteitMax
         FROM s)
@@ -361,27 +377,11 @@ class AssetTypeUpdater:
 
     @staticmethod
     def insert_attribuut(attribuut, cursor):
-        eig = attribuut['eigenschap']
-        uuid = eig['uuid']
-        actief = eig['actief']
-        uri = eig['uri']
-        naam = eig['naam'].replace("'", "''")
-        label = eig.get('label', '').replace("'", "''")
-        definitie = eig['definitie'].replace("'", "''")
-        categorie = eig['categorie']
+        values_string = AssetTypeUpdater.create_values_string_from_attribuut(attribuut)
 
-        if 'datatype' in eig['type']:
-            datatypeNaam = eig['type']['datatype']['naam']
-            datatypeType = eig['type']['datatype']['type']['_type']
-        else:
-            datatypeNaam = 'legacy' + eig['type']['_type']
-            datatypeType = 'legacy' + eig['type']['_type']
-        kardinaliteitMin = eig['kardinaliteitMin']
-        kardinaliteitMax = eig.get('kardinaliteitMax', '*')
-        values = f"('{uuid}',{actief},'{uri}','{naam}','{label}','{definitie}','{categorie}','{datatypeNaam}','{datatypeType}','{kardinaliteitMin}','{kardinaliteitMax}')"
         insert_query = f"""
 WITH s (uuid, actief, uri, naam, label, definitie, categorie, datatypeNaam, datatypeType, kardinaliteitMin, kardinaliteitMax) 
-    AS (VALUES {values}),
+    AS (VALUES {values_string}),
 to_insert AS (
     SELECT uuid::uuid AS uuid, actief, uri, naam, label, definitie, categorie, datatypeNaam, datatypeType, kardinaliteitMin, kardinaliteitMax
     FROM s)

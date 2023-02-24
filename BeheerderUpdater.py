@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Iterator
 
-from Helpers import peek_generator
+from Helpers import peek_generator, turn_list_of_lists_into_string
 
 
 class BeheerderUpdater:
@@ -11,9 +11,10 @@ class BeheerderUpdater:
         if object_generator is None:
             return
 
-        values = ''
+        values_array = []
         for beheerder_dict in object_generator:
-            beheerder_uuid = beheerder_dict['uuid']
+            record_array = [f"'{beheerder_dict['uuid']}'"]
+
             beheerder_naam = beheerder_dict.get('naam', '').replace("'", "''")
             beheerder_referentie = beheerder_dict.get('referentie', '').replace("'", "''")
             beheerder_type = beheerder_dict.get('_type', '')
@@ -31,19 +32,20 @@ class BeheerderUpdater:
                         if tot_date < datetime.now():
                             beheerder_actief = False
 
-            values += f"('{beheerder_uuid}',"
-
             for val in [beheerder_naam, beheerder_referentie, beheerder_type]:
                 if val == '':
-                    values += 'NULL,'
+                    record_array.append('NULL')
                 else:
-                    values += f"'{val}',"
+                    record_array.append(f"'{val}'")
 
-            values += f"{beheerder_actief}),"
+            record_array.append(f"{beheerder_actief}")
+            values_array.append(record_array)
+
+        values_string = turn_list_of_lists_into_string(values_array)
 
         insert_query = f"""
     WITH s (uuid, naam, referentie, typeBeheerder, actief) 
-        AS (VALUES {values[:-1]}),
+        AS (VALUES {values_string}),
     t AS (
         SELECT uuid::uuid AS uuid, naam, referentie, typeBeheerder, actief
         FROM s),
@@ -58,7 +60,7 @@ class BeheerderUpdater:
 
         update_query = f"""
     WITH s (uuid, naam, referentie, typeBeheerder, actief) 
-        AS (VALUES {values[:-1]}),
+        AS (VALUES {values_string}),
     t AS (
         SELECT uuid::uuid AS uuid, naam, referentie, typeBeheerder, actief
         FROM s),
