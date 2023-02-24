@@ -7,6 +7,8 @@ from Exceptions.AgentMissingError import AgentMissingError
 from Exceptions.AssetMissingError import AssetMissingError
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
 from Exceptions.AttribuutMissingError import AttribuutMissingError
+from Exceptions.BeheerderMissingError import BeheerderMissingError
+from Exceptions.ResetFillError import ResetFillError
 from PostGISConnector import PostGISConnector
 
 
@@ -76,6 +78,20 @@ class FastFiller(ABC):
                     logging.info('Attribute(s) missing while filling. This is normal behaviour. Trying again in 60 seconds')
                     time.sleep(60)
                     continue
+            except BeheerderMissingError:
+                connection.rollback()
+                params = self.postgis_connector.get_params(connection)
+                if 'beheerders_fill' in params and params['beheerders_fill']:
+                    logging.info('Beheerder(s) missing while filling. This is normal behaviour. Trying again in 60 seconds')
+                    time.sleep(60)
+                    continue
+                else:
+                    logging.info('Refilling beheerders. Sending reset signal to all processes.')
+                    self.postgis_connector.update_params(
+                        params={'beheerders_fill': True, 'beheerders_cursor': ''},
+                        connection=connection)
+                    raise ResetFillError()
+
             except Exception as ex:
                 connection.rollback()
                 logging.error(f'Found unknown error in {type(self).__name__}.')

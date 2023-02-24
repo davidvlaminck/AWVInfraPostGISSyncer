@@ -1,0 +1,2 @@
+class ResetFillError(Exception):
+    pass

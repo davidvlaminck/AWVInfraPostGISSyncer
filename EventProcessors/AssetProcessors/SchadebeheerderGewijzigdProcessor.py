@@ -4,6 +4,7 @@ import time
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.AssetProcessors.SpecificEventProcessor import SpecificEventProcessor
 from Exceptions.BeheerderMissingError import BeheerderMissingError
+from Helpers import turn_list_of_lists_into_string
 
 
 class SchadebeheerderGewijzigdProcessor(SpecificEventProcessor):
@@ -15,46 +16,44 @@ class SchadebeheerderGewijzigdProcessor(SpecificEventProcessor):
         start = time.time()
 
         asset_dicts = self.eminfra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
-        amount = self.process_dicts(connection=connection, asset_uuids=uuids, asset_dicts=asset_dicts)
+        amount = self.process_dicts(connection=connection, asset_dicts=asset_dicts)
 
         end = time.time()
         logging.info(f'updated schadebeheerder of {amount} asset(s) in {str(round(end - start, 2))} seconds.')
 
     @staticmethod
-    def process_dicts(connection, asset_uuids: [str], asset_dicts: [dict]):
-        beheerder_null_assets = []
-        beheerder_update_values = ''
-        beheerders_referenties = set()
-
-        # TODO refactor to set null if 'tz:Schadebeheerder.schadebeheerder' not in asset_dict, else just the value
+    def process_dicts(connection, asset_dicts: [dict]):
         counter = 0
+        values_array = []
         with connection.cursor() as cursor:
             counter += 1
             for asset_dict in asset_dicts:
                 uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]
+
+                record_array = [f"'{uuid}'"]
+
                 if 'tz:Schadebeheerder.schadebeheerder' not in asset_dict:
-                    beheerder_null_assets.append(uuid)
+                    record_array.append('NULL')
                 else:
-                    beheerders_referenties.add(
-                        asset_dict['tz:Schadebeheerder.schadebeheerder']['tz:DtcBeheerder.referentie'])
-                    beheerder_update_values += f"('{uuid}', '{asset_dict['tz:Schadebeheerder.schadebeheerder']['tz:DtcBeheerder.referentie']}'),"
+                    record_array.append(f"'{asset_dict['tz:Schadebeheerder.schadebeheerder']['tz:DtcBeheerder.referentie']}'")
 
-            if len(beheerders_referenties) > 0:
-                lookup_beheerder_query = f"""SELECT count(*) FROM public.beheerders WHERE beheerders.referentie IN
-                    ('{"','".join(list(beheerders_referenties))}')"""
-                cursor.execute(lookup_beheerder_query)
-                beheerder_count = cursor.fetchone()[0]
-                if beheerder_count != len(beheerders_referenties):
-                    raise BeheerderMissingError()
+                values_array.append(record_array)
 
-            if len(beheerder_null_assets) > 0:
-                delete_beheerder_query = f"""UPDATE public.assets SET schadebeheerder = NULL WHERE uuid IN ('{"'::uuid,'".join(beheerder_null_assets)}'::uuid)"""
-                cursor.execute(delete_beheerder_query)
+            values_string = turn_list_of_lists_into_string(values_array)
 
-            if beheerder_update_values != '':
+            if values_string != '':
+                check_beheerders_missing_query = f"""
+                    WITH s (assetUuid, beheerderReferentie) 
+                        AS (VALUES {values_string}),
+                    to_update AS (    
+                        SELECT s.assetUuid::uuid AS assetUuid, beheerderReferentie, beheerders.uuid as beheerderUuid
+                        FROM s
+                            LEFT JOIN public.beheerders on s.beheerderReferentie = beheerders.referentie)    
+                    SELECT count(*) FROM to_update WHERE beheerderReferentie IS NOT NULL AND beheerderUuid IS NULL;"""
+
                 update_beheerder_query = f"""
                     WITH s (assetUuid, beheerderReferentie) 
-                        AS (VALUES {beheerder_update_values[:-1]}),
+                        AS (VALUES {values_string}),
                     to_update AS (
                         SELECT s.assetUuid::uuid AS assetUuid, beheerders.uuid as beheerderUuid
                         FROM s
@@ -63,6 +62,13 @@ class SchadebeheerderGewijzigdProcessor(SpecificEventProcessor):
                     SET schadebeheerder = to_update.beheerderUuid
                     FROM to_update 
                     WHERE to_update.assetUuid = assets.uuid"""
+                cursor.execute(check_beheerders_missing_query)
+                count_beheerders_missing = cursor.fetchone()[0]
+                if count_beheerders_missing > 0:
+                    logging.error('raising BeheerderMissingError')
+                    # connection.rollback()
+                    # raise BeheerderMissingError()
+
                 cursor.execute(update_beheerder_query)
 
         return counter

@@ -38,7 +38,7 @@ class AssetUpdater:
 
         AttributenGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
                                                    asset_dicts=asset_dict_list)
-        SchadebeheerderGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
+        SchadebeheerderGewijzigdProcessor.process_dicts(connection=connection,
                                                         asset_dicts=asset_dict_list)
         ToezichtGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
                                                  asset_dicts=asset_dict_list)
