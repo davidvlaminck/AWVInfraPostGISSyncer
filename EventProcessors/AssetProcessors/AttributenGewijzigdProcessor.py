@@ -56,6 +56,8 @@ class AttributenGewijzigdProcessor(SpecificEventProcessor):
                     continue
                 if key.startswith('lgc:') or key.startswith('ond:') or key.startswith('ins:') or key.startswith('grp:'):
                     key = key[4:]
+                # elif key.startswith('bz:'):
+                #     key = key[3:]
                 if isinstance(value, dict):
                     value = str(value)
                 elif isinstance(value, list):
@@ -92,6 +94,7 @@ FROM to_insert;"""
                 cursor.execute(insert_query)
         except psycopg2.Error as exc:
             if str(exc).split('\n')[0] == 'null value in column "attribuutuuid" violates not-null constraint':
+                logging.error('AttribuutMissingError: ' + str(exc).split('\n')[1])
                 raise AttribuutMissingError()
             else:
                 raise exc

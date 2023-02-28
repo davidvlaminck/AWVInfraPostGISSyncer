@@ -16,6 +16,7 @@ from BestekKoppelingSyncer import BestekKoppelingSyncer
 from BetrokkeneRelatieFiller import BetrokkeneRelatieFiller
 from EMInfraImporter import EMInfraImporter
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
+from Exceptions.FillResetError import FillResetError
 from FeedEventsCollector import FeedEventsCollector
 from FeedEventsProcessor import FeedEventsProcessor
 from IdentiteitFiller import IdentiteitFiller
@@ -264,12 +265,10 @@ class FillManager:
         while True:
             try:
                 asset_filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
-            except AssetTypeMissingError:
-                params = self.connector.get_params(connection)
-                if 'assettypes_fill' in params and params['assettypes_fill']:
-                    logging.info('Assettype(s) missing while filling. Trying again in 60 seconds')
-                    time.sleep(60)
-                    continue
+            except FillResetError:
+                connection.rollback()
+                self.connector.kill_connection(connection)
+                return
             except ConnectionError as exc:
                 logging.error(exc)
                 logging.info('Connection error: trying again in 60 seconds...')

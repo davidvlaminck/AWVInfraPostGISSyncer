@@ -16,7 +16,6 @@ class AssetTypeUpdater:
             return
 
         values_array = []
-        values = ''
         for assettype_dict in object_generator:
             record_array = [f"'{assettype_dict['uuid']}'"]
 
@@ -88,10 +87,7 @@ class AssetTypeUpdater:
         assettypes_to_update = list(map(lambda x: (x[0], x[1]), cursor.fetchall()))
 
         for assettype_uuid, uri in assettypes_to_update:
-            voc = 'onderdeel'
-            if 'installatie#' in uri:
-                voc = 'installatie'
-            kenmerken = self.eminfra_importer.get_kenmerken_by_assettype_uuids(assettype_uuid=assettype_uuid, voc=voc)
+            kenmerken = self.eminfra_importer.get_kenmerken_by_assettype_uuids(assettype_uuid=assettype_uuid)
             eigenschappenkenmerk = list(filter(lambda x: x.get('standard', False), kenmerken))
             if eigenschappenkenmerk is not None and len(eigenschappenkenmerk) > 0:
                 attributen = self.eminfra_importer.get_eigenschappen_by_kenmerk_uuid(kenmerk_uuid=eigenschappenkenmerk[0]['kenmerkType']['uuid'])
@@ -275,9 +271,16 @@ class AssetTypeUpdater:
             attribute_columns = ''
             attribute_joins = ''
 
+            attribute_counter = 0
             for attribute_record in attributes_of_type:
                 if attribute_record[0] is None:
                     continue
+
+                attribute_counter += 1
+                attribute_table_id = str(attribute_counter)
+                while len(attribute_table_id) < 3:
+                    attribute_table_id = '0' + attribute_table_id
+                attribute_table_id = 'attribuut_' + attribute_table_id
 
                 attribute_naam = attribute_record[1]
                 for char in reserved_chars_for_name:
@@ -285,7 +288,7 @@ class AssetTypeUpdater:
                 while '__' in attribute_naam:
                     attribute_naam = attribute_naam.replace('__', '_')
                 attribute_type = attribute_record[2]
-                attribute_columns += f'attribuutwaarden_{attribute_naam}.waarde'
+                attribute_columns += f'{attribute_table_id}.waarde'
                 if attribute_type in ['number', 'legacynumber']:
                     attribute_columns += '::numeric'
                 elif attribute_type in ['boolean', 'legacyboolean']:
@@ -297,7 +300,7 @@ class AssetTypeUpdater:
                     attribute_columns += f' AS "{attribute_naam}",'
                 else:
                     attribute_columns += f' AS {attribute_naam},'
-                attribute_joins += f"LEFT JOIN attribuutwaarden attribuutwaarden_{attribute_naam} ON assets.uuid = attribuutwaarden_{attribute_naam}.assetuuid AND attribuutwaarden_{attribute_naam}.attribuutuuid = '{attribute_record[0]}'\n"
+                attribute_joins += f"LEFT JOIN attribuutwaarden {attribute_table_id} ON assets.uuid = {attribute_table_id}.assetuuid AND {attribute_table_id}.attribuutuuid = '{attribute_record[0]}'\n"
 
             if attribute_columns != '':
                 attribute_columns = ', ' + attribute_columns[:-1]

@@ -93,6 +93,12 @@ class AssetRelatiesUpdater:
                 connection.rollback()
                 logging.error('raising AssetMissingError')
                 raise AssetMissingError()
+            elif first_line == 'insert or update on table "assetrelaties" violates foreign key constraint "assetrelaties_doeluuid_fkey"':
+                if '\n' in str(exc):
+                    logging.error(str(exc).split('\n')[1])
+                connection.rollback()
+                logging.error('raising AssetMissingError')
+                raise AssetMissingError()
             elif first_line == 'insert or update on table "assetrelaties" violates foreign key constraint "assetrelaties_relatietype_fkey"':
                 if '\n' in str(exc):
                     logging.error(str(exc).split('\n')[1])

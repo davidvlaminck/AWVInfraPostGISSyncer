@@ -9,6 +9,7 @@ from Exceptions.AssetMissingError import AssetMissingError
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
 from Exceptions.AttribuutMissingError import AttribuutMissingError
 from Exceptions.BeheerderMissingError import BeheerderMissingError
+from Exceptions.FillResetError import FillResetError
 from Exceptions.IdentiteitMissingError import IdentiteitMissingError
 from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 from PostGISConnector import PostGISConnector
@@ -67,8 +68,9 @@ class FastFiller(ABC):
                     logging.info('Agent(s) missing while filling. This is normal behaviour. Trying again in 60 seconds')
                     time.sleep(60)
                     continue
-            except (AssetTypeMissingError, AttribuutMissingError):
+            except (AssetTypeMissingError, AttribuutMissingError) as exc:
                 connection.rollback()
+                print(type(exc))
                 params = self.postgis_connector.get_params(connection)
                 if 'assettypes_fill' in params and params['assettypes_fill']:
                     logging.info('AssetType(s) or attribute(s) missing while filling. This is normal behaviour. Trying again in 60 seconds')
@@ -80,6 +82,7 @@ class FastFiller(ABC):
                         params={'assettypes_fill': True, 'assettypes_cursor': ''},
                         connection=connection)
                     global_vars.FILL_MANAGER_RESET_CALLED = True
+                    raise FillResetError()
             except BeheerderMissingError:
                 connection.rollback()
                 params = self.postgis_connector.get_params(connection)
@@ -93,6 +96,7 @@ class FastFiller(ABC):
                         params={'beheerders_fill': True, 'beheerders_cursor': ''},
                         connection=connection)
                     global_vars.FILL_MANAGER_RESET_CALLED = True
+                    raise FillResetError()
             except ToezichtgroepMissingError:
                 connection.rollback()
                 params = self.postgis_connector.get_params(connection)
@@ -106,6 +110,7 @@ class FastFiller(ABC):
                         params={'toezichtgroepen_fill': True, 'toezichtgroepen_cursor': ''},
                         connection=connection)
                     global_vars.FILL_MANAGER_RESET_CALLED = True
+                    raise FillResetError()
             except IdentiteitMissingError:
                 connection.rollback()
                 params = self.postgis_connector.get_params(connection)
@@ -119,6 +124,7 @@ class FastFiller(ABC):
                         params={'identiteiten_fill': True, 'identiteiten_cursor': ''},
                         connection=connection)
                     global_vars.FILL_MANAGER_RESET_CALLED = True
+                    raise FillResetError()
 
             except Exception as ex:
                 connection.rollback()
