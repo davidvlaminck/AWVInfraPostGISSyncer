@@ -4,6 +4,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 import urllib3
+from urllib3.exceptions import NewConnectionError
 
 import global_vars
 from BestekKoppelingSyncer import BestekKoppelingSyncer
@@ -14,6 +15,7 @@ from FeedEventsProcessor import FeedEventsProcessor
 from FillerFactory import FillerFactory
 from PostGISConnector import PostGISConnector
 from RequestHandler import RequestHandler
+from ResourceEnum import ResourceEnum
 
 
 class FillManager:
@@ -26,11 +28,11 @@ class FillManager:
         self.events_processor = FeedEventsProcessor(connector, eminfra_importer)
         global_vars.init()
 
-    def fill_table(self, table_to_fill, page_size, fill, cursor):
+    def fill_table(self, table_to_fill: ResourceEnum, page_size, fill, cursor):
         if not fill:
             return
 
-        if table_to_fill == 'bestekkoppelingen':
+        if table_to_fill == ResourceEnum.bestekkoppelingen.name:
             self.fill_bestekkoppelingen(page_size, cursor)
         else:
             self.fill_resource(page_size=page_size, pagingcursor=cursor, resource=table_to_fill)
@@ -41,7 +43,8 @@ class FillManager:
         if 'page_assets' not in params or 'page_assetrelaties' not in params or \
                 'page_agents' not in params or 'page_betrokkenerelaties' not in params:
             logging.info('Getting the last pages for feeds')
-            feeds = ['assets', 'agents', 'assetrelaties', 'betrokkenerelaties']
+            feeds = [ResourceEnum.assets.name, ResourceEnum.agents.name, ResourceEnum.assetrelaties.name,
+                     ResourceEnum.betrokkenerelaties.name]
 
             # use multithreading
             executor = ThreadPoolExecutor()
@@ -55,9 +58,7 @@ class FillManager:
 
         while True:
             try:
-                tables_to_fill = ['agents', 'bestekken', 'toezichtgroepen', 'identiteiten', 'relatietypes',
-                                  'assettypes', 'beheerders', 'betrokkenerelaties', 'assetrelaties', 'assets',
-                                  'bestekkoppelingen']
+                tables_to_fill = ResourceEnum.__members__
 
                 params = self.connector.get_params(self.connector.main_connection)
                 if 'assets_fill' not in params:
@@ -90,7 +91,7 @@ class FillManager:
                 print(err)
                 logging.info("failed connection, retrying in 1 minute")
                 time.sleep(60)
-            except urllib3.exceptions.ConnectionError as exc:
+            except NewConnectionError as exc:
                 logging.error(exc)
                 logging.info('failed connection, retrying in 1 minute')
                 time.sleep(60)
@@ -134,12 +135,12 @@ class FillManager:
         end = time.time()
         logging.info(f'time for all bestekkoppelingen: {round(end - start, 2)}')
 
-    def fill_resource(self, page_size, pagingcursor, resource):
+    def fill_resource(self, page_size, pagingcursor, resource: ResourceEnum):
         logging.info(f'Filling {resource} table')
         connection = self.connector.get_connection()
 
-        filler = FillerFactory.CreateFiller(eminfra_importer=self.eminfra_importer, resource=resource,
-                                            postgis_connector=self.connector)
+        filler = FillerFactory.create_filler(eminfra_importer=self.eminfra_importer, resource=resource,
+                                             postgis_connector=self.connector)
         while True:
             try:
                 if filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection):

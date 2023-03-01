@@ -13,10 +13,11 @@ from Exceptions.FillResetError import FillResetError
 from Exceptions.IdentiteitMissingError import IdentiteitMissingError
 from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 from PostGISConnector import PostGISConnector
+from ResourceEnum import ResourceEnum
 
 
 class BaseFiller(ABC):
-    def __init__(self, resource: str, postgis_connector: PostGISConnector, eminfra_importer: EMInfraImporter, updater):
+    def __init__(self, resource: ResourceEnum, postgis_connector: PostGISConnector, eminfra_importer: EMInfraImporter, updater):
         self.postgis_connector = postgis_connector
         self.eminfra_importer = eminfra_importer
         self.resource = resource
