@@ -17,40 +17,6 @@ class EMInfraImporter:
         url = f"feedproxy/feed/{resource}/{page_num}/{page_size}"
         return self.request_handler.get_jsondict(url)
 
-    def get_objects_from_oslo_search_endpoint(self, url_part: str, cursor_name: str = None, filter_string: str = '{}',
-                                              size: int = 100, contact_info: bool = False,
-                                              expansions_string: str = '{}') -> [dict]:
-        url = f'core/api/otl/{url_part}/search'
-        # if contact_info:
-        #     url += '?expand=contactInfo'
-        body_fixed_part = '{"size": ' + f'{size}' + ''
-        if filter_string != '{}':
-            body_fixed_part += ', "filters": ' + filter_string
-        if expansions_string != '{}':
-            body_fixed_part += ', "expansions": ' + expansions_string
-
-        json_list = []
-
-        body = body_fixed_part
-        if cursor_name is not None and self.paging_cursors[cursor_name] != '':
-            body += ', "fromCursor": ' + f'"{self.paging_cursors[cursor_name]}"'
-        body += '}'
-        json_data = json.loads(body)
-
-        response = self.request_handler.perform_post_request(url=url, json_data=json_data)
-
-        decoded_string = response.content.decode("utf-8")
-        dict_obj = json.loads(decoded_string)
-        keys = response.headers.keys()
-        json_list.extend(dict_obj['@graph'])
-        if cursor_name is not None:
-            if 'em-paging-next-cursor' in keys:
-                self.paging_cursors[cursor_name] = response.headers['em-paging-next-cursor']
-            else:
-                self.paging_cursors[cursor_name] = ''
-
-        yield from json_list
-
     def get_assets_from_webservice_by_naam(self, naam: str) -> [dict]:
         filter_string = '{ "naam": ' + f'"{naam}"' + ' }'
         return self.get_objects_from_oslo_search_endpoint(url_part='assets', filter_string=filter_string)
@@ -187,6 +153,41 @@ class EMInfraImporter:
     @staticmethod
     def get_distinct_set_from_list_of_relations(relation_list: [dict]) -> [dict]:
         return list({x["@id"]: x for x in relation_list}.values())
+
+    def get_objects_from_oslo_search_endpoint(self, url_part: str, cursor_name: str = None, filter_string: str = '{}',
+                                              size: int = 100, contact_info: bool = False,
+                                              expansions_string: str = '{}') -> [dict]:
+        url = f'core/api/otl/{url_part}/search'
+        # if contact_info:
+        #     url += '?expand=contactInfo'
+        body_fixed_part = '{"size": ' + f'{size}' + ''
+        if filter_string != '{}':
+            body_fixed_part += ', "filters": ' + filter_string
+        if expansions_string != '{}':
+            body_fixed_part += ', "expansions": ' + expansions_string
+
+        json_list = []
+
+        body = body_fixed_part
+        if cursor_name is not None and self.paging_cursors[cursor_name] != '':
+            body += ', "fromCursor": ' + f'"{self.paging_cursors[cursor_name]}"'
+        body += '}'
+        json_data = json.loads(body)
+
+        response = self.request_handler.perform_post_request(url=url, json_data=json_data)
+
+        decoded_string = response.content.decode("utf-8")
+        dict_obj = json.loads(decoded_string)
+        keys = response.headers.keys()
+        json_list.extend(dict_obj['@graph'])
+        if cursor_name is not None:
+            if 'em-paging-next-cursor' in keys:
+                self.paging_cursors[cursor_name] = response.headers['em-paging-next-cursor']
+            else:
+                self.paging_cursors[cursor_name] = ''
+
+        yield from json_list
+
 
     def get_objects_from_non_oslo_endpoint(self, url_part: str, zoek_payload: ZoekParameterPayload = None,
                                            request_type: str = None, identiteit: bool = False) -> Generator[list]:
