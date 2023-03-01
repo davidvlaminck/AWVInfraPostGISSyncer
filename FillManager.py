@@ -1,34 +1,27 @@
 import concurrent
 import logging
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 
 import urllib3
 
 import global_vars
-from AgentFiller import AgentFiller
 from AssetFiller import AssetFiller
 from AssetRelatieFiller import AssetRelatieFiller
-from AssetTypeFiller import AssetTypeFiller
-from BeheerderFiller import BeheerderFiller
-from BestekFiller import BestekFiller
 from BestekKoppelingSyncer import BestekKoppelingSyncer
 from BetrokkeneRelatieFiller import BetrokkeneRelatieFiller
 from EMInfraImporter import EMInfraImporter
-from Exceptions.AssetTypeMissingError import AssetTypeMissingError
 from Exceptions.FillResetError import FillResetError
 from FeedEventsCollector import FeedEventsCollector
 from FeedEventsProcessor import FeedEventsProcessor
-from IdentiteitFiller import IdentiteitFiller
+from FillerFactory import FillerFactory
 from PostGISConnector import PostGISConnector
-from RelatieTypeFiller import RelatieTypeFiller
 from RequestHandler import RequestHandler
-from ToezichtgroepFiller import ToezichtgroepFiller
 
 
 class FillManager:
     def __init__(self, connector: PostGISConnector, request_handler: RequestHandler,
-                 eminfra_importer: EMInfraImporter, ):
+                 eminfra_importer: EMInfraImporter):
         self.connector = connector
         self.request_handler = request_handler
         self.eminfra_importer = eminfra_importer
@@ -39,30 +32,11 @@ class FillManager:
     def fill_table(self, table_to_fill, page_size, fill, cursor):
         if not fill:
             return
-        if table_to_fill == 'agents':
-            self.fill_agents(page_size, cursor)
-        elif table_to_fill == 'toezichtgroepen':
-            self.fill_toezichtgroepen(page_size, cursor)
-        elif table_to_fill == 'beheerders':
-            self.fill_beheerders(page_size, cursor)
-        elif table_to_fill == 'betrokkenerelaties':
-            self.fill_betrokkenerelaties(page_size, cursor)
-        elif table_to_fill == 'assetrelaties':
-            self.fill_assetrelaties(page_size, cursor)
-        elif table_to_fill == 'bestekken':
-            self.fill_bestekken(page_size, cursor)
-        elif table_to_fill == 'assettypes':
-            self.fill_assettypes(page_size, cursor)
-        elif table_to_fill == 'toezichtgroepen':
-            self.fill_toezichtgroepen(page_size, cursor)
-        elif table_to_fill == 'identiteiten':
-            self.fill_identiteiten(page_size, cursor)
-        elif table_to_fill == 'relatietypes':
-            self.fill_relatietypes(page_size, cursor)
-        elif table_to_fill == 'assets':
-            self.fill_assets(page_size, cursor)
-        elif table_to_fill == 'bestekkoppelingen':
+
+        if table_to_fill == 'bestekkoppelingen':
             self.fill_bestekkoppelingen(page_size, cursor)
+        else:
+            self.fill_resource(page_size=page_size, pagingcursor=cursor, resource=table_to_fill)
 
     def fill(self, params: dict):
         logging.info('Filling the database with data')
@@ -169,8 +143,8 @@ class FillManager:
             except Exception as exc:
                 logging.error(exc)
                 logging.info('Unknown error, escalating it.')
-                raise exc
-
+                time.sleep(10)
+                continue
                 # missing_assets = exc.args[0]
                 # logging.info(f'Syncing {len(missing_assets)} assets first.')
                 # self.connector.create_params(params={'assets_ad_hoc': ''}, connection=connection)
@@ -183,7 +157,7 @@ class FillManager:
             if self.eminfra_importer.paging_cursors['assetrelaties_cursor'] == '':
                 break
 
-        self.connector.update_params(params={'assetrelaties_fill': False}, connection=connection)
+        # self.connector.update_params(params={'assetrelaties_fill': False}, connection=connection)
         self.connector.kill_connection(connection)
         end = time.time()
         logging.info(f'time for all assetrelaties: {round(end - start, 2)}')
@@ -212,7 +186,8 @@ class FillManager:
             except Exception as exc:
                 logging.error(exc)
                 logging.info('Unknown error, escalating it.')
-                raise exc
+                time.sleep(10)
+                continue
 
                 # missing_assets = exc.args[0]
                 # logging.info(f'Syncing {len(missing_assets)} assets first.')
@@ -229,13 +204,13 @@ class FillManager:
                 # Syncers : converts uuids to generator to be processed by Updater
                 #   contains logic on how to convert uuids to dicts
                 # Fillers : creates a generator to loop over all objects, to be processed by Updater
-                # Fillers inherit from FastFiller, so they all use the same mechanic fill()
+                # Fillers inherit from BaseFiller, so they all use the same mechanic fill()
                 #   contains logic on how to get all dicts
 
             if self.eminfra_importer.paging_cursors['betrokkenerelaties_cursor'] == '':
                 break
 
-        self.connector.update_params(params={'betrokkenerelaties_fill': False}, connection=connection)
+        # self.connector.update_params(params={'betrokkenerelaties_fill': False}, connection=connection)
         self.connector.kill_connection(connection)
         end = time.time()
         logging.info(f'time for all betrokkenerelaties: {round(end - start, 2)}')
@@ -256,18 +231,16 @@ class FillManager:
         end = time.time()
         logging.info(f'time for all bestekkoppelingen: {round(end - start, 2)}')
 
-    def fill_assets(self, page_size, pagingcursor):
-        logging.info(f'Filling assets table')
-        start = time.time()
-        asset_filler = AssetFiller(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
-                                   resource='assets')
+    def fill_resource(self, page_size, pagingcursor, resource):
+        logging.info(f'Filling {resource} table')
         connection = self.connector.get_connection()
+
+        filler = FillerFactory.CreateFiller(eminfra_importer=self.eminfra_importer, resource=resource,
+                                            postgis_connector=self.connector)
         while True:
             try:
-                asset_filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
+                filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
             except FillResetError:
-                connection.rollback()
-                self.connector.kill_connection(connection)
                 return
             except ConnectionError as exc:
                 logging.error(exc)
@@ -280,129 +253,12 @@ class FillManager:
                 time.sleep(60)
                 continue
             except Exception as exc:
+                logging.error('Unknown error. Hiding it!!')
                 logging.error(exc)
-                logging.info('Unknown error')
+                time.sleep(10)
                 continue
 
-            if self.eminfra_importer.paging_cursors['assets_cursor'] == '':
-                break
-
-        self.connector.update_params(params={'assets_fill': False}, connection=connection)
         self.connector.kill_connection(connection)
-        end = time.time()
-        logging.info(f'Time for all assets: {round(end - start, 2)}')
-
-        # start = time.time()
-        # asset_syncer = AssetSyncer(em_infra_importer=self.eminfra_importer,
-        #                            postgis_connector=self.connector)
-        # params = None
-        # while True:
-        #     try:
-        #         params = self.connector.get_params()
-        #         asset_syncer.sync_assets(pagingcursor=params['pagingcursor'])
-        #     except (AssetTypeMissingError, AttribuutMissingError):
-        #         self.connector.connection.rollback()
-        #         print('refreshing assettypes')
-        #         current_paging_cursor = self.eminfra_importer.pagingcursor
-        #         self.eminfra_importer.pagingcursor = ''
-        #         self.fill_assettypes(page_size=params['pagesize'], pagingcursor='')
-        #         self.eminfra_importer.pagingcursor = current_paging_cursor
-        #         self.connector.save_props_to_params({'pagingcursor': current_paging_cursor})
-        #     except (ToezichtgroepMissingError):
-        #         self.connector.connection.rollback()
-        #         print('refreshing toezichtgroepen')
-        #         current_paging_cursor = self.eminfra_importer.pagingcursor
-        #         self.eminfra_importer.pagingcursor = ''
-        #         self.fill_toezichtgroepen(page_size=params['pagesize'], pagingcursor='')
-        #         self.eminfra_importer.pagingcursor = current_paging_cursor
-        #         self.connector.save_props_to_params({'pagingcursor': current_paging_cursor})
-        #
-        #     if self.eminfra_importer.pagingcursor == '':
-        #         break
-        #
-        # end = time.time()
-        # logging.info(f'time for all assets: {round(end - start, 2)}')
-
-    def fill_relatietypes(self, page_size, pagingcursor):
-        logging.info(f'Filling relatietypes table')
-        start = time.time()
-        relatietypes_filler = RelatieTypeFiller(eminfra_importer=self.eminfra_importer,
-                                                postgis_connector=self.connector, resource='relatietypes')
-        connection = self.connector.get_connection()
-        relatietypes_filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
-        self.connector.update_params(params={'relatietypes_fill': False}, connection=connection)
-        self.connector.kill_connection(connection)
-        end = time.time()
-        logging.info(f'time for all relatietypes: {round(end - start, 2)}')
-
-    def fill_assettypes(self, page_size, pagingcursor):
-        logging.info(f'Filling assettypes table')
-        start = time.time()
-        assettype_filler = AssetTypeFiller(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
-                                           resource='assettypes')
-        connection = self.connector.get_connection()
-        assettype_filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
-        self.connector.update_params(params={'assettypes_fill': False}, connection=connection)
-        self.connector.kill_connection(connection)
-        end = time.time()
-        logging.info(f'time for all assettypes: {round(end - start, 2)}')
-
-    def fill_bestekken(self, page_size, pagingcursor):
-        logging.info(f'Filling bestekken table')
-        connection = self.connector.get_connection()
-
-        bestek_filler = BestekFiller(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
-                                     resource='bestekken')
-        bestek_filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
-
-        self.connector.update_params(params={'bestekken_fill': False}, connection=connection)
-        self.connector.kill_connection(connection)
-
-    def fill_beheerders(self, page_size, pagingcursor):
-        logging.info(f'Filling beheerders table')
-        connection = self.connector.get_connection()
-
-        beheerder_filler = BeheerderFiller(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
-                                           resource='beheerders')
-        beheerder_filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
-
-        self.connector.update_params(params={'beheerders_fill': False}, connection=connection)
-        self.connector.kill_connection(connection)
-
-
-    def fill_identiteiten(self, page_size, pagingcursor):
-        logging.info(f'Filling identiteiten table')
-        connection = self.connector.get_connection()
-
-        identiteit_filler = IdentiteitFiller(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
-                                             resource='identiteiten')
-        identiteit_filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
-
-        self.connector.update_params(params={'identiteiten_fill': False}, connection=connection)
-        self.connector.kill_connection(connection)
-
-    def fill_toezichtgroepen(self, page_size, pagingcursor):
-        logging.info(f'Filling toezichtgroepen table')
-        connection = self.connector.get_connection()
-
-        toezichtgroep_filler = ToezichtgroepFiller(eminfra_importer=self.eminfra_importer,
-                                                   postgis_connector=self.connector, resource='toezichtgroepen')
-        toezichtgroep_filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
-
-        self.connector.update_params(params={'toezichtgroepen_fill': False}, connection=connection)
-        self.connector.kill_connection(connection)
-
-    def fill_agents(self, page_size, pagingcursor):
-        logging.info(f'Filling agents table')
-        start = time.time()
-        agent_filler = AgentFiller(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
-                                   resource='agents')
-        connection = self.connector.get_connection()
-        agent_filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
-        self.connector.update_params(params={'agents_fill': False}, connection=connection)
-        self.connector.kill_connection(connection)
-        end = time.time()
-        logging.info(f'Time for all agents: {round(end - start, 2)}')
 
     def save_last_feedevent_to_params(self, page_size: int, feed: str):
         logging.info(f'Searching last page of current feed for {feed}')
@@ -471,3 +327,4 @@ class FillManager:
         for k, v in event_dict.items():
             if len(v) > 0:
                 logging.info(f'number of events of type {k}: {len(v)}')
+

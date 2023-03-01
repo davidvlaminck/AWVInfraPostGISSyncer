@@ -56,8 +56,8 @@ class AttributenGewijzigdProcessor(SpecificEventProcessor):
                     continue
                 if key.startswith('lgc:') or key.startswith('ond:') or key.startswith('ins:') or key.startswith('grp:'):
                     key = key[4:]
-                # elif key.startswith('bz:'):
-                #     key = key[3:]
+                elif key.startswith('bz:'):
+                    key = key[3:]
                 if isinstance(value, dict):
                     value = str(value)
                 elif isinstance(value, list):
