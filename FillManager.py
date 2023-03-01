@@ -6,7 +6,6 @@ from concurrent.futures import ThreadPoolExecutor
 import urllib3
 from urllib3.exceptions import NewConnectionError
 
-import global_vars
 from BestekKoppelingSyncer import BestekKoppelingSyncer
 from EMInfraImporter import EMInfraImporter
 from Exceptions.FillResetError import FillResetError
@@ -26,7 +25,7 @@ class FillManager:
         self.eminfra_importer = eminfra_importer
         self.events_collector = FeedEventsCollector(eminfra_importer)
         self.events_processor = FeedEventsProcessor(connector, eminfra_importer)
-        global_vars.init()
+        self.reset_called: bool = False
 
     def fill_table(self, table_to_fill: ResourceEnum, page_size, fill, cursor):
         if not fill:
@@ -77,7 +76,7 @@ class FillManager:
                                for table_to_fill in tables_to_fill_filtered]
                     concurrent.futures.wait(futures)
 
-                global_vars.FILL_MANAGER_RESET_CALLED = False
+                self.reset_called = False
 
                 params = self.connector.get_params(self.connector.main_connection)
                 done = True
@@ -140,7 +139,7 @@ class FillManager:
         connection = self.connector.get_connection()
 
         filler = FillerFactory.create_filler(eminfra_importer=self.eminfra_importer, resource=resource,
-                                             postgis_connector=self.connector)
+                                             postgis_connector=self.connector, fill_manager=self)
         while True:
             try:
                 if filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection):
