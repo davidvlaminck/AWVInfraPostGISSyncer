@@ -31,7 +31,7 @@ class AssetRelatiesUpdater:
                 record_array.append(f"'{assetrelatie_dict['@type']}'")
 
             if 'AIMDBStatus.isActief' in assetrelatie_dict:
-                record_array.append(f"'{assetrelatie_dict['AIMDBStatus.isActief']}'")
+                record_array.append(f"{assetrelatie_dict['AIMDBStatus.isActief']}")
             else:
                 record_array.append("TRUE")
 
