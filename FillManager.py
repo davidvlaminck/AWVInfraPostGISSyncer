@@ -6,10 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 import urllib3
 
 import global_vars
-from AssetFiller import AssetFiller
-from AssetRelatieFiller import AssetRelatieFiller
 from BestekKoppelingSyncer import BestekKoppelingSyncer
-from BetrokkeneRelatieFiller import BetrokkeneRelatieFiller
 from EMInfraImporter import EMInfraImporter
 from Exceptions.FillResetError import FillResetError
 from FeedEventsCollector import FeedEventsCollector
@@ -119,103 +116,9 @@ class FillManager:
             param_dict[table_to_fill + '_cursor'] = ''
         self.connector.create_params(param_dict, connection)
 
-    def fill_assetrelaties(self, page_size, pagingcursor):
-        logging.info(f'Filling assetrelaties table')
-        start = time.time()
-        assetrelatie_syncer = AssetRelatieFiller(
-            eminfra_importer=self.eminfra_importer, postgis_connector=self.connector, resource='assetrelaties')
-        connection = self.connector.get_connection()
-        params = None
-        while True:
-            try:
-                params = self.connector.get_params(connection)
-                assetrelatie_syncer.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
-            except ConnectionError as exc:
-                logging.error(exc)
-                logging.info('Connection error: trying again in 60 seconds...')
-                time.sleep(60)
-                continue
-            except urllib3.exceptions.ConnectionError as exc:
-                logging.error(exc)
-                logging.info('Connection error: trying again in 60 seconds...')
-                time.sleep(60)
-                continue
-            except Exception as exc:
-                logging.error(exc)
-                logging.info('Unknown error, escalating it.')
-                time.sleep(10)
-                continue
-                # missing_assets = exc.args[0]
-                # logging.info(f'Syncing {len(missing_assets)} assets first.')
-                # self.connector.create_params(params={'assets_ad_hoc': ''}, connection=connection)
-                # asset_syncer = AssetSyncer(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
-                #                            resource='assets')
-                # asset_syncer.sync_ad_hoc(missing_assets, connection=connection)
-                # self.connector.delete_params(params={'assets_ad_hoc': ''}, connection=connection)
-                # continue
-
-            if self.eminfra_importer.paging_cursors['assetrelaties_cursor'] == '':
-                break
-
-        # self.connector.update_params(params={'assetrelaties_fill': False}, connection=connection)
-        self.connector.kill_connection(connection)
-        end = time.time()
-        logging.info(f'time for all assetrelaties: {round(end - start, 2)}')
-
-    def fill_betrokkenerelaties(self, page_size, pagingcursor):
-        logging.info(f'Filling betrokkenerelaties table')
-        start = time.time()
-        betrokkenerelatie_syncer = BetrokkeneRelatieFiller(
-            eminfra_importer=self.eminfra_importer, postgis_connector=self.connector, resource='betrokkenerelaties')
-        connection = self.connector.get_connection()
-        params = None
-        while True:
-            try:
-                params = self.connector.get_params(connection)
-                betrokkenerelatie_syncer.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
-            except ConnectionError as exc:
-                logging.error(exc)
-                logging.info('Connection error: trying again in 60 seconds...')
-                time.sleep(60)
-                continue
-            except urllib3.exceptions.ConnectionError as exc:
-                logging.error(exc)
-                logging.info('Connection error: trying again in 60 seconds...')
-                time.sleep(60)
-                continue
-            except Exception as exc:
-                logging.error(exc)
-                logging.info('Unknown error, escalating it.')
-                time.sleep(10)
-                continue
-
-                # missing_assets = exc.args[0]
-                # logging.info(f'Syncing {len(missing_assets)} assets first.')
-                # self.connector.create_params(params={'assets_ad_hoc': ''}, connection=connection)
-                # asset_syncer = AssetSyncer(eminfra_importer=self.eminfra_importer, postgis_connector=self.connector,
-                #                            resource='assets')
-                # asset_syncer.sync_ad_hoc(missing_assets, connection=connection)
-                # self.connector.delete_params(params={'assets_ad_hoc': ''}, connection=connection)
-                # continue
-
-                # Updater : updates objects
-                #   logic how to update/create/delete objects
-                #   SQL query's
-                # Syncers : converts uuids to generator to be processed by Updater
-                #   contains logic on how to convert uuids to dicts
-                # Fillers : creates a generator to loop over all objects, to be processed by Updater
-                # Fillers inherit from BaseFiller, so they all use the same mechanic fill()
-                #   contains logic on how to get all dicts
-
-            if self.eminfra_importer.paging_cursors['betrokkenerelaties_cursor'] == '':
-                break
-
-        # self.connector.update_params(params={'betrokkenerelaties_fill': False}, connection=connection)
-        self.connector.kill_connection(connection)
-        end = time.time()
-        logging.info(f'time for all betrokkenerelaties: {round(end - start, 2)}')
-
     def fill_bestekkoppelingen(self, page_size, pagingcursor):
+        # TODO write own loop to check for assets_fill
+        # else: use fill_resource
         logging.info(f'Filling bestekkoppelingen table')
         params = self.connector.get_params(self.connector.main_connection)
         if 'assets_fill' not in params:
