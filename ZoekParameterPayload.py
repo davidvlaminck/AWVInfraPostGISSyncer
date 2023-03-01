@@ -40,13 +40,7 @@ class ZoekParameterPayload:
         if self.pagingMode == 'OFFSET' and self.from_ is None:
             self.from_ = 0
 
-        d = {}
-        d['size'] = self.size
-        d['from'] = self.from_
-        d['fromCursor'] = self.fromCursor
-        d['pagingMode'] = self.pagingMode
-        d['expansions'] = self.expansions
-        d['settings'] = self.settings
-        d['selection'] = self.selection
+        d = {'size': self.size, 'from': self.from_, 'fromCursor': self.fromCursor, 'pagingMode': self.pagingMode,
+             'expansions': self.expansions, 'settings': self.settings, 'selection': self.selection}
 
         return d
