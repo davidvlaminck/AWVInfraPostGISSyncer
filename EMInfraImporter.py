@@ -80,32 +80,32 @@ class EMInfraImporter:
         elif resource == 'toezichtgroepen':
             zoek_params = ZoekParameterPayload()
             zoek_params.size = page_size
-            yield from self.get_objects_from_non_oslo_endpoint(url_part=f'{resource}/search',
-                                                               zoek_payload=zoek_params, identiteit=True)
+            yield from self.get_objects_from_non_oslo_endpoint(url_part=f'{resource}/search', cursor_name=resource,
+                                                               zoek_payload=zoek_params, identiteit=True, )
         elif resource == 'identiteiten':
             zoek_params = ZoekParameterPayload()
             zoek_params.size = page_size
-            yield from self.get_objects_from_non_oslo_endpoint(url_part=f'{resource}/search',
+            yield from self.get_objects_from_non_oslo_endpoint(url_part=f'{resource}/search', cursor_name=resource,
                                                                zoek_payload=zoek_params, identiteit=True)
         elif resource == 'beheerders':
             zoek_params = ZoekParameterPayload()
             zoek_params.size = page_size
-            yield from self.get_objects_from_non_oslo_endpoint(url_part=f'{resource}/search',
+            yield from self.get_objects_from_non_oslo_endpoint(url_part=f'{resource}/search', cursor_name=resource,
                                                                zoek_payload=zoek_params)
         elif resource == 'relatietypes':
             zoek_params = ZoekParameterPayload()
             zoek_params.size = page_size
-            yield from self.get_objects_from_non_oslo_endpoint(url_part=f'relatietypes/search',
+            yield from self.get_objects_from_non_oslo_endpoint(url_part=f'relatietypes/search', cursor_name=resource,
                                                                zoek_payload=zoek_params)
         elif resource == 'assettypes':
             zoek_params = ZoekParameterPayload()
             zoek_params.size = page_size
-            yield from self.get_objects_from_non_oslo_endpoint(url_part=f'assettypes/search',
+            yield from self.get_objects_from_non_oslo_endpoint(url_part=f'assettypes/search', cursor_name=resource,
                                                                zoek_payload=zoek_params)
         elif resource == 'bestekken':
             zoek_params = ZoekParameterPayload()
             zoek_params.size = page_size
-            yield from self.get_objects_from_non_oslo_endpoint(url_part=f'bestekrefs/search',
+            yield from self.get_objects_from_non_oslo_endpoint(url_part=f'bestekrefs/search', cursor_name=resource,
                                                                zoek_payload=zoek_params)
         else:
             raise NotImplementedError()
@@ -188,9 +188,9 @@ class EMInfraImporter:
 
         yield from json_list
 
-
     def get_objects_from_non_oslo_endpoint(self, url_part: str, zoek_payload: ZoekParameterPayload = None,
-                                           request_type: str = None, identiteit: bool = False) -> Generator[list]:
+                                           request_type: str = None, identiteit: bool = False,  cursor_name: str = None
+                                           ) -> Generator[list]:
         if identiteit:
             url = f"identiteit/api/{url_part}"
         else:
@@ -207,33 +207,40 @@ class EMInfraImporter:
                 yield dict_obj
 
         else:
-            current_count = 0
-            while True:
-                if zoek_payload.pagingMode == 'CURSOR' and self.pagingcursor != '':
-                    zoek_payload.fromCursor = self.pagingcursor
+            if cursor_name is not None and cursor_name in self.paging_cursors:
+                if zoek_payload.pagingMode == 'CURSOR' and self.paging_cursors[cursor_name] != '':
+                    zoek_payload.fromCursor = self.paging_cursors[cursor_name]
+                if zoek_payload.pagingMode == 'OFFSET' and self.paging_cursors[cursor_name] != '':
+                    zoek_payload.from_ = int(self.paging_cursors[cursor_name])
 
-                json_data = zoek_payload.fill_dict()
-                response = self.request_handler.perform_post_request(url=url, json_data=json_data)
+            json_data = zoek_payload.fill_dict()
+            response = self.request_handler.perform_post_request(url=url, json_data=json_data)
 
-                decoded_string = response.content.decode("utf-8")
-                dict_obj = json.loads(decoded_string)
-                keys = response.headers.keys()
+            decoded_string = response.content.decode("utf-8")
+            dict_obj = json.loads(decoded_string)
+            keys = response.headers.keys()
 
-                yield from dict_obj['data']
+            yield from dict_obj['data']
 
-                if zoek_payload.pagingMode == 'CURSOR':
-                    if 'em-paging-next-cursor' in keys:
-                        self.pagingcursor = response.headers['em-paging-next-cursor']
-                    else:
-                        self.pagingcursor = ''
+            if cursor_name is None:
+                return
 
-                    if self.pagingcursor == '':
-                        return
-                elif zoek_payload.pagingMode == 'OFFSET':
-                    current_count += len(dict_obj['data'])
-                    if current_count == dict_obj['totalCount']:
-                        return
-                    zoek_payload.from_ += zoek_payload.size
+            if zoek_payload.pagingMode == 'CURSOR':
+                if 'em-paging-next-cursor' in keys:
+                    self.paging_cursors[cursor_name] = response.headers['em-paging-next-cursor']
+                else:
+                    self.paging_cursors[cursor_name] = ''
+
+                if self.paging_cursors[cursor_name] == '':
+                    return
+            elif zoek_payload.pagingMode == 'OFFSET':
+                amount_fetched = len(dict_obj['data'])
+                zoek_payload.from_ += amount_fetched
+                self.paging_cursors[cursor_name] = str(zoek_payload.from_)
+
+                if zoek_payload.from_ == dict_obj['totalCount']:
+                    self.paging_cursors[cursor_name] = ''
+                    return
 
     def import_all_assettypes_from_webservice(self):
         zoek_params = ZoekParameterPayload()

@@ -142,7 +142,8 @@ class FillManager:
                                             postgis_connector=self.connector)
         while True:
             try:
-                filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection)
+                if filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection):
+                    break
             except FillResetError:
                 return
             except ConnectionError as exc:
