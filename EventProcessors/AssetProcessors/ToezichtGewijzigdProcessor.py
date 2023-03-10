@@ -13,7 +13,7 @@ class ToezichtGewijzigdProcessor(SpecificEventProcessor):
         super().__init__(eminfra_importer)
 
     def process(self, uuids: [str], connection):
-        logging.info(f'started updating toezicht')
+        logging.info('started updating toezicht')
         start = time.time()
 
         asset_dicts = self.eminfra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)

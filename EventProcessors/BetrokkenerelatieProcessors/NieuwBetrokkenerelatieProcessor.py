@@ -12,7 +12,7 @@ class NieuwBetrokkenerelatieProcessor(SpecificEventProcessor):
         super().__init__(eminfra_importer)
 
     def process(self, uuids: [str], connection):
-        logging.info(f'started creating betrokkenerelaties')
+        logging.info('started creating betrokkenerelaties')
         start = time.time()
 
         betrokkenerelatie_count = 0

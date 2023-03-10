@@ -11,7 +11,7 @@ class AssetrelatieVerwijderdOngedaanProcessor(SpecificEventProcessor):
         super().__init__(eminfra_importer)
 
     def process(self, uuids: [str], connection):
-        logging.info(f'started undo of remove assetrelaties')
+        logging.info('started undo of remove assetrelaties')
         start = time.time()
 
         assetrelatie_count = 0

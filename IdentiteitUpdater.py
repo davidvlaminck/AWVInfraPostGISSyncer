@@ -24,7 +24,7 @@ class IdentiteitUpdater:
             for val in [identiteit_naam, identiteit_voornaam, identiteit_gebruikersnaam, identiteit_type,
                         identiteit_vo_id, identiteit_bron]:
                 if val == '':
-                    record_array.append(f"NULL")
+                    record_array.append('NULL')
                 else:
                     record_array.append(f"'{val}'")
 

@@ -11,7 +11,7 @@ class BetrokkenerelatieVerwijderdOngedaanProcessor(SpecificEventProcessor):
         super().__init__(eminfra_importer)
 
     def process(self, uuids: [str], connection):
-        logging.info(f'started undo of remove betrokkenerelaties')
+        logging.info('started undo of remove betrokkenerelaties')
         start = time.time()
 
         betrokkenerelatie_count = 0

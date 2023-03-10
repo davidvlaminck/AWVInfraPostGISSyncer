@@ -119,12 +119,12 @@ class FillManager:
     def fill_bestekkoppelingen(self, page_size, pagingcursor):
         # TODO write own loop to check for assets_fill
         # else: use fill_resource
-        logging.info(f'Filling bestekkoppelingen table')
+        logging.info('Filling bestekkoppelingen table')
         params = self.connector.get_params(self.connector.main_connection)
         if 'assets_fill' not in params:
             raise ValueError('missing assets_fill in params')
         if params['assets_fill']:
-            logging.info(f'Waiting for assets to be filled')
+            logging.info('Waiting for assets to be filled')
             return
 
         start = time.time()

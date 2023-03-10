@@ -11,7 +11,7 @@ class NieuwAssetrelatieProcessor(SpecificEventProcessor):
         super().__init__(eminfra_importer)
 
     def process(self, uuids: [str], connection):
-        logging.info(f'started creating assetrelaties')
+        logging.info('started creating assetrelaties')
         start = time.time()
 
         assetrelatie_count = 0

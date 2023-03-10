@@ -43,7 +43,7 @@ class BetrokkeneRelatieSyncer:
 
                     total_events = sum(len(lists) for lists in eventsparams_to_process.event_dict.values())
                     if total_events == 0:
-                        logging.info(f"The database is fully synced for betrokkenerelaties. Continuing keep up to date in 30 seconds")
+                        logging.info('The database is fully synced for betrokkenerelaties. Continuing keep up to date in 30 seconds')
                         self.postgis_connector.update_params(params={'last_update_utc_betrokkenerelaties': datetime.utcnow()},
                                                              connection=connection)
                         time.sleep(30)  # wait 30 seconds to prevent overloading API
@@ -63,8 +63,8 @@ class BetrokkeneRelatieSyncer:
                 try:
                     self.events_processor.process_events(eventsparams_to_process, connection)
                 except AssetMissingError or AgentMissingError:
-                    logging.warning(f"Tried to add betrokkenerelaties but a source or target is missing. "
-                                    f"Trying again in 60 seconds to allow other feeds to create the missing objects.")
+                    logging.warning('Tried to add betrokkenerelaties but a source or target is missing. '
+                                    'Trying again in 60 seconds to allow other feeds to create the missing objects.')
                     time.sleep(60)
                     continue
                 except Exception as exc:

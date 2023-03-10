@@ -32,7 +32,7 @@ class AssetSyncer:
                 sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
                 if not sync_allowed_by_time:
                     self.update_view_tables(connection)
-                    logging.info(f'syncing is not allowed at this time. Trying again in 5 minutes')
+                    logging.info('syncing is not allowed at this time. Trying again in 5 minutes')
                     time.sleep(300)
                     continue
                 params = self.postgis_connector.get_params(connection)
@@ -51,7 +51,7 @@ class AssetSyncer:
 
                     total_events = sum(len(lists) for lists in eventsparams_to_process.event_dict.values())
                     if total_events == 0:
-                        logging.info(f"The database is fully synced for assets. Continuing keep up to date in 30 seconds")
+                        logging.info("The database is fully synced for assets. Continuing keep up to date in 30 seconds")
                         self.postgis_connector.update_params(params={'last_update_utc_assets': datetime.utcnow()},
                                                              connection=connection)
                         time.sleep(30)  # wait 30 seconds to prevent overloading API

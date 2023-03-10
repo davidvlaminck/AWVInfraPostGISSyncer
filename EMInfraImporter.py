@@ -96,17 +96,17 @@ class EMInfraImporter:
         elif resource == 'relatietypes':
             zoek_params = ZoekParameterPayload()
             zoek_params.size = page_size
-            yield from self.get_objects_from_non_oslo_endpoint(url_part=f'relatietypes/search', cursor_name=resource,
+            yield from self.get_objects_from_non_oslo_endpoint(url_part='relatietypes/search', cursor_name=resource,
                                                                zoek_payload=zoek_params)
         elif resource == 'assettypes':
             zoek_params = ZoekParameterPayload()
             zoek_params.size = page_size
-            yield from self.get_objects_from_non_oslo_endpoint(url_part=f'assettypes/search', cursor_name=resource,
+            yield from self.get_objects_from_non_oslo_endpoint(url_part='assettypes/search', cursor_name=resource,
                                                                zoek_payload=zoek_params)
         elif resource == 'bestekken':
             zoek_params = ZoekParameterPayload()
             zoek_params.size = page_size
-            yield from self.get_objects_from_non_oslo_endpoint(url_part=f'bestekrefs/search', cursor_name=resource,
+            yield from self.get_objects_from_non_oslo_endpoint(url_part='bestekrefs/search', cursor_name=resource,
                                                                zoek_payload=zoek_params)
         else:
             raise NotImplementedError()

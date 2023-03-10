@@ -11,7 +11,7 @@ class AssetrelatieVerwijderdProcessor(SpecificEventProcessor):
         super().__init__(eminfra_importer)
 
     def process(self, uuids: [str], connection):
-        logging.info(f'started removing assetrelaties')
+        logging.info('started removing assetrelaties')
         start = time.time()
 
         assetrelatie_count = 0

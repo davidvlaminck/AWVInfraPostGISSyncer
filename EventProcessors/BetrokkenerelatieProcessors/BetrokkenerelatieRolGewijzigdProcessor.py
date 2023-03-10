@@ -11,7 +11,7 @@ class BetrokkenerelatieRolGewijzigdProcessor(SpecificEventProcessor):
         super().__init__(eminfra_importer)
 
     def process(self, uuids: [str], connection):
-        logging.info(f'started changing rol of betrokkenerelaties')
+        logging.info('started changing rol of betrokkenerelaties')
         start = time.time()
 
         betrokkenerelatie_count = 0

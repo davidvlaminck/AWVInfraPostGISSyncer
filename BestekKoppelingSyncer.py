@@ -145,7 +145,7 @@ SELECT uuid FROM bestek_assets;"""
                                                              bestek_koppelingen_dicts_list=koppelingen_list)
 
                 update_temp_table_query = "UPDATE public.temp_sync_bestekkoppelingen SET done = TRUE WHERE " \
-                                          f"assetUuid IN (VALUES ('" + "'::uuid),('".join(assets_to_update)+"'::uuid));"
+                                          "assetUuid IN (VALUES ('" + "'::uuid),('".join(assets_to_update)+"'::uuid));"
                 cursor.execute(update_temp_table_query)
                 connection.commit()
 

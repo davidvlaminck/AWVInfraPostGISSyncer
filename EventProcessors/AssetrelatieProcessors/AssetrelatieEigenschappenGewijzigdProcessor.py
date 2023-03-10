@@ -12,7 +12,7 @@ class AssetrelatieEigenschappenGewijzigdProcessor(SpecificEventProcessor):
         super().__init__(eminfra_importer)
 
     def process(self, uuids: [str], connection):
-        logging.info(f'started changing eigenschappen of assetrelaties')
+        logging.info('started changing eigenschappen of assetrelaties')
         start = time.time()
 
         assetrelatie_count = 0
