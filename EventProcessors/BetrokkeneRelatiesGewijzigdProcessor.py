@@ -26,10 +26,12 @@ class BetrokkeneRelatiesGewijzigdProcessor(SpecificEventProcessor):
         logging.info(f'updated {len(betrokkenerelatie_dicts)} betrokkenerelaties in {str(round(end - start, 2))} seconds.')
 
     def process_dicts(self, cursor, betrokkenerelatie_dicts: dict):
+        if len(betrokkenerelatie_dicts) == 0:
+            return
+
         logging.info(f'started creating {len(betrokkenerelatie_dicts)} betrokkenerelaties')
-
-
         values = ''
+
         for betrokkenerelatie_dict in betrokkenerelatie_dicts:
             values += f"('{betrokkenerelatie_dict['@id'].replace('https://data.awvvlaanderen.be/id/assetrelatie/','')[0:36]}', '{betrokkenerelatie_dict['RelatieObject.doel']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36]}', " \
                       f"'{betrokkenerelatie_dict['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36]}',"
