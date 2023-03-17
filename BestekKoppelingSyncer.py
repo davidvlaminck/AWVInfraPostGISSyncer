@@ -130,7 +130,8 @@ SELECT uuid FROM bestek_assets;"""
         connection.commit()
 
     def loop_using_temp_table_and_sync_koppelingen(self, batch_size: int, connection):
-        select_from_temp_table_query = f"SELECT assetUuid FROM public.temp_sync_bestekkoppelingen WHERE done IS NULL LIMIT {batch_size};"
+        select_from_temp_table_query = 'SELECT assetUuid FROM public.temp_sync_bestekkoppelingen WHERE done IS NULL ' \
+                                       f'LIMIT {batch_size}; '
         with connection.cursor() as cursor:
             cursor.execute(select_from_temp_table_query)
             assets_to_update = list(map(lambda x: x[0], cursor.fetchall()))
@@ -141,7 +142,8 @@ SELECT uuid FROM bestek_assets;"""
                 for asset_uuid, koppelingen in koppelingen_generator:
                     asset_uuid_list.append(asset_uuid)
                     koppelingen_list.append(list(koppelingen))
-                BestekKoppelingSyncer.update_bestekkoppelingen_by_asset_uuids(connection=connection, asset_uuids=asset_uuid_list,
+                BestekKoppelingSyncer.update_bestekkoppelingen_by_asset_uuids(connection=connection,
+                                                                              asset_uuids=asset_uuid_list,
                                                              bestek_koppelingen_dicts_list=koppelingen_list)
 
                 update_temp_table_query = "UPDATE public.temp_sync_bestekkoppelingen SET done = TRUE WHERE " \
