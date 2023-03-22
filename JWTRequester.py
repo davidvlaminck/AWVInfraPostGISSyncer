@@ -23,7 +23,7 @@ class JWTRequester(requests.Session):
         self.first_part_url: str = first_part_url
 
         self.oauth_token: str = ''
-        self.expires: datetime.datetime = datetime.datetime.now() - datetime.timedelta(seconds=1)
+        self.expires: datetime.datetime = datetime.datetime.utcnow() - datetime.timedelta(seconds=1)
         self.requested_at: datetime.datetime = self.expires
         super().__init__()
 
@@ -48,7 +48,7 @@ class JWTRequester(requests.Session):
         return super().delete(url=self.first_part_url + url, **kwargs)
 
     def get_oauth_token(self) -> str:
-        if self.expires > datetime.datetime.now():
+        if self.expires > datetime.datetime.utcnow():
             return self.oauth_token
 
         authentication_token = self.generate_authentication_token()
