@@ -1,4 +1,8 @@
+import concurrent.futures
+import logging
+import time
 from collections.abc import Generator
+from concurrent.futures import ThreadPoolExecutor
 
 import psycopg2
 
@@ -22,13 +26,15 @@ class BestekKoppelingSyncer:
         if params['bestekkoppelingen_cursor'] == '':
             # create a temp table that holds all asset_uuid
             self.create_temp_table_for_sync_bestekkoppelingen(connection=connection)
-            self.postGIS_connector.update_params(params={'bestekkoppelingen_cursor': 'setup done'}, connection=connection)
+            self.postGIS_connector.update_params(params={'bestekkoppelingen_cursor': 'setup done'},
+                                                 connection=connection)
             params = self.postGIS_connector.get_params(connection)
 
         if params['bestekkoppelingen_cursor'] == 'setup done':
             # go through all of the table and flag as sync'd when done, allow for parameter batch size
             self.loop_using_temp_table_and_sync_koppelingen(batch_size=batch_size, connection=connection)
-            self.postGIS_connector.update_params(params={'bestekkoppelingen_cursor': 'syncing done'}, connection=connection)
+            self.postGIS_connector.update_params(params={'bestekkoppelingen_cursor': 'syncing done'},
+                                                 connection=connection)
             params = self.postGIS_connector.get_params(connection)
 
         if params['bestekkoppelingen_cursor'] == 'syncing done':
@@ -36,16 +42,20 @@ class BestekKoppelingSyncer:
             self.delete_temp_table_for_sync_bestekkoppelingen(connection=connection)
             self.postGIS_connector.update_params(params={'bestekkoppelingen_fill': False}, connection=connection)
 
+        connection.close()
+
     def get_all_bestekkoppelingen_by_asset_uuids(self, asset_uuids: [str]) -> Generator[tuple]:
         yield from self.eminfra_importer.get_all_bestekkoppelingen_from_webservice_by_asset_uuids(
             asset_uuids=asset_uuids)
 
     @staticmethod
-    def update_bestekkoppelingen_by_asset_uuids(connection, asset_uuids: [str], bestek_koppelingen_dicts_list: [[dict]]) -> None:
+    def update_bestekkoppelingen_by_asset_uuids(connection, asset_uuids: [str],
+                                                bestek_koppelingen_dicts_list: [[dict]]) -> None:
         if len(asset_uuids) == 0:
             return
 
-        delete_query = "DELETE FROM public.bestekkoppelingen WHERE assetUuid IN (VALUES ('" + "'::uuid),('".join(asset_uuids)+"'::uuid));"
+        delete_query = "DELETE FROM public.bestekkoppelingen WHERE assetUuid IN (VALUES ('" + "'::uuid),('".join(
+            asset_uuids) + "'::uuid));"
         with connection.cursor() as cursor:
             cursor.execute(delete_query)
 
@@ -129,27 +139,48 @@ SELECT uuid FROM bestek_assets;"""
             cursor.execute(delete_table_query)
         connection.commit()
 
+    def update_bestekkoppelingen_by_asset_uuid(self, asset_uuid: str,
+                                                koppelingen: [dict]) -> None:
+        start = time.time()
+        logging.info(f'starting proces for {asset_uuid}')
+        connection = None
+        try:
+            with self.postGIS_connector.get_connection() as connection:
+                self.update_bestekkoppelingen_by_asset_uuids(connection=connection, asset_uuids=[asset_uuid],
+                                                             bestek_koppelingen_dicts_list=[list(koppelingen)])
+                with connection.cursor() as cursor:
+                    update_temp_table_query = "UPDATE public.temp_sync_bestekkoppelingen SET done = TRUE WHERE " \
+                                              "assetUuid = '" + asset_uuid + "'::uuid;"
+                    cursor.execute(update_temp_table_query)
+            end = time.time()
+            logging.info(f'updated bestekkoppelingen for 1 asset in {str(round(end - start, 2))} seconds.')
+        except Exception as exc:
+            print(exc.args[0])
+            pass
+        finally:
+            if connection is not None:
+                self.postGIS_connector.kill_connection(connection)
+
     def loop_using_temp_table_and_sync_koppelingen(self, batch_size: int, connection):
         select_from_temp_table_query = 'SELECT assetUuid FROM public.temp_sync_bestekkoppelingen WHERE done IS NULL ' \
                                        f'LIMIT {batch_size}; '
         with connection.cursor() as cursor:
+            start = time.time()
             cursor.execute(select_from_temp_table_query)
             assets_to_update = list(map(lambda x: x[0], cursor.fetchall()))
             while len(assets_to_update) > 0:
-                koppelingen_list = []
-                asset_uuid_list = []
                 koppelingen_generator = self.get_all_bestekkoppelingen_by_asset_uuids(asset_uuids=assets_to_update)
-                for asset_uuid, koppelingen in koppelingen_generator:
-                    asset_uuid_list.append(asset_uuid)
-                    koppelingen_list.append(list(koppelingen))
-                BestekKoppelingSyncer.update_bestekkoppelingen_by_asset_uuids(connection=connection,
-                                                                              asset_uuids=asset_uuid_list,
-                                                             bestek_koppelingen_dicts_list=koppelingen_list)
 
-                update_temp_table_query = "UPDATE public.temp_sync_bestekkoppelingen SET done = TRUE WHERE " \
-                                          "assetUuid IN (VALUES ('" + "'::uuid),('".join(assets_to_update)+"'::uuid));"
-                cursor.execute(update_temp_table_query)
+                # use multithreading
+                executor = ThreadPoolExecutor(10)
+                futures = [executor.submit(self.update_bestekkoppelingen_by_asset_uuid, asset_uuid=asset_uuid,
+                                           koppelingen=koppelingen)
+                           for asset_uuid, koppelingen in koppelingen_generator]
+                concurrent.futures.wait(futures)
                 connection.commit()
 
                 cursor.execute(select_from_temp_table_query)
                 assets_to_update = list(map(lambda x: x[0], cursor.fetchall()))
+
+            end = time.time()
+            logging.info(f'updated {batch_size} bestekkoppelingen in {str(round(end - start, 2))} seconds.')
