@@ -172,7 +172,7 @@ SELECT uuid FROM bestek_assets;"""
                 koppelingen_generator = self.get_all_bestekkoppelingen_by_asset_uuids(asset_uuids=assets_to_update)
 
                 # use multithreading
-                executor = ThreadPoolExecutor(10)
+                executor = ThreadPoolExecutor(8)
                 futures = [executor.submit(self.update_bestekkoppelingen_by_asset_uuid, asset_uuid=asset_uuid,
                                            koppelingen=koppelingen)
                            for asset_uuid, koppelingen in koppelingen_generator]
