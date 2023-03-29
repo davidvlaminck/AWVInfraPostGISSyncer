@@ -13,7 +13,9 @@ from Exceptions.BeheerderMissingError import BeheerderMissingError
 from Exceptions.BestekMissingError import BestekMissingError
 from Exceptions.IdentiteitMissingError import IdentiteitMissingError
 from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
+from FillManager import FillManager
 from PostGISConnector import PostGISConnector
+from ResourceEnum import ResourceEnum
 from SyncTimer import SyncTimer
 
 
@@ -71,23 +73,23 @@ class AssetSyncer:
                 try:
                     self.events_processor.process_events(eventsparams_to_process, connection)
                 except AssetTypeMissingError:
-                    # TODO
-                    raise NotImplementedError
+                    connection.rollback()
+                    self.fill_resource(ResourceEnum.assettypes)
                 except AttribuutMissingError:
-                    # TODO
-                    raise NotImplementedError
+                    connection.rollback()
+                    self.fill_resource(ResourceEnum.assettypes)
                 except BeheerderMissingError:
-                    # TODO
-                    raise NotImplementedError
+                    connection.rollback()
+                    self.fill_resource(ResourceEnum.beheerders)
                 except ToezichtgroepMissingError:
-                    # TODO
-                    raise NotImplementedError
+                    connection.rollback()
+                    self.fill_resource(ResourceEnum.toezichtgroepen)
                 except IdentiteitMissingError:
-                    # TODO
-                    raise NotImplementedError
+                    connection.rollback()
+                    self.fill_resource(ResourceEnum.identiteiten)
                 except BestekMissingError:
-                    # TODO
-                    raise NotImplementedError
+                    connection.rollback()
+                    self.fill_resource(ResourceEnum.bestekken)
                 except Exception as exc:
                     traceback.print_exception(exc)
                     connection.rollback()
@@ -140,3 +142,12 @@ class AssetSyncer:
             logging.error("Could not create view tables")
             logging.error(exc)
             connection.rollback()
+
+    def fill_resource(self, resource: ResourceEnum):
+        fill_manager = FillManager(connector=self.postgis_connector,
+                                   eminfra_importer=self.eminfra_importer)
+        fill_manager.create_params_for_table_fill(tables_to_fill=[resource],
+                                                  connection=self.postgis_connector.main_connection)
+        fill_manager.fill_resource(100, pagingcursor='', resource=resource)
+        fill_manager.delete_params_for_table_fill(tables_to_fill=[resource],
+                                                  connection=self.postgis_connector.main_connection)
