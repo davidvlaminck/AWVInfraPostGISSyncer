@@ -13,15 +13,12 @@ from FeedEventsCollector import FeedEventsCollector
 from FeedEventsProcessor import FeedEventsProcessor
 from FillerFactory import FillerFactory
 from PostGISConnector import PostGISConnector
-from RequestHandler import RequestHandler
 from ResourceEnum import ResourceEnum
 
 
 class FillManager:
-    def __init__(self, connector: PostGISConnector, request_handler: RequestHandler,
-                 eminfra_importer: EMInfraImporter):
+    def __init__(self, connector: PostGISConnector, eminfra_importer: EMInfraImporter):
         self.connector = connector
-        self.request_handler = request_handler
         self.eminfra_importer = eminfra_importer
         self.events_collector = FeedEventsCollector(eminfra_importer)
         self.events_processor = FeedEventsProcessor(connector, eminfra_importer)
@@ -102,14 +99,14 @@ class FillManager:
         self.delete_params_for_table_fill(tables_to_fill, connection=self.connector.main_connection)
         self.connector.update_params(connection=self.connector.main_connection, params={'fresh_start': False})
 
-    def delete_params_for_table_fill(self, tables_to_fill, connection):
+    def delete_params_for_table_fill(self, tables_to_fill: [ResourceEnum], connection):
         param_dict = {}
         for table_to_fill in tables_to_fill:
             param_dict[table_to_fill + '_fill'] = True
             param_dict[table_to_fill + '_cursor'] = True
         self.connector.delete_params(param_dict, connection)
 
-    def create_params_for_table_fill(self, tables_to_fill, connection):
+    def create_params_for_table_fill(self, tables_to_fill: [ResourceEnum], connection):
         param_dict = {}
         for table_to_fill in tables_to_fill:
             param_dict[table_to_fill + '_fill'] = True
