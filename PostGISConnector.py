@@ -1,6 +1,10 @@
-import psycopg2
+from pathlib import Path
+
 from psycopg2 import Error
 from psycopg2.pool import ThreadedConnectionPool
+
+
+THIS_DIR = Path(__file__).parent
 
 
 class PostGISConnector:
@@ -53,7 +57,7 @@ class PostGISConnector:
             'assetrelaties_ad_hoc': 'text',
         }
 
-    def set_up_tables(self, file_path='setup_tables_querys.sql'):
+    def set_up_tables(self, file_path=Path(THIS_DIR / 'setup_tables_querys.sql')):
         # create drop views query's with:
         drop_views_query = """
         SELECT 'DROP VIEW ' || table_name || ' CASCADE;'
