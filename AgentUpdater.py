@@ -32,6 +32,9 @@ class AgentUpdater:
             record_array.append(f"{contact_info_value}")
             values_array.append(record_array)
 
+        if len(values_array) == 0:
+            return 0
+
         values_string = turn_list_of_lists_into_string(values_array)
 
         insert_query = f"""

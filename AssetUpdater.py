@@ -33,6 +33,9 @@ class AssetUpdater:
 
             values = AssetUpdater.append_values(asset_dict, asset_uuid, values)
 
+        if len(asset_uuids) == 0:
+            return 0
+
         AssetUpdater.perform_insert_update_from_values(connection, insert_only, values)
 
         AttributenGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
