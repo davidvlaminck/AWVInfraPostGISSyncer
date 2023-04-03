@@ -7,6 +7,7 @@ import psycopg2
 from Exceptions.AgentMissingError import AgentMissingError
 from Exceptions.AssetMissingError import AssetMissingError
 from Helpers import peek_generator, turn_list_of_lists_into_string
+from ResourceEnum import colorama_table, ResourceEnum
 
 
 class BetrokkeneRelatiesUpdater:
@@ -92,23 +93,23 @@ class BetrokkeneRelatiesUpdater:
             if first_line in ['insert or update on table "betrokkenerelaties" violates foreign key constraint "betrokkenerelaties_agents_fkey"',
                               'insert or update on table "betrokkenerelaties" violates foreign key constraint "betrokkenerelaties_bron_agents_fkey"']:
                 if '\n' in str(exc):
-                    logging.error(str(exc).split('\n')[1])
+                    logging.error(colorama_table[ResourceEnum.betrokkenerelaties] + str(exc).split('\n')[1])
                 connection.rollback()
-                logging.error('raising AgentMissingError')
+                logging.error(colorama_table[ResourceEnum.betrokkenerelaties] + 'raising AgentMissingError')
                 raise AgentMissingError()
 
             elif first_line == 'insert or update on table "betrokkenerelaties" violates foreign key constraint "betrokkenerelaties_bron_assets_fkey"':
                 if '\n' in str(exc):
-                    logging.error(str(exc).split('\n')[1])
+                    logging.error(colorama_table[ResourceEnum.betrokkenerelaties] + str(exc).split('\n')[1])
                 connection.rollback()
-                logging.error('raising AssetMissingError')
+                logging.error(colorama_table[ResourceEnum.betrokkenerelaties] + 'raising AssetMissingError')
                 raise AssetMissingError()
             else:
                 connection.rollback()
                 raise exc
         except Exception as exc:
-            logging.error(f'raising unhandled error: {exc}')
+            logging.error(colorama_table[ResourceEnum.betrokkenerelaties] + f'raising unhandled error: {exc}')
             raise exc
 
-        logging.info(f'done batch of {counter} betrokkenerelaties')
+        logging.info(colorama_table[ResourceEnum.betrokkenerelaties] + f'done batch of {counter} betrokkenerelaties')
         return counter

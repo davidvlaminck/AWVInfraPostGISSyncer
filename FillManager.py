@@ -13,7 +13,7 @@ from FeedEventsCollector import FeedEventsCollector
 from FeedEventsProcessor import FeedEventsProcessor
 from FillerFactory import FillerFactory
 from PostGISConnector import PostGISConnector
-from ResourceEnum import ResourceEnum
+from ResourceEnum import ResourceEnum, colorama_table
 
 
 class FillManager:
@@ -116,12 +116,12 @@ class FillManager:
     def fill_bestekkoppelingen(self, page_size, pagingcursor):
         # TODO write own loop to check for assets_fill
         # else: use fill_resource
-        logging.info('Filling bestekkoppelingen table')
+        logging.info(colorama_table[ResourceEnum.bestekkoppelingen] + 'Filling bestekkoppelingen table')
         params = self.connector.get_params(self.connector.main_connection)
         if 'assets_fill' not in params:
             raise ValueError('missing assets_fill in params')
         if params['assets_fill']:
-            logging.info('Waiting for assets to be filled')
+            logging.info(colorama_table[ResourceEnum.bestekkoppelingen] + 'Waiting for assets to be filled')
             return
 
         start = time.time()
@@ -129,10 +129,11 @@ class FillManager:
                                                         postGIS_connector=self.connector)
         bestek_koppeling_syncer.sync_bestekkoppelingen()
         end = time.time()
-        logging.info(f'time for all bestekkoppelingen: {round(end - start, 2)}')
+        logging.info(colorama_table[ResourceEnum.bestekkoppelingen] + f'time for all bestekkoppelingen: {round(end - start, 2)}')
 
     def fill_resource(self, page_size, pagingcursor, resource: ResourceEnum):
-        logging.info(f'Filling {resource} table')
+        color = colorama_table(resource)
+        logging.info(color + f'Filling {resource} table')
         connection = self.connector.get_connection()
 
         filler = FillerFactory.create_filler(eminfra_importer=self.eminfra_importer, resource=resource,
@@ -145,16 +146,16 @@ class FillManager:
                 return
             except ConnectionError as exc:
                 logging.error(exc)
-                logging.info('Connection error: trying again in 60 seconds...')
+                logging.info(color + 'Connection error: trying again in 60 seconds...')
                 time.sleep(60)
                 continue
             except urllib3.exceptions.ConnectionError as exc:
                 logging.error(exc)
-                logging.info('Connection error: trying again in 60 seconds...')
+                logging.info(color + 'Connection error: trying again in 60 seconds...')
                 time.sleep(60)
                 continue
             except Exception as exc:
-                logging.error('Unknown error. Hiding it!!')
+                logging.error(color + 'Unknown error. Hiding it!!')
                 logging.error(exc)
                 time.sleep(10)
                 continue
@@ -220,12 +221,3 @@ class FillManager:
 
         return self.recur_find_last_page(current_num=current_num + current_step * new_i, step=step,
                                          current_step=int(current_step / step), page_size=page_size, feed=feed)
-
-    @staticmethod
-    def log_eventparams(event_dict, timespan: float):
-        total = sum(len(events) for events in event_dict.values())
-        logging.info(f'fetched {total} asset events to sync in {timespan} seconds')
-        for k, v in event_dict.items():
-            if len(v) > 0:
-                logging.info(f'number of events of type {k}: {len(v)}')
-

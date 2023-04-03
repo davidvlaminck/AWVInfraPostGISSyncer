@@ -2,6 +2,7 @@ import logging
 from typing import Iterator
 
 from Helpers import peek_generator, turn_list_of_lists_into_string
+from ResourceEnum import colorama_table, ResourceEnum
 
 
 class BestekUpdater:
@@ -37,7 +38,7 @@ class BestekUpdater:
 
                 values_array.append(record_array)
             except KeyError as exc:
-                logging.error(f'Could not create a bestek from the following respoonse:\n{bestek_dict}\nError:{exc}')
+                logging.error(colorama_table[ResourceEnum.bestekken] + f'Could not create a bestek from the following respoonse:\n{bestek_dict}\nError:{exc}')
                 continue
 
         values_string = turn_list_of_lists_into_string(values_array)

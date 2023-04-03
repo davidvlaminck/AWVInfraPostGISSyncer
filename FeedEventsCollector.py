@@ -2,6 +2,7 @@ import logging
 from collections import namedtuple
 
 from EMInfraImporter import EMInfraImporter
+from ResourceEnum import colorama_table
 
 EventParams = namedtuple('EventParams', 'event_dict page_num event_uuid')
 
@@ -63,7 +64,7 @@ class FeedEventsCollector:
                 links = page['links']
                 if len(entries) > 0:
                     last_event = entries[-1]
-                    logging.info(f"processing event of {last_event['updated']}")
+                    logging.info(colorama_table[resource] + f"processing event of {last_event['updated']}")
 
                 page_num = next(link for link in links if link['rel'] == 'self')['href'].split('/')[1]
 

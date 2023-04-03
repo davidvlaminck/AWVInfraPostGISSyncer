@@ -7,6 +7,7 @@ import psycopg2
 from Exceptions.AssetMissingError import AssetMissingError
 from Exceptions.RelatieTypeMissingError import RelatieTypeMissingError
 from Helpers import peek_generator, turn_list_of_lists_into_string
+from ResourceEnum import colorama_table, ResourceEnum
 
 
 class AssetRelatiesUpdater:
@@ -112,8 +113,8 @@ class AssetRelatiesUpdater:
                 connection.rollback()
                 raise exc
         except Exception as exc:
-            logging.error(f'raising unhandled error: {exc}')
+            logging.error(colorama_table[ResourceEnum.assetrelaties] + f'raising unhandled error: {exc}')
             raise exc
 
-        logging.info(f'done batch of {counter} assetrelaties')
+        logging.info(colorama_table[ResourceEnum.assetrelaties] +f'done batch of {counter} assetrelaties')
         return counter

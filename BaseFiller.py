@@ -13,7 +13,7 @@ from Exceptions.IdentiteitMissingError import IdentiteitMissingError
 from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 from FillManager import FillManager
 from PostGISConnector import PostGISConnector
-from ResourceEnum import ResourceEnum
+from ResourceEnum import ResourceEnum, colorama_table
 
 
 class BaseFiller(ABC):
@@ -24,7 +24,8 @@ class BaseFiller(ABC):
         self.resource = resource
         self.updater = updater
         self.fill_manager = fill_manager
-        logging.info(f'Created an instance of {type(self).__name__} to start filling/syncing.')
+        self.color = colorama_table[ResourceEnum.resource]
+        logging.info(self.color + f'Created an instance of {type(self).__name__} to start filling/syncing.')
 
     @staticmethod
     def intermittent_sleep(break_when: [bool], total_sleep: int = 60, interval: int = 5):
@@ -72,14 +73,14 @@ class BaseFiller(ABC):
                 connection.rollback()
                 params = self.postgis_connector.get_params(connection)
                 if 'assets_fill' in params and params['assets_fill']:
-                    logging.info('Asset(s) missing while filling. This is normal behaviour. Trying again in 60 seconds')
+                    logging.info(self.color + 'Asset(s) missing while filling. This is normal behaviour. Trying again in 60 seconds')
                     self.intermittent_sleep(break_when=[self.fill_manager.reset_called])
                     continue
             except AgentMissingError:
                 connection.rollback()
                 params = self.postgis_connector.get_params(connection)
                 if 'agents_fill' in params and params['agents_fill']:
-                    logging.info('Agent(s) missing while filling. This is normal behaviour. Trying again in 60 seconds')
+                    logging.info(self.color + 'Agent(s) missing while filling. This is normal behaviour. Trying again in 60 seconds')
                     self.intermittent_sleep(break_when=[self.fill_manager.reset_called])
                     continue
             except (AssetTypeMissingError, AttribuutMissingError) as exc:
@@ -87,11 +88,11 @@ class BaseFiller(ABC):
                 print(type(exc))
                 params = self.postgis_connector.get_params(connection)
                 if 'assettypes_fill' in params and params['assettypes_fill']:
-                    logging.info('AssetType(s) or attribute(s) missing while filling. This is normal behaviour. Trying again in 60 seconds')
+                    logging.info(self.color + 'AssetType(s) or attribute(s) missing while filling. This is normal behaviour. Trying again in 60 seconds')
                     self.intermittent_sleep(break_when=[self.fill_manager.reset_called])
                     continue
                 else:
-                    logging.info('Refilling assettypes and attributes. Sending reset signal to all processes.')
+                    logging.info(self.color + 'Refilling assettypes and attributes. Sending reset signal to all processes.')
                     self.postgis_connector.update_params(
                         params={'assettypes_fill': True, 'assettypes_cursor': ''},
                         connection=connection)
@@ -101,11 +102,11 @@ class BaseFiller(ABC):
                 connection.rollback()
                 params = self.postgis_connector.get_params(connection)
                 if 'beheerders_fill' in params and params['beheerders_fill']:
-                    logging.info('Beheerder(s) missing while filling. This is normal behaviour. Trying again in 60 seconds')
+                    logging.info(self.color + 'Beheerder(s) missing while filling. This is normal behaviour. Trying again in 60 seconds')
                     self.intermittent_sleep(break_when=[self.fill_manager.reset_called])
                     continue
                 else:
-                    logging.info('Refilling beheerders. Sending reset signal to all processes.')
+                    logging.info(self.color + 'Refilling beheerders. Sending reset signal to all processes.')
                     self.postgis_connector.update_params(
                         params={'beheerders_fill': True, 'beheerders_cursor': ''},
                         connection=connection)
@@ -115,11 +116,11 @@ class BaseFiller(ABC):
                 connection.rollback()
                 params = self.postgis_connector.get_params(connection)
                 if 'toezichtgroepen_fill' in params and params['toezichtgroepen_fill']:
-                    logging.info('Toezichtgroep(en) missing while filling. This is normal behaviour. Trying again in 60 seconds')
+                    logging.info(self.color + 'Toezichtgroep(en) missing while filling. This is normal behaviour. Trying again in 60 seconds')
                     self.intermittent_sleep(break_when=[self.fill_manager.reset_called])
                     continue
                 else:
-                    logging.info('Refilling Toezichtgroepen. Sending reset signal to all processes.')
+                    logging.info(self.color + 'Refilling Toezichtgroepen. Sending reset signal to all processes.')
                     self.postgis_connector.update_params(
                         params={'toezichtgroepen_fill': True, 'toezichtgroepen_cursor': ''},
                         connection=connection)
@@ -129,11 +130,11 @@ class BaseFiller(ABC):
                 connection.rollback()
                 params = self.postgis_connector.get_params(connection)
                 if 'identiteiten_fill' in params and params['identiteiten_fill']:
-                    logging.info('Identiteit(en) missing while filling. This is normal behaviour. Trying again in 60 seconds')
+                    logging.info(self.color + 'Identiteit(en) missing while filling. This is normal behaviour. Trying again in 60 seconds')
                     self.intermittent_sleep(break_when=[self.fill_manager.reset_called])
                     continue
                 else:
-                    logging.info('Refilling identiteiten. Sending reset signal to all processes.')
+                    logging.info(self.color + 'Refilling identiteiten. Sending reset signal to all processes.')
                     self.postgis_connector.update_params(
                         params={'identiteiten_fill': True, 'identiteiten_cursor': ''},
                         connection=connection)
@@ -141,11 +142,11 @@ class BaseFiller(ABC):
                     raise FillResetError()
             except Exception as err:
                 connection.rollback()
-                logging.error(f'Found unknown error in {type(self).__name__}.')
+                logging.error(self.color + f'Found unknown error in {type(self).__name__}.')
                 raise err
 
         end = time.time()
-        logging.info(f'Time for all {self.resource}: {round(end - start, 2)}')
+        logging.info(self.color + f'Time for all {self.resource}: {round(end - start, 2)}')
         return True
 
     @staticmethod

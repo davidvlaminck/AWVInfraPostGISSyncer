@@ -9,12 +9,14 @@ import psycopg2
 from EMInfraImporter import EMInfraImporter
 from Exceptions.BestekMissingError import BestekMissingError
 from PostGISConnector import PostGISConnector
+from ResourceEnum import ResourceEnum, colorama_table
 
 
 class BestekKoppelingSyncer:
     def __init__(self, postGIS_connector: PostGISConnector, em_infra_importer: EMInfraImporter):
         self.postGIS_connector = postGIS_connector
         self.eminfra_importer = em_infra_importer
+        self.color = colorama_table[ResourceEnum.bestekkoppelingen]
 
     def sync_bestekkoppelingen(self, batch_size: int = 100):
         self.update_all_bestekkoppelingen(batch_size=batch_size)
@@ -153,7 +155,7 @@ SELECT uuid FROM bestek_assets;"""
                                               "assetUuid = '" + asset_uuid + "'::uuid;"
                     cursor.execute(update_temp_table_query)
             end = time.time()
-            logging.info(f'updated bestekkoppelingen for 1 asset in {str(round(end - start, 2))} seconds.')
+            logging.info(self.color + f'updated bestekkoppelingen for 1 asset in {str(round(end - start, 2))} seconds.')
         except Exception as exc:
             print(exc.args[0])
             pass
@@ -183,4 +185,4 @@ SELECT uuid FROM bestek_assets;"""
                 assets_to_update = list(map(lambda x: x[0], cursor.fetchall()))
 
             end = time.time()
-            logging.info(f'updated {batch_size} bestekkoppelingen in {str(round(end - start, 2))} seconds.')
+            logging.info(self.color + f'updated {batch_size} bestekkoppelingen in {str(round(end - start, 2))} seconds.')
