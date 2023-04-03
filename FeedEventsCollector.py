@@ -16,12 +16,12 @@ class FeedEventsCollector:
                                    resource: str) -> EventParams:
         event_dict = self.create_empty_event_dict()
         searching_where_stopped = True
-        if resource == 'betrokkenerelaties':
-            resource = 'betrokkene-relaties'
 
         uuids_string = f'{resource[:-1]}-uuids'
         if uuids_string in ['asset-uuids', 'assetrelatie-uuids']:
             uuids_string = 'uuids'
+        if resource == 'betrokkenerelaties':
+            uuids_string = 'betrokkene-relatie-uuids'
 
         while True:
             page = self.eminfra_importer.get_events_from_proxyfeed(
