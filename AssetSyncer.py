@@ -34,7 +34,7 @@ class AssetSyncer:
             try:
                 sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
                 if not sync_allowed_by_time:
-                    self.update_view_tables(connection)
+                    self.update_view_tables(connection, color=self.color)
                     logging.info(self.color + 'syncing is not allowed at this time. Trying again in 5 minutes')
                     time.sleep(300)
                     continue
@@ -120,7 +120,7 @@ class AssetSyncer:
             if len(v) > 0:
                 logging.info(color + f'number of events of type {k}: {len(v)}')
 
-    def update_view_tables(self, connection):
+    def update_view_tables(self, connection, color):
         try:
             params = self.postgis_connector.get_params(connection)
             last_update_views_date = params['last_update_utc_views'].date()
@@ -134,8 +134,12 @@ class AssetSyncer:
                 cursor.execute(select_view_names_query)
 
                 for view_name in cursor.fetchall():
-                    view_query = f"DROP IF EXISTS table_{view_name}; CREATE TABLE table_{view_name} AS SELECT * FROM {view_name};"
+                    view_name = view_name[0]
+                    logging.info(color + f'creating fixed table for {view_name}')
+                    view_query = f"DROP TABLE IF EXISTS asset_views.table_{view_name}; " \
+                                 f"CREATE TABLE asset_views.table_{view_name} AS SELECT * FROM asset_views.{view_name};"
                     cursor.execute(view_query)
+                    connection.commit()
 
             self.postgis_connector.update_params(params={'last_update_utc_views': datetime.utcnow()},
                                                  connection=connection)
