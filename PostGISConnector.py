@@ -3,13 +3,13 @@ from pathlib import Path
 from psycopg2 import Error
 from psycopg2.pool import ThreadedConnectionPool
 
-
 THIS_DIR = Path(__file__).parent
 
 
 class PostGISConnector:
     def __init__(self, host, port, user, password, database: str = 'awvinfra'):
-        self.pool = ThreadedConnectionPool(minconn=5, maxconn=20, user=user,password=password,host=host,port=port,database=database)
+        self.pool = ThreadedConnectionPool(minconn=5, maxconn=20, user=user, password=password, host=host, port=port,
+                                           database=database)
         self.main_connection = self.pool.getconn()
         self.main_connection.autocommit = False
         self.db = database
@@ -28,7 +28,7 @@ class PostGISConnector:
             'page_betrokkenerelaties': 'int',
             'event_uuid_betrokkenerelaties': 'text',
             'last_update_utc_betrokkenerelaties': 'timestamp',
-            'last_update_utc_views' : 'timestamp',
+            'last_update_utc_views': 'timestamp',
             'agents_fill': 'bool',
             'agents_cursor': 'text',
             'toezichtgroepen_fill': 'bool',
