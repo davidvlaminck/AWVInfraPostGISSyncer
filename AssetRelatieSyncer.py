@@ -26,10 +26,14 @@ class AssetRelatieSyncer:
         self.color = colorama_table[ResourceEnum.assetrelaties]
 
     def sync(self, connection):
-        sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
-
-        while sync_allowed_by_time:
+        while True:
             try:
+                sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
+                if not sync_allowed_by_time:
+                    logging.info(self.color + 'syncing is not allowed at this time. Trying again in 5 minutes')
+                    time.sleep(300)
+                    continue
+
                 params = self.postgis_connector.get_params(connection)
                 current_page = params['page_assetrelaties']
                 completed_event_id = params['event_uuid_assetrelaties']
