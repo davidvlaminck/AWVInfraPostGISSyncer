@@ -3,6 +3,8 @@ import time
 import traceback
 from datetime import datetime
 
+from requests.exceptions import ConnectionError
+
 from AssetFeedEventsCollector import AssetFeedEventsCollector
 from AssetFeedEventsProcessor import AssetFeedEventsProcessor
 from AssetUpdater import AssetUpdater
@@ -59,8 +61,7 @@ class AssetSyncer:
                                                              connection=connection)
                         time.sleep(30)  # wait 30 seconds to prevent overloading API
                         continue
-                except ConnectionError as err:
-                    print(err)
+                except ConnectionError:
                     logging.info(self.color + "failed connection, retrying in 1 minute")
                     time.sleep(60)
                     continue
@@ -95,8 +96,7 @@ class AssetSyncer:
                     traceback.print_exception(exc)
                     connection.rollback()
                     time.sleep(30)
-            except ConnectionError as err:
-                print(err)
+            except ConnectionError:
                 logging.info(self.color + "failed connection, retrying in 1 minute")
                 time.sleep(60)
             except Exception as err:

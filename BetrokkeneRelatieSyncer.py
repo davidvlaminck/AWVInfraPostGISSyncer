@@ -3,6 +3,8 @@ import time
 import traceback
 from datetime import datetime
 
+from requests.exceptions import ConnectionError
+
 from BetrokkeneRelatieFeedEventsCollector import BetrokkeneRelatieFeedEventsCollector
 from BetrokkeneRelatieFeedEventsProcessor import BetrokkeneRelatieFeedEventsProcessor
 from BetrokkeneRelatiesUpdater import BetrokkeneRelatiesUpdater
@@ -54,8 +56,7 @@ class BetrokkeneRelatieSyncer:
                                                              connection=connection)
                         time.sleep(30)  # wait 30 seconds to prevent overloading API
                         continue
-                except ConnectionError as err:
-                    print(err)
+                except ConnectionError:
                     logging.info(self.color + "failed connection, retrying in 1 minute")
                     time.sleep(60)
                     continue
@@ -77,15 +78,12 @@ class BetrokkeneRelatieSyncer:
                     traceback.print_exception(exc)
                     connection.rollback()
                     time.sleep(30)
-            except ConnectionError as err:
-                print(err)
+            except ConnectionError:
                 logging.info(self.color + "failed connection, retrying in 1 minute")
                 time.sleep(60)
             except Exception as err:
                 logging.error(self.color + err)
                 time.sleep(30)
-
-            sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
 
     @staticmethod
     def log_eventparams(event_dict, timespan: float, color):

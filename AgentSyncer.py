@@ -2,6 +2,8 @@ import logging
 import time
 from datetime import datetime
 
+from requests.exceptions import ConnectionError
+
 from AgentFeedEventsCollector import AgentFeedEventsCollector
 from AgentFeedEventsProcessor import AgentFeedEventsProcessor
 from AgentUpdater import AgentUpdater
@@ -51,8 +53,7 @@ class AgentSyncer:
                         continue
                     end = time.time()
                     self.log_eventparams(eventsparams_to_process.event_dict, round(end - start, 2), color=self.color)
-                except ConnectionError as err:
-                    print(err)
+                except ConnectionError:
                     logging.info(self.color + "failed connection, retrying in 1 minute")
                     connection.rollback()
                     time.sleep(60)
@@ -71,8 +72,7 @@ class AgentSyncer:
                     time.sleep(30)
 
                 sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
-            except ConnectionError as err:
-                print(err)
+            except ConnectionError:
                 logging.info(self.color + "failed connection, retrying in 1 minute")
                 time.sleep(60)
             except Exception as err:
