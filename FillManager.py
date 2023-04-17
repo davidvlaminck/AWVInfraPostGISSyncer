@@ -132,7 +132,7 @@ class FillManager:
         logging.info(colorama_table[ResourceEnum.bestekkoppelingen] + f'time for all bestekkoppelingen: {round(end - start, 2)}')
 
     def fill_resource(self, page_size, pagingcursor, resource: ResourceEnum):
-        color = colorama_table(resource)
+        color = colorama_table[resource]
         logging.info(color + f'Filling {resource} table')
         connection = self.connector.get_connection()
 
