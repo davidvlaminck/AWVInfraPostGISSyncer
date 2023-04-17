@@ -24,7 +24,7 @@ class BaseFiller(ABC):
         self.resource = resource
         self.updater = updater
         self.fill_manager = fill_manager
-        self.color = colorama_table[ResourceEnum.resource]
+        self.color = colorama_table[resource]
         logging.info(self.color + f'Created an instance of {type(self).__name__} to start filling/syncing.')
 
     @staticmethod
