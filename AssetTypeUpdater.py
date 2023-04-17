@@ -81,8 +81,13 @@ class AssetTypeUpdater:
         self.create_views_for_assettypes_with_attributes(connection)
 
     def update_assettypes_with_attributen(self, connection, force_update: bool):
-        select_query = 'SELECT uuid, uri FROM public.assettypes WHERE attributen is NULL'
         cursor = connection.cursor()
+
+        if force_update:
+            reset_assettype_query = "UPDATE public.assettypes SET attributen = NULL;"
+            cursor.execute(reset_assettype_query)
+
+        select_query = 'SELECT uuid, uri FROM public.assettypes WHERE attributen is NULL'
         cursor.execute(select_query)
         assettypes_to_update = list(map(lambda x: (x[0], x[1]), cursor.fetchall()))
 
