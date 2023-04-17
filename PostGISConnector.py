@@ -123,8 +123,21 @@ class PostGISConnector:
         cursor.close()
 
     def create_params(self, params: dict, connection):
+        if len(params.keys()) == 0:
+            return
+        cursor = connection.cursor()
+        query = f"""SELECT key_name FROM public.params WHERE key_name IN ('{"','".join(params.keys())}');"""
+        cursor.execute(query)
+        existing_keys = cursor.fetchall()
+        if len(existing_keys) == 0:
+            existing_keys = []
+        else:
+            existing_keys = list(map(lambda x: x[0], existing_keys))
+
         query = ''
         for key_name, value in params.items():
+            if key_name in existing_keys:
+                continue
             param_type = self.param_type_map[key_name]
             if value is None:
                 query += f"""INSERT INTO public.params(key_name, value_{param_type})
@@ -136,7 +149,8 @@ class PostGISConnector:
                 query += f"""INSERT INTO public.params(key_name, value_{param_type})
                                              VALUES ('{key_name}', '{value}');"""
 
-        cursor = connection.cursor()
+        if query == '':
+            return
         cursor.execute(query)
         connection.commit()
         cursor.close()
