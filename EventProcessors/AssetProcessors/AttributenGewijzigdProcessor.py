@@ -93,7 +93,8 @@ FROM to_insert;"""
             with connection.cursor() as cursor:
                 cursor.execute(insert_query)
         except psycopg2.Error as exc:
-            if str(exc).split('\n')[0] == 'null value in column "attribuutuuid" violates not-null constraint':
+            msg = str(exc).split('\n')[0]
+            if 'null value in column "attribuutuuid"' in msg and 'violates not-null constraint' in msg:
                 logging.error('raising AttribuutMissingError: ' + str(exc).split('\n')[1])
                 raise AttribuutMissingError()
             else:
