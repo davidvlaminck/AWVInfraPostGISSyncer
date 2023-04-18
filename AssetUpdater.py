@@ -48,9 +48,25 @@ class AssetUpdater:
                                                            asset_dicts=asset_dict_list)
         AssetUpdater.update_elek_aansluiting_of_synced_assets(connection=connection, asset_uuids=asset_uuids,
                                                               eminfra_importer=eminfra_importer)
+        AssetUpdater.update_vplan_of_synced_assets(connection=connection, asset_uuids=asset_uuids,
+                                                   eminfra_importer=eminfra_importer)
 
         logging.info(f'Updated or inserted {counter} assets, including legacy info.')
         return counter
+
+    @staticmethod
+    def update_vplan_of_synced_assets(connection, asset_uuids, eminfra_importer):
+        joined_uuids = "','".join(asset_uuids)
+        select_assets_for_vplan_query = f"""SELECT assets.uuid 
+                FROM assets 
+                    LEFT JOIN assettypes ON assets.assettype = assettypes.uuid
+                WHERE assets.uuid IN ('{joined_uuids}')
+                AND vplan = TRUE;"""
+        with connection.cursor() as cursor:
+            cursor.execute(select_assets_for_vplan_query)
+            assets_for_vplan = list(map(lambda x: x[0], cursor.fetchall()))
+            vplan_processor = VplanGewijzigdProcessor(eminfra_importer=eminfra_importer)
+            vplan_processor.process(uuids=assets_for_vplan, connection=connection)
 
     @staticmethod
     def update_elek_aansluiting_of_synced_assets(connection, asset_uuids, eminfra_importer):

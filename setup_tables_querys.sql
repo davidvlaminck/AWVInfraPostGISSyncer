@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS public.assettypes
     toezicht boolean,
     gevoedDoor boolean,
     elek_aansluiting boolean,
+    vplan boolean,
     attributen boolean,
     CONSTRAINT assettypes_pkey PRIMARY KEY (uuid)
 );
@@ -274,6 +275,30 @@ CREATE TABLE IF NOT EXISTS public.elek_aansluitingen
 
 ALTER TABLE IF EXISTS public.elek_aansluitingen
     ADD CONSTRAINT assets_elek_aansluitingen_fkey
+    FOREIGN KEY (assetUuid)
+    REFERENCES public.assets (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+
+-- Table: public.vplan_koppelingen
+
+DROP TABLE IF EXISTS public.vplan_koppelingen CASCADE;
+CREATE TABLE IF NOT EXISTS public.vplan_koppelingen
+(
+    uuid uuid NOT NULL,
+    assetUuid uuid NOT NULL,
+    vplannummer text COLLATE pg_catalog."default",
+    vplan uuid,
+    inDienstDatum TIMESTAMP WITH TIME ZONE,
+    uitDienstDatum TIMESTAMP WITH TIME ZONE,
+    commentaar text COLLATE pg_catalog."default",
+    PRIMARY KEY (uuid)
+);
+
+ALTER TABLE IF EXISTS public.vplan_koppelingen
+    ADD CONSTRAINT assets_vplan_koppelingen_fkey
     FOREIGN KEY (assetUuid)
     REFERENCES public.assets (uuid) MATCH SIMPLE
     ON UPDATE NO ACTION

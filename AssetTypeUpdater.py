@@ -77,6 +77,7 @@ class AssetTypeUpdater:
         self.update_assettypes_with_toezicht(connection)
         self.update_assettypes_with_gevoed_door(connection)
         self.update_assettypes_with_elek_aansluiting(connection)
+        self.update_assettypes_with_vplan(connection)
         self.update_assettypes_with_attributen(connection, force_update=True)
         self.create_views_for_assettypes_with_attributes(connection)
 
@@ -247,6 +248,27 @@ class AssetTypeUpdater:
         if len(types_without_elek_aansluiting) > 0:
             update_query = "UPDATE public.assettypes SET elek_aansluiting = FALSE WHERE uuid IN (VALUES ('" + \
                            "'::uuid),('".join(types_without_elek_aansluiting) + "'::uuid));"
+            cursor.execute(update_query)
+
+    def update_assettypes_with_vplan(self, connection):
+        select_query = 'SELECT uuid FROM public.assettypes WHERE vplan is NULL'
+        cursor = connection.cursor()
+        cursor.execute(select_query)
+        assettypes_to_update = list(map(lambda x: x[0], cursor.fetchall()))
+
+        types_with_vplan_dicts = list(
+            self.eminfra_importer.get_assettypes_with_kenmerk_vplan_by_uuids(
+                assettype_uuids=assettypes_to_update))
+        types_with_vplan = list(map(lambda x: x['uuid'], types_with_vplan_dicts))
+        types_without_vplan = list(set(assettypes_to_update) - set(types_with_vplan))
+
+        if len(types_with_vplan) > 0:
+            update_query = "UPDATE public.assettypes SET vplan = TRUE WHERE uuid IN (VALUES ('" + \
+                           "'::uuid),('".join(types_with_vplan) + "'::uuid));"
+            cursor.execute(update_query)
+        if len(types_without_vplan) > 0:
+            update_query = "UPDATE public.assettypes SET vplan = FALSE WHERE uuid IN (VALUES ('" + \
+                           "'::uuid),('".join(types_without_vplan) + "'::uuid));"
             cursor.execute(update_query)
 
     @staticmethod

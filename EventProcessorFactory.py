@@ -5,6 +5,7 @@ from EventProcessors.AgentProcessors.AgentContactInfoGewijzigdProcessor import A
 from EventProcessors.AgentProcessors.AgentNaamGewijzigdProcessor import AgentNaamGewijzigdProcessor
 from EventProcessors.AgentProcessors.AgentVOIDGewijzigdProcessor import AgentVOIDGewijzigdProcessor
 from EventProcessors.AgentProcessors.NieuwAgentProcessor import NieuwAgentProcessor
+from EventProcessors.AssetProcessors.VplanGewijzigdProcessor import VplanGewijzigdProcessor
 from EventProcessors.AssetrelatieProcessors.AssetrelatieEigenschappenGewijzigdProcessor import \
     AssetrelatieEigenschappenGewijzigdProcessor
 from EventProcessors.AssetrelatieProcessors.AssetrelatieVerwijderdOngedaanProcessor import \
@@ -94,7 +95,7 @@ class EventProcessorFactory:
         elif event_type == 'TOEZICHT_GEWIJZIGD':
             return ToezichtGewijzigdProcessor(eminfra_importer)
         elif event_type == 'VPLAN_GEWIJZIGD':
-            pass
+            return VplanGewijzigdProcessor(eminfra_importer)
         else:
             raise NotImplementedError(f"can't create an asset event processor with type: {event_type}")
 

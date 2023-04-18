@@ -322,6 +322,10 @@ class EMInfraImporter:
         yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
                                                                  kenmerk='87dff279-4162-4031-ba30-fb7ffd9c014b')
 
+    def get_assettypes_with_kenmerk_vplan_by_uuids(self, assettype_uuids: [str]):
+        yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
+                                                                 kenmerk='9f12fd85-d4ae-4adc-952f-5fa6e9d0ffb7')
+
     def import_identiteiten_from_webservice_page_by_page(self, page_size):
         zoek_params = ZoekParameterPayload()
         zoek_params.size = page_size
