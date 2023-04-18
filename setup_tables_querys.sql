@@ -504,4 +504,6 @@ SELECT 'identiteiten', count(*) FROM identiteiten
 UNION ALL
 SELECT 'relatietypes', count(*) FROM relatietypes
 UNION ALL
-SELECT 'toezichtgroepen', count(*) FROM toezichtgroepen;
+SELECT 'toezichtgroepen', count(*) FROM toezichtgroepen
+UNION ALL
+SELECT 'vplan_koppelingen', count(*) FROM vplan_koppelingen;

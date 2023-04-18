@@ -163,23 +163,18 @@ class FillManager:
         self.connector.kill_connection(connection)
 
     def save_last_feedevent_to_params(self, page_size: int, feed: str):
-        logging.info(f'Searching last page of current feed for {feed}')
-        start_num = 1
-        step = 5
-        start_num = self.recur_exp_find_start_page(current_num=start_num, step=step, page_size=page_size, feed=feed)
-        if start_num < step:
-            start_num = step
-        current_page_num = self.recur_find_last_page(current_num=int(start_num / step),
-                                                     current_step=int(start_num / step),
-                                                     step=step, page_size=page_size, feed=feed)
+        logging.info(f'Getting last page of current feed for {feed}')
 
-        # doublecheck
-        event_page = self.eminfra_importer.get_events_from_proxyfeed(page_num=current_page_num, page_size=page_size,
-                                                                     resource=feed)
-        links = event_page['links']
-        prev_link = next((l for l in links if l['rel'] == 'previous'), None)
-        if prev_link is not None:
-            raise RuntimeError('algorithm did not result in the last page')
+        while True:
+            try:
+                event_page = self.eminfra_importer.get_events_from_proxyfeed(page_num=-1, page_size=page_size,
+                                                                             resource=feed)
+                self_link = next(l for l in event_page['links'] if l['rel'] == 'self')
+                current_page_num = int(self_link['href'][1:].split('/')[0])
+                break
+            except Exception as ex:
+                logging.error(ex.args[0])
+                time.sleep(60)
 
         # find last event_id
         entries = event_page['entries']
@@ -191,33 +186,3 @@ class FillManager:
              f'last_update_utc_{feed}': None},
             connection=self.connector.main_connection)
         logging.info(f'Added last page of current feed for {feed} to params (page: {current_page_num})')
-
-    def recur_exp_find_start_page(self, current_num, step, page_size, feed):
-        event_page = None
-        try:
-            event_page = self.eminfra_importer.get_events_from_proxyfeed(page_num=current_num, page_size=page_size,
-                                                                         resource=feed)
-        except Exception as ex:
-            if ex.args[0] == 'status 400':
-                return current_num
-        if event_page is None or 'message' not in event_page:
-            return self.recur_exp_find_start_page(current_num=current_num * step, step=step, page_size=page_size,
-                                                  feed=feed)
-        return current_num
-
-    def recur_find_last_page(self, current_num, current_step, step, page_size, feed):
-        new_i = 0
-        for i in range(step + 1):
-            new_num = current_num + current_step * i
-            try:
-                self.eminfra_importer.get_events_from_proxyfeed(page_num=new_num, page_size=page_size, resource=feed)
-            except Exception as ex:
-                if ex.args[0] == 'status 400':
-                    new_i = i - 1
-                    break
-
-        if current_step == 1:
-            return current_num + current_step * new_i
-
-        return self.recur_find_last_page(current_num=current_num + current_step * new_i, step=step,
-                                         current_step=int(current_step / step), page_size=page_size, feed=feed)
