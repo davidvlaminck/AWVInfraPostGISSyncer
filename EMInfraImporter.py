@@ -15,7 +15,10 @@ class EMInfraImporter:
         self.paging_cursors = {}
 
     def get_events_from_proxyfeed(self, resource: str, page_num: int, page_size: int = 1):
-        url = f"feedproxy/feed/{resource}/{page_num}/{page_size}"
+        if page_num == -1:
+            url = f"feedproxy/feed/{resource}"
+        else:
+            url = f"feedproxy/feed/{resource}/{page_num}/{page_size}"
         return self.request_handler.get_jsondict(url)
 
     def get_assets_from_webservice_by_naam(self, naam: str) -> [dict]:
@@ -269,6 +272,12 @@ class EMInfraImporter:
     def import_all_bestekken_from_webservice(self):
         zoek_params = ZoekParameterPayload()
         yield from self.get_objects_from_non_oslo_endpoint(url_part='bestekrefs/search', zoek_payload=zoek_params)
+
+    def get_all_vplankoppelingen_from_webservice_by_asset_uuids(self, asset_uuids: [str]) -> Generator[tuple]:
+        for asset_uuid in asset_uuids:
+            yield asset_uuid, self.get_objects_from_non_oslo_endpoint(
+                url_part=f'installaties/{asset_uuid}/kenmerken/9f12fd85-d4ae-4adc-952f-5fa6e9d0ffb7/vplannen',
+                request_type='GET')
 
     def get_all_elek_aansluitingen_from_webservice_by_asset_uuids(self, asset_uuids: [str]) -> Generator[tuple]:
         for asset_uuid in asset_uuids:
