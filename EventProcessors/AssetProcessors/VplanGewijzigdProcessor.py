@@ -35,9 +35,11 @@ class VplanGewijzigdProcessor(SpecificEventProcessor):
 
             values_array = []
             for vplan_koppeling in vplankoppeling_list:
+                vplannr = vplan_koppeling['vplanRef']['nummer']
+                if vplannr is not None:
+                    vplannr = vplannr.replace("'", "''")
                 record_array = [f"'{vplan_koppeling['uuid']}'", f"'{asset_uuid}'",
-                                f"'{vplan_koppeling['vplanRef']['nummer']}'",
-                                f"'{vplan_koppeling['vplanRef']['uuid']}'"]
+                                f"'{vplannr}'", f"'{vplan_koppeling['vplanRef']['uuid']}'"]
 
                 in_dienst_datum = vplan_koppeling.get('inDienstDatum', None)
                 uit_dienst_datum = vplan_koppeling.get('uitDienstDatum', None)
