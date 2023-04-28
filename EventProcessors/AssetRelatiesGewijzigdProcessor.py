@@ -27,6 +27,8 @@ class AssetRelatiesGewijzigdProcessor(SpecificEventProcessor):
         logging.info(f'updated {len(assetrelatie_dicts)} assetrelaties in {str(round(end - start, 2))} seconds.')
 
     def process_dicts(self, cursor, assetrelatie_dicts: dict):
+        if not len(assetrelatie_dicts):
+            return 0
         logging.info(f'started creating {len(assetrelatie_dicts)} assetrelaties')
 
         values = ''
@@ -74,10 +76,9 @@ class AssetRelatiesGewijzigdProcessor(SpecificEventProcessor):
 
             values += f"('{uuid}', '{bron_uuid}', '{doel_uuid}', '{relatie_type_uri}', {actief}, "
             if attributen == '':
-                values += 'NULL),'
+                values += f"('{uuid}',NULL),"
             else:
-                values += f"'{attributen}'),"
-
+                values += f"('{uuid}','{attributen}'),"
         insert_query = f"""
 WITH s (uuid, bronUuid, doelUuid, relatieTypeUri, actief, attributen) 
     AS (VALUES {values[:-1]}),
