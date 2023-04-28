@@ -76,9 +76,9 @@ class AssetRelatiesGewijzigdProcessor(SpecificEventProcessor):
 
             values += f"('{uuid}', '{bron_uuid}', '{doel_uuid}', '{relatie_type_uri}', {actief}, "
             if attributen == '':
-                values += f"('{uuid}',NULL),"
+                values += 'NULL),'
             else:
-                values += f"('{uuid}','{attributen}'),"
+                values += f"'{attributen}'),"
         insert_query = f"""
 WITH s (uuid, bronUuid, doelUuid, relatieTypeUri, actief, attributen) 
     AS (VALUES {values[:-1]}),
