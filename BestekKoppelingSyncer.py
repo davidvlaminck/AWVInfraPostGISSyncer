@@ -12,6 +12,9 @@ from PostGISConnector import PostGISConnector
 from ResourceEnum import ResourceEnum, colorama_table
 
 
+# maak gebruik van legacy installaties endpoint:
+# {"size":10,"from":0,"selection":{"expressions":[{"terms":[{"property":"actief","value":true,"operator":0,"logicalOp":null,"negate":false}],"logicalOp":null}],"settings":{}},"expansions":{"fields":["parent","kenmerk:ee2e627e-bb79-47aa-956a-ea167d20acbd"]},"pagingMode":"CURSOR","fromCursor":null}
+
 class BestekKoppelingSyncer:
     def __init__(self, postGIS_connector: PostGISConnector, em_infra_importer: EMInfraImporter):
         self.postGIS_connector = postGIS_connector
