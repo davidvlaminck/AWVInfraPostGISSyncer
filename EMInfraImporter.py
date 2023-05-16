@@ -286,10 +286,12 @@ class EMInfraImporter:
                 request_type='GET')
 
     def get_all_bestekkoppelingen_from_webservice_by_asset_uuids(self, asset_uuids: [str]) -> Generator[tuple]:
-        for asset_uuid in asset_uuids:
-            yield asset_uuid, self.get_objects_from_non_oslo_endpoint(
-                url_part=f'installaties/{asset_uuid}/kenmerken/ee2e627e-bb79-47aa-956a-ea167d20acbd/bestekken',
-                request_type='GET')
+        zoek_params = ZoekParameterPayload()
+        zoek_params.expansions = {'fields': ['kenmerk:ee2e627e-bb79-47aa-956a-ea167d20acbd']}
+        zoek_params.add_term(property='id', value=list(asset_uuids), operator='IN')
+        for kenmerk_object in self.get_objects_from_non_oslo_endpoint(url_part='installaties/search',
+                                                                      request_type='POST', zoek_payload=zoek_params):
+            yield kenmerk_object['uuid'], kenmerk_object['kenmerken']['data'][0]['bestekKoppelingen']['data']
 
     def get_assettypes_with_kenmerk_and_by_uuids(self, assettype_uuids: [str], kenmerk: str):
         zoek_params = ZoekParameterPayload()
