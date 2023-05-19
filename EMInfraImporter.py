@@ -294,6 +294,8 @@ class EMInfraImporter:
             koppeling_object = kenmerk_object['kenmerken']['data'][0]
             if 'bestekKoppelingen' in koppeling_object:
                 yield kenmerk_object['uuid'], koppeling_object['bestekKoppelingen']['data']
+            else:
+                yield kenmerk_object['uuid'], []
 
     def get_assettypes_with_kenmerk_and_by_uuids(self, assettype_uuids: [str], kenmerk: str):
         zoek_params = ZoekParameterPayload()
