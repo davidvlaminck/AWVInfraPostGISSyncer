@@ -223,7 +223,8 @@ CREATE TABLE IF NOT EXISTS public.locatie
     adres_bus text COLLATE pg_catalog."default",
     adres_postcode text COLLATE pg_catalog."default",
     adres_gemeente text COLLATE pg_catalog."default",
-    adres_provincie text COLLATE pg_catalog."default"
+    adres_provincie text COLLATE pg_catalog."default",
+    geometry geometry
 );
 
 ALTER TABLE IF EXISTS public.locatie
