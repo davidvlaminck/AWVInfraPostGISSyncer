@@ -289,15 +289,19 @@ class EMInfraImporter:
         zoek_params = ZoekParameterPayload()
         zoek_params.expansions = {'fields': ['kenmerk:ee2e627e-bb79-47aa-956a-ea167d20acbd']}
         zoek_params.add_term(property='id', value=list(asset_uuids), operator='IN')
-        for kenmerk_object in self.get_objects_from_non_oslo_endpoint(url_part='onderdelen/search',
+        for kenmerk_object in self.get_objects_from_non_oslo_endpoint(url_part='installaties/search',
                                                                       request_type='POST', zoek_payload=zoek_params):
-            yield kenmerk_object['uuid'], kenmerk_object['kenmerken']['data'][0]['bestekKoppelingen']['data']
+            koppeling_object = kenmerk_object['kenmerken']['data'][0]
+            if 'bestekKoppelingen' in koppeling_object:
+                yield kenmerk_object['uuid'], koppeling_object['bestekKoppelingen']['data']
+            else:
+                yield kenmerk_object['uuid'], []
 
     def get_all_bestekkoppelingen_from_webservice_by_asset_uuids_onderdelen(self, asset_uuids: [str]) -> Generator[tuple]:
         zoek_params = ZoekParameterPayload()
         zoek_params.expansions = {'fields': ['kenmerk:ee2e627e-bb79-47aa-956a-ea167d20acbd']}
         zoek_params.add_term(property='id', value=list(asset_uuids), operator='IN')
-        for kenmerk_object in self.get_objects_from_non_oslo_endpoint(url_part='installaties/search',
+        for kenmerk_object in self.get_objects_from_non_oslo_endpoint(url_part='onderdelen/search',
                                                                       request_type='POST', zoek_payload=zoek_params):
             koppeling_object = kenmerk_object['kenmerken']['data'][0]
             if 'bestekKoppelingen' in koppeling_object:
