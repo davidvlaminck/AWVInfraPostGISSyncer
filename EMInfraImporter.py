@@ -285,7 +285,15 @@ class EMInfraImporter:
                 url_part=f'installaties/{asset_uuid}/kenmerken/87dff279-4162-4031-ba30-fb7ffd9c014b',
                 request_type='GET')
 
-    def get_all_bestekkoppelingen_from_webservice_by_asset_uuids(self, asset_uuids: [str]) -> Generator[tuple]:
+    def get_all_bestekkoppelingen_from_webservice_by_asset_uuids_installaties(self, asset_uuids: [str]) -> Generator[tuple]:
+        zoek_params = ZoekParameterPayload()
+        zoek_params.expansions = {'fields': ['kenmerk:ee2e627e-bb79-47aa-956a-ea167d20acbd']}
+        zoek_params.add_term(property='id', value=list(asset_uuids), operator='IN')
+        for kenmerk_object in self.get_objects_from_non_oslo_endpoint(url_part='onderdelen/search',
+                                                                      request_type='POST', zoek_payload=zoek_params):
+            yield kenmerk_object['uuid'], kenmerk_object['kenmerken']['data'][0]['bestekKoppelingen']['data']
+
+    def get_all_bestekkoppelingen_from_webservice_by_asset_uuids_onderdelen(self, asset_uuids: [str]) -> Generator[tuple]:
         zoek_params = ZoekParameterPayload()
         zoek_params.expansions = {'fields': ['kenmerk:ee2e627e-bb79-47aa-956a-ea167d20acbd']}
         zoek_params.add_term(property='id', value=list(asset_uuids), operator='IN')

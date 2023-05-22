@@ -49,8 +49,12 @@ class BestekKoppelingSyncer:
 
         connection.close()
 
-    def get_all_bestekkoppelingen_by_asset_uuids(self, asset_uuids: [str]) -> Generator[tuple]:
-        yield from self.eminfra_importer.get_all_bestekkoppelingen_from_webservice_by_asset_uuids(
+    def get_all_bestekkoppelingen_by_asset_uuids_onderdelen(self, asset_uuids: [str]) -> Generator[tuple]:
+        yield from self.eminfra_importer.get_all_bestekkoppelingen_from_webservice_by_asset_uuids_onderdelen(
+            asset_uuids=asset_uuids)
+
+    def get_all_bestekkoppelingen_by_asset_uuids_installaties(self, asset_uuids: [str]) -> Generator[tuple]:
+        yield from self.eminfra_importer.get_all_bestekkoppelingen_from_webservice_by_asset_uuids_installaties(
             asset_uuids=asset_uuids)
 
     @staticmethod
@@ -145,7 +149,7 @@ SELECT uuid FROM bestek_assets;"""
         connection.commit()
 
     def update_bestekkoppelingen_by_asset_uuid(self, asset_uuid: str,
-                                                koppelingen: [dict]) -> None:
+                                               koppelingen: [dict]) -> None:
         start = time.time()
         logging.info(f'starting proces for {asset_uuid}')
         connection = None
@@ -167,16 +171,30 @@ SELECT uuid FROM bestek_assets;"""
                 self.postGIS_connector.kill_connection(connection)
 
     def loop_using_temp_table_and_sync_koppelingen(self, batch_size: int, connection):
-        select_from_temp_table_query = 'SELECT assetUuid FROM public.temp_sync_bestekkoppelingen WHERE done IS NULL ' \
-                                       f'LIMIT {batch_size}; '
+        select_from_temp_table_query = "SELECT assetuuid, CASE WHEN t.uri LIKE '%/ns/onderdeel#' THEN 'onderdelen' ELSE 'installaties' END AS asset_cat " \
+                                       "FROM public.temp_sync_bestekkoppelingen " \
+                                       "LEFT JOIN assets a ON a.uuid = assetUuid " \
+                                       "LEFT JOIN assettypes t ON a.assettype = t.uuid " \
+                                       "WHERE done IS NULL" \
+                                       f"LIMIT {batch_size}; "
         with connection.cursor() as cursor:
             start = time.time()
             cursor.execute(select_from_temp_table_query)
-            assets_to_update = list(map(lambda x: x[0], cursor.fetchall()))
-            while len(assets_to_update) > 0:
-                koppelingen_generator = self.get_all_bestekkoppelingen_by_asset_uuids(asset_uuids=assets_to_update)
-
+            all_rows = cursor.fetchall()
+            onderdelen_to_update = list(map(lambda x: x[0], filter(lambda x: x[1] == 'onderdelen', all_rows)))
+            installaties_to_update = list(map(lambda x: x[0], filter(lambda x: x[1] == 'installaties', all_rows)))
+            while len(onderdelen_to_update) > 0 or len(installaties_to_update) > 0:
+                koppelingen_generator = self.get_all_bestekkoppelingen_by_asset_uuids_onderdelen(
+                    asset_uuids=onderdelen_to_update)
                 # use multithreading
+                executor = ThreadPoolExecutor(8)
+                futures = [executor.submit(self.update_bestekkoppelingen_by_asset_uuid, asset_uuid=asset_uuid,
+                                           koppelingen=koppelingen)
+                           for asset_uuid, koppelingen in koppelingen_generator]
+                concurrent.futures.wait(futures)
+
+                koppelingen_generator = self.get_all_bestekkoppelingen_by_asset_uuids_installaties(
+                    asset_uuids=installaties_to_update)
                 executor = ThreadPoolExecutor(8)
                 futures = [executor.submit(self.update_bestekkoppelingen_by_asset_uuid, asset_uuid=asset_uuid,
                                            koppelingen=koppelingen)
@@ -185,7 +203,9 @@ SELECT uuid FROM bestek_assets;"""
                 connection.commit()
 
                 cursor.execute(select_from_temp_table_query)
-                assets_to_update = list(map(lambda x: x[0], cursor.fetchall()))
+                onderdelen_to_update = list(map(lambda x: x[0], filter(lambda x: x[1] == 'onderdelen', all_rows)))
+                installaties_to_update = list(map(lambda x: x[0], filter(lambda x: x[1] == 'installaties', all_rows)))
 
             end = time.time()
-            logging.info(self.color + f'updated {batch_size} bestekkoppelingen in {str(round(end - start, 2))} seconds.')
+            logging.info(
+                self.color + f'updated {batch_size} bestekkoppelingen in {str(round(end - start, 2))} seconds.')
