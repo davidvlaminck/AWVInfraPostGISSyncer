@@ -171,11 +171,11 @@ SELECT uuid FROM bestek_assets;"""
                 self.postGIS_connector.kill_connection(connection)
 
     def loop_using_temp_table_and_sync_koppelingen(self, batch_size: int, connection):
-        select_from_temp_table_query = "SELECT assetuuid, CASE WHEN t.uri LIKE '%/ns/onderdeel#' THEN 'onderdelen' ELSE 'installaties' END AS asset_cat " \
+        select_from_temp_table_query = "SELECT assetuuid, CASE WHEN t.uri LIKE '%/ns/onderdeel#%' THEN 'onderdelen' ELSE 'installaties' END AS asset_cat " \
                                        "FROM public.temp_sync_bestekkoppelingen " \
                                        "LEFT JOIN assets a ON a.uuid = assetUuid " \
                                        "LEFT JOIN assettypes t ON a.assettype = t.uuid " \
-                                       "WHERE done IS NULL" \
+                                       "WHERE done IS NULL " \
                                        f"LIMIT {batch_size}; "
         with connection.cursor() as cursor:
             start = time.time()
