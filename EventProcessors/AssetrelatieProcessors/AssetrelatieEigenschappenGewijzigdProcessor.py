@@ -51,6 +51,9 @@ class AssetrelatieEigenschappenGewijzigdProcessor(SpecificEventProcessor):
             else:
                 values += f"('{assetrelatie_uuid}','{attributen}'),"
 
+        if values == '':
+            return counter
+
         update_query = f"""
         WITH s (uuid, attributen) 
             AS (VALUES {values[:-1]}),
