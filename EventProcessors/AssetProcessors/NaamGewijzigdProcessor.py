@@ -32,7 +32,7 @@ class NaamGewijzigdProcessor(SpecificEventProcessor):
             if 'AIMNaamObject.naam' in asset_dict:
                 naam = asset_dict['AIMNaamObject.naam']
             elif 'AbstracteAanvullendeGeometrie.naam' in asset_dict:
-                naam = asset_dict['AIMNaamObject.naam']
+                naam = asset_dict['AbstracteAanvullendeGeometrie.naam']
 
             naampad = None
             if 'NaampadObject.naampad' in asset_dict:
