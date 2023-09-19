@@ -22,7 +22,7 @@ if __name__ == '__main__':
     syncer = Syncer(connector=connector, request_handler=request_handler, eminfra_importer=eminfra_importer,
                     settings=settings_manager.settings)
 
-    syncer.start_syncing(stop_when_fully_synced=True)
-
+    # syncer.start_syncing(stop_when_fully_synced=True)
+    syncer.start_syncing()
     # set up database users
     # install postgis: CREATE EXTENSION postgis;
