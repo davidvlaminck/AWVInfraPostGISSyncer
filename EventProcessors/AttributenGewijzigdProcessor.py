@@ -44,7 +44,8 @@ class AttributenGewijzigdProcessor(SpecificEventProcessor):
             asset_uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]
             for key, value in asset_dict.items():
                 if key in ['@type', '@id', 'NaampadObject.naampad', 'AIMObject.notitie', 'AIMObject.typeURI',
-                           'AIMDBStatus.isActief', 'AIMNaamObject.naam', 'AIMToestand.toestand', 'geometry']:
+                           'AIMDBStatus.isActief', 'AIMNaamObject.naam', 'AIMToestand.toestand', 'geometry',
+                           'bs:Bestek.bestekkoppeling']:
                     continue
                 if key.startswith('tz:') or key.startswith('geo:') or key.startswith('loc:'):
                     continue
