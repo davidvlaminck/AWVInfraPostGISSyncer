@@ -11,7 +11,10 @@ class RequesterFactory:
     def create_requester(cls, settings: Dict = None, auth_type: str = '', env: str = '',
                          multiprocessing_safe: bool = False) -> requests.Session:
         try:
-            auth_info = next(a for a in settings['auth_options'] if a['type'] == auth_type and a['environment'] == env)
+            auth_env = env
+            if auth_env == 'aim':
+                auth_env = 'dev'
+            auth_info = next(a for a in settings['auth_options'] if a['type'] == auth_type and a['environment'] == auth_env)
         except StopIteration:
             raise ValueError(f"Could not load the settings for {auth_type} {env}")
 
@@ -22,6 +25,8 @@ class RequesterFactory:
             first_part_url = 'https://services.apps-tei.mow.vlaanderen.be/'
         elif auth_info['environment'] == 'dev':
             first_part_url = 'https://services.apps-dev.mow.vlaanderen.be/'
+        elif auth_info['environment'] == 'aim':
+            first_part_url = 'https://services-aim.apps-dev.mow.vlaanderen.be/'
 
         if auth_info['type'] == 'JWT':
             if multiprocessing_safe:
