@@ -78,7 +78,8 @@ class EventProcessorFactory:
             return AttributenGewijzigdProcessor(eminfra_importer)
         elif event_type == 'ELEKTRICITEITSAANSLUITING_GEWIJZIGD':
             return ElekAansluitingGewijzigdProcessor(eminfra_importer)
-        elif event_type == 'GEOMETRIE_GEWIJZIGD' or event_type == 'LOCATIE_GEWIJZIGD':
+        elif (event_type == 'GEOMETRIE_GEWIJZIGD' or event_type == 'LOCATIE_GEWIJZIGD'
+              or event_type == 'WEGLOCATIE_GEWIJZIGD'):
             return GeometrieOrLocatieGewijzigdProcessor(eminfra_importer)
         elif event_type == 'NAAM_GEWIJZIGD' or event_type == 'NAAMPAD_GEWIJZIGD' or event_type == 'PARENT_GEWIJZIGD':
             return NaamGewijzigdProcessor(eminfra_importer)

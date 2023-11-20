@@ -182,7 +182,46 @@ class GeometrieSyncerTests(TestCase):
                 "AIMDBStatus.isActief": True,
                 "Netwerkpoort.type": "https://wegenenverkeer.data.vlaanderen.be/id/concept/KlNetwerkpoortType/ncni",
                 "Netwerkpoort.merk": "https://wegenenverkeer.data.vlaanderen.be/id/concept/KlNetwerkMerk/Cisco",
-                "Netwerkpoort.serienummer": "NULL"
+                "Netwerkpoort.serienummer": "NULL",
+                "wl:Weglocatie.wegaanduiding": [
+                    {
+                        "wl:DtcWegaanduiding.tot": {
+                            "wl:DtcRelatieveLocatie.weg": {
+                                "wl:DtcWeg.nummer": "N7530002"
+                            },
+                            "wl:DtcRelatieveLocatie.referentiepunt": {
+                                "wl:DtcReferentiepunt.weg": {
+                                    "wl:DtcWeg.nummer": "N7530001"
+                                },
+                                "wl:DtcReferentiepunt.opschrift": "1.9"
+                            },
+                            "wl:DtcRelatieveLocatie.afstand": 647
+                        },
+                        "wl:DtcWegaanduiding.van": {
+                            "wl:DtcRelatieveLocatie.weg": {
+                                "wl:DtcWeg.nummer": "N7530002"
+                            },
+                            "wl:DtcRelatieveLocatie.referentiepunt": {
+                                "wl:DtcReferentiepunt.weg": {
+                                    "wl:DtcWeg.nummer": "N7530001"
+                                },
+                                "wl:DtcReferentiepunt.opschrift": "1.9"
+                            },
+                            "wl:DtcRelatieveLocatie.afstand": 647
+                        },
+                        "wl:DtcWegaanduiding.weg": {
+                            "wl:DtcWeg.nummer": "N7530002"
+                        }
+                    }
+                ],
+                "wl:Weglocatie.geometrie": "POINT Z(153759.7 211533.4 0)",
+                "wl:Weglocatie.wegsegment": [
+                    {
+                        "wl:DtcWegsegment.oidn": 347253
+                    }
+                ],
+                "wl:Weglocatie.bron": "https://wl.data.wegenenverkeer.be/id/concept/KlWeglocatieBron/automatisch",
+                "wl:Weglocatie.score": "12.782011089369375",
             },
             {
                 "@type": "https://lgc.data.wegenenverkeer.be/ns/installatie#Kast",

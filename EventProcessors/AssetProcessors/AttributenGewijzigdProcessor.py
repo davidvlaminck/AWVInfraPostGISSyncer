@@ -53,7 +53,7 @@ class AttributenGewijzigdProcessor(SpecificEventProcessor):
                            'AIMDBStatus.isActief', 'AIMNaamObject.naam', 'AIMToestand.toestand', 'geometry',
                            'bs:Bestek.bestekkoppeling']:
                     continue
-                if key.startswith('tz:') or key.startswith('geo:') or key.startswith('loc:'):
+                if key.startswith('tz:') or key.startswith('geo:') or key.startswith('loc:') or key.startswith('wl:'):
                     continue
                 if key.startswith('lgc:') or key.startswith('ond:') or key.startswith('ins:') or key.startswith('grp:'):
                     key = key[4:]
