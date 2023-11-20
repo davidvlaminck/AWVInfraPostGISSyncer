@@ -347,6 +347,7 @@ class AssetTypeUpdater:
                 {geometry_part2}
                 {attribute_joins} WHERE assettype = '{type_uuid}' and assets.actief = TRUE;"""
             try:
+                continue # TODO workaround
                 cursor.execute(create_view_query)
             except Exception as exc:
                 print(create_view_query)
