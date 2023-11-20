@@ -19,13 +19,13 @@ class RequesterFactory:
             raise ValueError(f"Could not load the settings for {auth_type} {env}")
 
         first_part_url = ''
-        if auth_info['environment'] == 'prd':
+        if env == 'prd':
             first_part_url = 'https://services.apps.mow.vlaanderen.be/'
-        elif auth_info['environment'] == 'tei':
+        elif env == 'tei':
             first_part_url = 'https://services.apps-tei.mow.vlaanderen.be/'
-        elif auth_info['environment'] == 'dev':
+        elif env == 'dev':
             first_part_url = 'https://services.apps-dev.mow.vlaanderen.be/'
-        elif auth_info['environment'] == 'aim':
+        elif env == 'aim':
             first_part_url = 'https://services-aim.apps-dev.mow.vlaanderen.be/'
 
         if auth_info['type'] == 'JWT':
