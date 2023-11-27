@@ -58,8 +58,8 @@ class AgentSyncer:
                     connection.rollback()
                     time.sleep(60)
                     continue
-                except Exception as err:
-                    logging.error(self.color + str(err))
+                except Exception as exc:
+                    logging.error(f'{self.color}{exc}')
                     connection.rollback()
                     time.sleep(30)
                     continue
@@ -67,7 +67,7 @@ class AgentSyncer:
                 try:
                     self.events_processor.process_events(eventsparams_to_process, connection)
                 except Exception as exc:
-                    logging.error(self.color + exc)
+                    logging.error(f'{self.color}{exc}')
                     connection.rollback()
                     time.sleep(30)
 
