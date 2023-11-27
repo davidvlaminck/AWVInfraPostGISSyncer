@@ -99,8 +99,8 @@ class AssetSyncer:
             except ConnectionError:
                 logging.info(self.color + "failed connection, retrying in 1 minute")
                 time.sleep(60)
-            except Exception as err:
-                logging.error(self.color + err)
+            except Exception as exc:
+                logging.error(f'{self.color}{exc}')
                 time.sleep(30)
 
     def sync_by_uuids(self, uuids: [str], connection):
