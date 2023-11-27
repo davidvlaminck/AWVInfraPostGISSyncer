@@ -1,4 +1,5 @@
 from EMInfraImporter import EMInfraImporter
+from EventProcessors.AgentProcessors.AgentOvocodeGewijzigdProcessor import AgentOvocodeGewijzigdProcessor
 from EventProcessors.AssetProcessors.ActiefGewijzigdProcessor import ActiefGewijzigdProcessor
 from EventProcessors.AgentProcessors.AgentActiefGewijzigdProcessor import AgentActiefGewijzigdProcessor
 from EventProcessors.AgentProcessors.AgentContactInfoGewijzigdProcessor import AgentContactInfoGewijzigdProcessor
@@ -112,6 +113,8 @@ class EventProcessorFactory:
             return AgentContactInfoGewijzigdProcessor(eminfra_importer=eminfra_importer)
         elif event_type == 'ACTIEF_GEWIJZIGD':
             return AgentActiefGewijzigdProcessor(eminfra_importer=eminfra_importer)
+        elif event_type == 'OVO_CODE_GEWIJZIGD':
+            return AgentOvocodeGewijzigdProcessor(eminfra_importer=eminfra_importer)
         elif event_type == 'BETROKKENE_RELATIES_GEWIJZIGD':
             pass  # using different feed instead
         else:

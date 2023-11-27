@@ -59,7 +59,7 @@ class AgentSyncer:
                     time.sleep(60)
                     continue
                 except Exception as err:
-                    logging.error(self.color + err)
+                    logging.error(self.color + str(err))
                     connection.rollback()
                     time.sleep(30)
                     continue

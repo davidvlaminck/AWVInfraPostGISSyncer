@@ -30,6 +30,12 @@ class AgentUpdater:
                 contact_info_value = "'" + json.dumps(contact_info).replace("'", "''") + "'"
 
             record_array.append(f"{contact_info_value}")
+
+            ovo_code = agent_dict.get('tz:Agent.ovoCode', 'NULL')
+            if ovo_code != 'NULL':
+                ovo_code = "'" + ovo_code + "'"
+            record_array.append(f"{ovo_code}")
+
             values_array.append(record_array)
 
         if len(values_array) == 0:
@@ -38,27 +44,27 @@ class AgentUpdater:
         values_string = turn_list_of_lists_into_string(values_array)
 
         insert_query = f"""
-        WITH s (uuid, naam, actief, contact_info) 
+        WITH s (uuid, naam, actief, contact_info, ovo_code) 
             AS (VALUES {values_string}),
         t AS (
-            SELECT uuid::uuid AS uuid, naam, actief, contact_info::json AS contact_info
+            SELECT uuid::uuid AS uuid, naam, actief, contact_info::json AS contact_info, ovo_code
             FROM s),
         to_insert AS (
             SELECT t.* 
             FROM t
                 LEFT JOIN public.agents AS agents ON agents.uuid = t.uuid 
             WHERE agents.uuid IS NULL)
-        INSERT INTO public.agents (uuid, naam, actief, contact_info)
-        SELECT to_insert.uuid, to_insert.naam, to_insert.actief, to_insert.contact_info 
+        INSERT INTO public.agents (uuid, naam, actief, contact_info, ovo_code)
+        SELECT to_insert.uuid, to_insert.naam, to_insert.actief, to_insert.contact_info, to_insert.ovo_code 
         FROM to_insert;"""
 
         update_query = ''
         if not insert_only:
             update_query = f"""
-            WITH s (uuid, naam, actief, contact_info) 
+            WITH s (uuid, naam, actief, contact_info, ovo_code) 
                 AS (VALUES {values_string}),
             t AS (
-                SELECT uuid::uuid AS uuid, naam, actief, contact_info::json AS contact_info
+                SELECT uuid::uuid AS uuid, naam, actief, contact_info::json AS contact_info, ovo_code
                 FROM s),
             to_update AS (
                 SELECT t.* 
@@ -66,7 +72,8 @@ class AgentUpdater:
                     LEFT JOIN public.agents AS agents ON agents.uuid = t.uuid 
                 WHERE agents.uuid IS NOT NULL)
             UPDATE agents 
-            SET naam = to_update.naam, actief = to_update.actief, contact_info = to_update.contact_info
+            SET naam = to_update.naam, actief = to_update.actief, contact_info = to_update.contact_info, 
+                ovo_code = to_update.ovo_code
             FROM to_update 
             WHERE to_update.uuid = agents.uuid;"""
 
