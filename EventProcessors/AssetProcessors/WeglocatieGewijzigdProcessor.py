@@ -1,5 +1,6 @@
 import logging
 import time
+from typing import Sequence
 
 from EventProcessors.AssetProcessors.SpecificEventProcessor import SpecificEventProcessor
 from Helpers import turn_list_of_lists_into_string
@@ -10,7 +11,7 @@ class WeglocatieGewijzigdProcessor(SpecificEventProcessor):
         super().__init__(eminfra_importer)
 
     def process(self, uuids: [str], connection):
-        logging.info(f'started updating weglocatie')
+        logging.info('started updating weglocatie')
         start = time.time()
 
         asset_dicts = self.eminfra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
@@ -30,50 +31,21 @@ class WeglocatieGewijzigdProcessor(SpecificEventProcessor):
             return amount
 
     @classmethod
-    def create_weglocatie_values_string_from_dicts(cls, assets_dicts):
+    def create_weglocatie_values_string_from_dicts(cls, assets_dicts) -> (Sequence, int):
         counter = 0
         values_array = []
         for asset_dict in assets_dicts:
-            if 'geo:weglocatie.log' not in asset_dict:
+            if 'wl:Weglocatie.score' not in asset_dict:
                 continue
 
             counter += 1
-            for weglocatie_dict in asset_dict['geo:weglocatie.log']:
-                niveau = weglocatie_dict.get('geo:DtcLog.niveau')
-                niveau = niveau.replace('https://geo.data.wegenenverkeer.be/id/concept/KlLogNiveau/', '')
-                record_array = [f"'{asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]}'",
-                                f"'{niveau}'"]
-
-                bron = None
-                if 'geo:DtcLog.bron' in weglocatie_dict:
-                    bron = weglocatie_dict['geo:DtcLog.bron'].replace('https://geo.data.wegenenverkeer.be/id/concept/KlLogBron/', '')
-                nauwkeurigheid = weglocatie_dict.get('geo:DtcLog.nauwkeurigheid')
-                gaVersie = weglocatie_dict.get('geo:DtcLog.gaVersie')
-
-                weglocatie = None
-                if 'geo:DtcLog.weglocatie' in weglocatie_dict:
-                    wkt_dict = weglocatie_dict['geo:DtcLog.weglocatie']
-                    if len(wkt_dict.values()) > 1:
-                        raise NotImplementedError(f'geo:DtcLog.weglocatie in dict of asset {uuid} has more than 1 geometry')
-
-                    if len(wkt_dict.values()) == 1:
-                        weglocatie = list(wkt_dict.values())[0]
-
-                overerving = None
-                if 'geo:DtcLog.overerving' in weglocatie_dict and len(weglocatie_dict['geo:DtcLog.overerving']) > 0:
-                    erflaten = []
-                    for overerving in weglocatie_dict['geo:DtcLog.overerving']:
-                        erflaten.append(overerving['geo:DtcOvererving.erflaatId']['DtcIdentificator.identificator'])
-                    overerving = '|'.join(erflaten)
-
-                for value in [gaVersie, nauwkeurigheid, bron, weglocatie, overerving]:
-                    if value is None or value == '':
-                        record_array.append('NULL')
-                    else:
-                        value = value.replace("'", "''")
-                        record_array.append(f"'{value}'")
-
-                values_array.append(record_array)
+            record_array = [
+                f"'{asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[:36]}'",
+                f"'{asset_dict['wl:Weglocatie.geometrie']}'",
+                f"'{asset_dict['wl:Weglocatie.score']}'",
+                f"'{asset_dict['wl:Weglocatie.bron'][62:]}'",
+            ]
+            values_array.append(record_array)
 
         values_string = turn_list_of_lists_into_string(values_array)
         return values_string, counter
@@ -82,14 +54,13 @@ class WeglocatieGewijzigdProcessor(SpecificEventProcessor):
     def perform_weglocatie_update_with_values(cls, cursor, values):
         if values != '':
             insert_query = f"""
-            WITH s (assetUuid, geo_niveau, ga_versie, nauwkeurigheid, bron, wkt_string, overerving_ids) 
+            WITH s (assetUuid, geometrie, score, bron) 
                 AS (VALUES {values}),
             to_insert AS (
-                SELECT assetUuid::uuid AS assetUuid, geo_niveau::integer, ga_versie, nauwkeurigheid, bron, wkt_string, overerving_ids
+                SELECT assetUuid::uuid AS assetUuid, geometrie, score, bron
                 FROM s)        
-            INSERT INTO public.weglocatie (assetUuid, geo_niveau, ga_versie, nauwkeurigheid, bron, wkt_string, overerving_ids) 
-            SELECT to_insert.assetUuid, to_insert.geo_niveau, to_insert.ga_versie, to_insert.nauwkeurigheid, 
-                to_insert.bron, to_insert.wkt_string, to_insert.overerving_ids
+            INSERT INTO public.weglocaties (assetUuid, geometrie, score, bron) 
+            SELECT to_insert.assetUuid, to_insert.geometrie, to_insert.score, to_insert.bron
             FROM to_insert;"""
             cursor.execute(insert_query)
 
@@ -105,4 +76,3 @@ class WeglocatieGewijzigdProcessor(SpecificEventProcessor):
         cursor.execute(update_query)
         update_query = f"""DELETE FROM weglocaties WHERE assetUuid IN ({values});"""
         cursor.execute(update_query)
-

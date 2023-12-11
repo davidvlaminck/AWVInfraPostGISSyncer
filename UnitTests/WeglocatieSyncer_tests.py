@@ -1,5 +1,6 @@
 from typing import Dict, Generator
 
+import pytest
 from psycopg2 import connect
 
 from AssetSyncer import AssetSyncer
@@ -12,7 +13,8 @@ from RequesterFactory import RequesterFactory
 from SettingsManager import SettingsManager
 
 
-def test_setup():
+@ pytest.fixture(scope='module')
+def setup():
     settings_manager = SettingsManager(
         settings_path='/home/davidlinux/Documents/AWV/resources/settings_AwvinfraPostGISSyncer.json')
     unittest_db_settings = settings_manager.settings['databases']['unittest']
@@ -43,7 +45,6 @@ def test_setup():
     connection = connector.get_connection()
     assettype_updater = AssetTypeUpdater(postgis_connector=connector, eminfra_importer=eminfra_importer)
     assettype_updater.perform_upsert(connection=connection, object_generator=get_assettypes())
-    connection.commit()
 
     assets_syncer = AssetSyncer(postgis_connector=connector, eminfra_importer=eminfra_importer)
     _, values = assets_syncer.updater.fill_values_from_object_generator(
@@ -51,14 +52,26 @@ def test_setup():
     assets_syncer.updater.perform_insert_update_from_values(connection, insert_only=True, values=values)
     connection.commit()
 
+    return {'connector': connector, 'eminfra_importer': eminfra_importer}
+
+
+def test_update_weglocaties(setup, subtests):
+    eminfra_importer = setup['eminfra_importer']
+    connector = setup['connector']
+    connection = connector.get_connection()
     processor = WeglocatieGewijzigdProcessor(eminfra_importer=eminfra_importer)
     asset_uuids = ['000ad2af-e393-4c45-b54f-b0d94524b1e1']
     processor.process_dicts(connection=connection, asset_uuids=asset_uuids,
                             asset_dicts=return_new_asset_dicts(asset_uuids))
 
-
-def test_update_geometries():
-    self.setup()
+    cursor = connection.cursor()
+    select_weglocatie_query = "SELECT bron, score, geometrie FROM weglocaties WHERE assetUuid = '{uuid}'"
+    with subtests.test(msg='check weglocatie of asset'):
+        cursor.execute(select_weglocatie_query.replace('{uuid}', '000ad2af-e393-4c45-b54f-b0d94524b1e1'))
+        result_row = cursor.fetchone()
+        assert result_row[0] == 'automatisch'
+        assert result_row[1] == '12.782011089369375'
+        assert result_row[2] == 'POINT Z(153759.7 211533.4 0)'
 
 
 def return_new_asset_dicts(asset_uuids: [str]) -> [Dict]:
