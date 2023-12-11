@@ -23,32 +23,40 @@ class WeglocatieGewijzigdProcessor(SpecificEventProcessor):
 
     @classmethod
     def process_dicts(cls, connection, asset_uuids: [str], asset_dicts: [dict]):
-        with connection.cursor() as cursor:
-            weglocatie_values, amount = cls.create_weglocatie_values_string_from_dicts(
+        with (connection.cursor() as cursor):
+            weglocatie_values, amount, wegsegmenten_values = cls.create_weglocatie_values_string_from_dicts(
                 assets_dicts=asset_dicts)
             cls.delete_weglocatie_records(cursor=cursor, uuids=asset_uuids)
             cls.perform_weglocatie_update_with_values(cursor=cursor, values=weglocatie_values)
             return amount
 
     @classmethod
-    def create_weglocatie_values_string_from_dicts(cls, assets_dicts) -> (Sequence, int):
+    def create_weglocatie_values_string_from_dicts(cls, assets_dicts) -> (Sequence, int, Sequence):
         counter = 0
-        values_array = []
+        wl_values_array = []
+        wegsegmenten_values_array = []
         for asset_dict in assets_dicts:
             if 'wl:Weglocatie.score' not in asset_dict:
                 continue
+            asset_uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[:36]
 
             counter += 1
             record_array = [
-                f"'{asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[:36]}'",
+                f"'{asset_uuid}'",
                 f"'{asset_dict['wl:Weglocatie.geometrie']}'",
                 f"'{asset_dict['wl:Weglocatie.score']}'",
                 f"'{asset_dict['wl:Weglocatie.bron'][62:]}'",
             ]
-            values_array.append(record_array)
+            wl_values_array.append(record_array)
 
-        values_string = turn_list_of_lists_into_string(values_array)
-        return values_string, counter
+            if 'wl:Weglocatie.wegsegment' in asset_dict:
+                wegsegmenten_values_array.extend(
+                    [f"'{asset_uuid}'", f"'{wegsegment['wl:DtcWegsegment.oidn']}'"]
+                    for wegsegment in asset_dict['wl:Weglocatie.wegsegment']
+                )
+        wl_values_string = turn_list_of_lists_into_string(wl_values_array)
+        wegsegmenten_values_string = turn_list_of_lists_into_string(wegsegmenten_values_array)
+        return wl_values_string, counter, wegsegmenten_values_string
 
     @classmethod
     def perform_weglocatie_update_with_values(cls, cursor, values):

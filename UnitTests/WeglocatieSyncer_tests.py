@@ -13,7 +13,7 @@ from RequesterFactory import RequesterFactory
 from SettingsManager import SettingsManager
 
 
-@ pytest.fixture(scope='module')
+@pytest.fixture(scope='module')
 def setup():
     settings_manager = SettingsManager(
         settings_path='/home/davidlinux/Documents/AWV/resources/settings_AwvinfraPostGISSyncer.json')
@@ -65,8 +65,16 @@ def test_update_weglocaties(setup, subtests):
                             asset_dicts=return_new_asset_dicts(asset_uuids))
 
     cursor = connection.cursor()
-    select_weglocatie_query = "SELECT bron, score, geometrie FROM weglocaties WHERE assetUuid = '{uuid}'"
     with subtests.test(msg='check weglocatie of asset'):
+        select_weglocatie_query = "SELECT bron, score, geometrie FROM weglocaties WHERE assetUuid = '{uuid}'"
+        cursor.execute(select_weglocatie_query.replace('{uuid}', '000ad2af-e393-4c45-b54f-b0d94524b1e1'))
+        result_row = cursor.fetchone()
+        assert result_row[0] == 'automatisch'
+        assert result_row[1] == '12.782011089369375'
+        assert result_row[2] == 'POINT Z(153759.7 211533.4 0)'
+
+    with subtests.test(msg='check wegsegmenten of asset'):
+        select_weglocatie_query = "SELECT bron, score, geometrie FROM weglocaties WHERE assetUuid = '{uuid}'"
         cursor.execute(select_weglocatie_query.replace('{uuid}', '000ad2af-e393-4c45-b54f-b0d94524b1e1'))
         result_row = cursor.fetchone()
         assert result_row[0] == 'automatisch'
@@ -180,6 +188,8 @@ def return_new_asset_dicts(asset_uuids: [str]) -> [Dict]:
             "wl:Weglocatie.wegsegment": [
                 {
                     "wl:DtcWegsegment.oidn": 347253
+                }, {
+                    "wl:DtcWegsegment.oidn": 347254
                 }
             ],
             "wl:Weglocatie.bron": "https://wl.data.wegenenverkeer.be/id/concept/KlWeglocatieBron/automatisch",
@@ -302,6 +312,7 @@ def return_new_asset_dicts(asset_uuids: [str]) -> [Dict]:
             "AbstracteAanvullendeGeometrie.typeURI": "https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AanvullendeGeometrie"
         }]
     return [next(asset for asset in asset_list if asset['@id'].split('/')[-1][:36] == uuid) for uuid in asset_uuids]
+
 
 def get_assets() -> Generator[Dict, None, None]:
     yield from [
