@@ -16,6 +16,6 @@ class AssetFeedEventsCollector(FeedEventsCollector):
                            'LOCATIE_GEWIJZIGD', 'NAAM_GEWIJZIGD', 'NAAMPAD_GEWIJZIGD', 'NIEUW_ONDERDEEL',
                            'NIEUWE_INSTALLATIE', 'PARENT_GEWIJZIGD', 'POSTIT_GEWIJZIGD', 'RELATIES_GEWIJZIGD',
                            'SCHADEBEHEERDER_GEWIJZIGD', 'TOEGANG_GEWIJZIGD', 'TOESTAND_GEWIJZIGD', 'TOEZICHT_GEWIJZIGD',
-                           'VPLAN_GEWIJZIGD']:
+                           'VPLAN_GEWIJZIGD', 'WEGLOCATIE_GEWIJZIGD']:
             empty_dict[event_type] = set()
         return empty_dict

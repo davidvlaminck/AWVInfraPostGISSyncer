@@ -26,13 +26,8 @@ class AssetUpdater:
         counter = 0
         asset_dict_list = []
         asset_uuids = []
-        for asset_dict in object_generator:
-            counter += 1
-            asset_dict_list.append(asset_dict)
-            asset_uuid = asset_dict['@id'].split('/')[-1][0:36]
-            asset_uuids.append(asset_uuid)
-
-            values = AssetUpdater.append_values(asset_dict, asset_uuid, values)
+        counter, values = AssetUpdater.fill_values_from_object_generator(
+            asset_dict_list, asset_uuids, counter, object_generator, values)
 
         if len(asset_uuids) == 0:
             return 0
@@ -54,6 +49,17 @@ class AssetUpdater:
 
         logging.info(f'Updated or inserted {counter} assets, including legacy info.')
         return counter
+
+    @staticmethod
+    def fill_values_from_object_generator(asset_dict_list, asset_uuids, counter, object_generator, values):
+        for asset_dict in object_generator:
+            counter += 1
+            asset_dict_list.append(asset_dict)
+            asset_uuid = asset_dict['@id'].split('/')[-1][:36]
+            asset_uuids.append(asset_uuid)
+
+            values = AssetUpdater.append_values(asset_dict, asset_uuid, values)
+        return counter, values
 
     @staticmethod
     def update_vplan_of_synced_assets(connection, asset_uuids, eminfra_importer):

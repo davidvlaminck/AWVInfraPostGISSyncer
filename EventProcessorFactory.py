@@ -7,6 +7,7 @@ from EventProcessors.AgentProcessors.AgentNaamGewijzigdProcessor import AgentNaa
 from EventProcessors.AgentProcessors.AgentVOIDGewijzigdProcessor import AgentVOIDGewijzigdProcessor
 from EventProcessors.AgentProcessors.NieuwAgentProcessor import NieuwAgentProcessor
 from EventProcessors.AssetProcessors.VplanGewijzigdProcessor import VplanGewijzigdProcessor
+from EventProcessors.AssetProcessors.WeglocatieGewijzigdProcessor import WeglocatieGewijzigdProcessor
 from EventProcessors.AssetrelatieProcessors.AssetrelatieEigenschappenGewijzigdProcessor import \
     AssetrelatieEigenschappenGewijzigdProcessor
 from EventProcessors.AssetrelatieProcessors.AssetrelatieVerwijderdOngedaanProcessor import \
@@ -79,8 +80,7 @@ class EventProcessorFactory:
             return AttributenGewijzigdProcessor(eminfra_importer)
         elif event_type == 'ELEKTRICITEITSAANSLUITING_GEWIJZIGD':
             return ElekAansluitingGewijzigdProcessor(eminfra_importer)
-        elif (event_type == 'GEOMETRIE_GEWIJZIGD' or event_type == 'LOCATIE_GEWIJZIGD'
-              or event_type == 'WEGLOCATIE_GEWIJZIGD'):
+        elif event_type == 'GEOMETRIE_GEWIJZIGD' or event_type == 'LOCATIE_GEWIJZIGD':
             return GeometrieOrLocatieGewijzigdProcessor(eminfra_importer)
         elif event_type == 'NAAM_GEWIJZIGD' or event_type == 'NAAMPAD_GEWIJZIGD' or event_type == 'PARENT_GEWIJZIGD':
             return NaamGewijzigdProcessor(eminfra_importer)
@@ -98,6 +98,8 @@ class EventProcessorFactory:
             return ToezichtGewijzigdProcessor(eminfra_importer)
         elif event_type == 'VPLAN_GEWIJZIGD':
             return VplanGewijzigdProcessor(eminfra_importer)
+        elif event_type == 'WEGLOCATIE_GEWIJZIGD':
+            return WeglocatieGewijzigdProcessor(eminfra_importer)
         else:
             raise NotImplementedError(f"can't create an asset event processor with type: {event_type}")
 

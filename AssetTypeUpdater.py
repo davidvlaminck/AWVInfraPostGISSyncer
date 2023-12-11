@@ -15,6 +15,21 @@ class AssetTypeUpdater:
         if object_generator is None:
             return
 
+        self.perform_upsert(connection, object_generator)
+
+        self.update_assettypes_with_bestek(connection)
+        self.update_assettypes_with_geometrie(connection)
+        self.update_assettypes_with_locatie(connection)
+        self.update_assettypes_with_beheerder(connection)
+        self.update_assettypes_with_toezicht(connection)
+        self.update_assettypes_with_gevoed_door(connection)
+        self.update_assettypes_with_elek_aansluiting(connection)
+        self.update_assettypes_with_vplan(connection)
+        self.update_assettypes_with_attributen(connection, force_update=True)
+        self.create_views_for_assettypes_with_attributes(connection)
+
+    @classmethod
+    def perform_upsert(cls, connection, object_generator):
         values_array = []
         for assettype_dict in object_generator:
             record_array = [f"'{assettype_dict['uuid']}'"]
@@ -26,13 +41,9 @@ class AssetTypeUpdater:
             uri = assettype_dict['uri'].replace("'", "''")
             record_array.append(f"'{uri}'")
             definitie = assettype_dict['definitie'].replace("'", "''")
-            record_array.append(f"'{definitie}'")
-            record_array.append(f"{assettype_dict['actief']}")
-
+            record_array.extend((f"'{definitie}'", f"{assettype_dict['actief']}"))
             values_array.append(record_array)
-
         values_string = turn_list_of_lists_into_string(values_array)
-
         insert_query = f"""
             WITH s (uuid, naam, label, uri, definitie, actief) 
                 AS (VALUES {values_string}),
@@ -47,7 +58,6 @@ class AssetTypeUpdater:
             INSERT INTO public.assettypes (uuid, naam, label, uri, definitie, actief)
             SELECT to_insert.uuid, to_insert.naam, to_insert.label, to_insert.uri, to_insert.definitie, to_insert.actief
             FROM to_insert;"""
-
         update_query = f"""
             WITH s (uuid, naam, label, uri, definitie, actief)  
                 AS (VALUES {values_string}),
@@ -63,23 +73,10 @@ class AssetTypeUpdater:
             SET naam = to_update.naam, label = to_update.label, uri = to_update.uri, definitie = to_update.definitie, actief = to_update.actief
             FROM to_update 
             WHERE to_update.uuid = assettypes.uuid;"""
-
         cursor = connection.cursor()
         cursor.execute(insert_query)
-
         cursor = connection.cursor()
         cursor.execute(update_query)
-
-        self.update_assettypes_with_bestek(connection)
-        self.update_assettypes_with_geometrie(connection)
-        self.update_assettypes_with_locatie(connection)
-        self.update_assettypes_with_beheerder(connection)
-        self.update_assettypes_with_toezicht(connection)
-        self.update_assettypes_with_gevoed_door(connection)
-        self.update_assettypes_with_elek_aansluiting(connection)
-        self.update_assettypes_with_vplan(connection)
-        self.update_assettypes_with_attributen(connection, force_update=True)
-        self.create_views_for_assettypes_with_attributes(connection)
 
     def update_assettypes_with_attributen(self, connection, force_update: bool):
         cursor = connection.cursor()
