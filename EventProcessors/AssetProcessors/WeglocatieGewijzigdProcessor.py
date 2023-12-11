@@ -99,5 +99,10 @@ class WeglocatieGewijzigdProcessor(SpecificEventProcessor):
             return
 
         values = "'" + "','".join(uuids) + "'"
-        update_query = f"""DELETE FROM weglocatie WHERE assetUuid IN ({values})"""
+        update_query = f"""DELETE FROM weglocatie_wegsegmenten WHERE assetUuid IN ({values});"""
         cursor.execute(update_query)
+        update_query = f"""DELETE FROM weglocatie_aanduidingen WHERE assetUuid IN ({values});"""
+        cursor.execute(update_query)
+        update_query = f"""DELETE FROM weglocaties WHERE assetUuid IN ({values});"""
+        cursor.execute(update_query)
+
