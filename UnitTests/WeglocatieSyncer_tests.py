@@ -63,6 +63,7 @@ def test_update_weglocaties(setup, subtests):
     asset_uuids = ['000ad2af-e393-4c45-b54f-b0d94524b1e1']
     processor.process_dicts(connection=connection, asset_uuids=asset_uuids,
                             asset_dicts=return_new_asset_dicts(asset_uuids))
+    connection.commit()
 
     cursor = connection.cursor()
     with subtests.test(msg='check weglocatie of asset'):
@@ -74,13 +75,11 @@ def test_update_weglocaties(setup, subtests):
         assert result_row[2] == 'POINT Z(153759.7 211533.4 0)'
 
     with subtests.test(msg='check wegsegmenten of asset'):
-        select_weglocatie_query = "SELECT bron, score, geometrie FROM weglocaties WHERE assetUuid = '{uuid}'"
-        cursor.execute(select_weglocatie_query.replace('{uuid}', '000ad2af-e393-4c45-b54f-b0d94524b1e1'))
-        result_row = cursor.fetchone()
-        assert result_row[0] == 'automatisch'
-        assert result_row[1] == '12.782011089369375'
-        assert result_row[2] == 'POINT Z(153759.7 211533.4 0)'
-
+        select_wegsegmenten_query = "SELECT oidn FROM weglocatie_wegsegmenten WHERE assetUuid = '{uuid}'"
+        cursor.execute(select_wegsegmenten_query.replace('{uuid}', '000ad2af-e393-4c45-b54f-b0d94524b1e1'))
+        results = cursor.fetchall()
+        assert results[0][0] == 347253
+        assert results[1][0] == 347254
 
 def return_new_asset_dicts(asset_uuids: [str]) -> [Dict]:
     asset_list = [

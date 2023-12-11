@@ -28,6 +28,7 @@ class WeglocatieGewijzigdProcessor(SpecificEventProcessor):
                 assets_dicts=asset_dicts)
             cls.delete_weglocatie_records(cursor=cursor, uuids=asset_uuids)
             cls.perform_weglocatie_update_with_values(cursor=cursor, values=weglocatie_values)
+            cls.perform_wegsegmenten_update_with_values(cursor=cursor, values=wegsegmenten_values)
             return amount
 
     @classmethod
@@ -51,7 +52,7 @@ class WeglocatieGewijzigdProcessor(SpecificEventProcessor):
 
             if 'wl:Weglocatie.wegsegment' in asset_dict:
                 wegsegmenten_values_array.extend(
-                    [f"'{asset_uuid}'", f"'{wegsegment['wl:DtcWegsegment.oidn']}'"]
+                    [f"'{asset_uuid}'", f"{wegsegment['wl:DtcWegsegment.oidn']}"]
                     for wegsegment in asset_dict['wl:Weglocatie.wegsegment']
                 )
         wl_values_string = turn_list_of_lists_into_string(wl_values_array)
@@ -69,6 +70,20 @@ class WeglocatieGewijzigdProcessor(SpecificEventProcessor):
                 FROM s)        
             INSERT INTO public.weglocaties (assetUuid, geometrie, score, bron) 
             SELECT to_insert.assetUuid, to_insert.geometrie, to_insert.score, to_insert.bron
+            FROM to_insert;"""
+            cursor.execute(insert_query)
+
+    @classmethod
+    def perform_wegsegmenten_update_with_values(cls, cursor, values):
+        if values != '':
+            insert_query = f"""
+            WITH s (assetUuid, oidn) 
+                AS (VALUES {values}),
+            to_insert AS (
+                SELECT assetUuid::uuid AS assetUuid, oidn
+                FROM s)        
+            INSERT INTO public.weglocatie_wegsegmenten (assetUuid, oidn) 
+            SELECT to_insert.assetUuid, to_insert.oidn
             FROM to_insert;"""
             cursor.execute(insert_query)
 
