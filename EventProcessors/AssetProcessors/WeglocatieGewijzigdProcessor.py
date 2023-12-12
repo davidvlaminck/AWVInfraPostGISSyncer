@@ -24,18 +24,20 @@ class WeglocatieGewijzigdProcessor(SpecificEventProcessor):
     @classmethod
     def process_dicts(cls, connection, asset_uuids: [str], asset_dicts: [dict]):
         with (connection.cursor() as cursor):
-            weglocatie_values, amount, wegsegmenten_values = cls.create_weglocatie_values_string_from_dicts(
+            weglocatie_values, amount, wegsegmenten_values, wegaanduidingen_values = cls.create_weglocatie_values_string_from_dicts(
                 assets_dicts=asset_dicts)
             cls.delete_weglocatie_records(cursor=cursor, uuids=asset_uuids)
             cls.perform_weglocatie_update_with_values(cursor=cursor, values=weglocatie_values)
             cls.perform_wegsegmenten_update_with_values(cursor=cursor, values=wegsegmenten_values)
+            cls.perform_wegaanduidingen_update_with_values(cursor=cursor, values=wegaanduidingen_values)
             return amount
 
     @classmethod
-    def create_weglocatie_values_string_from_dicts(cls, assets_dicts) -> (Sequence, int, Sequence):
+    def create_weglocatie_values_string_from_dicts(cls, assets_dicts) -> (Sequence, int, Sequence, Sequence):
         counter = 0
         wl_values_array = []
         wegsegmenten_values_array = []
+        wegaanduidingen_values_array = []
         for asset_dict in assets_dicts:
             if 'wl:Weglocatie.score' not in asset_dict:
                 continue
@@ -55,9 +57,28 @@ class WeglocatieGewijzigdProcessor(SpecificEventProcessor):
                     [f"'{asset_uuid}'", f"{wegsegment['wl:DtcWegsegment.oidn']}"]
                     for wegsegment in asset_dict['wl:Weglocatie.wegsegment']
                 )
+
+            if 'wl:Weglocatie.wegaanduiding' in asset_dict:
+                record_array = []
+                for wegaanduiding in asset_dict['wl:Weglocatie.wegaanduiding']:
+                    record_array.extend([
+                        f"'{asset_uuid}'",
+                        f"'{wegaanduiding['wl:DtcWegaanduiding.weg']['wl:DtcWeg.nummer']}'",
+                        f"'{wegaanduiding['wl:DtcWegaanduiding.van']['wl:DtcRelatieveLocatie.weg']['wl:DtcWeg.nummer']}'",
+                        f"'{wegaanduiding['wl:DtcWegaanduiding.van']['wl:DtcRelatieveLocatie.referentiepunt']['wl:DtcReferentiepunt.weg']['wl:DtcWeg.nummer']}'",
+                        f"'{wegaanduiding['wl:DtcWegaanduiding.van']['wl:DtcRelatieveLocatie.referentiepunt']['wl:DtcReferentiepunt.opschrift']}'",
+                        f"{wegaanduiding['wl:DtcWegaanduiding.van']['wl:DtcRelatieveLocatie.afstand']}",
+                        f"'{wegaanduiding['wl:DtcWegaanduiding.tot']['wl:DtcRelatieveLocatie.weg']['wl:DtcWeg.nummer']}'",
+                        f"'{wegaanduiding['wl:DtcWegaanduiding.tot']['wl:DtcRelatieveLocatie.referentiepunt']['wl:DtcReferentiepunt.weg']['wl:DtcWeg.nummer']}'",
+                        f"'{wegaanduiding['wl:DtcWegaanduiding.tot']['wl:DtcRelatieveLocatie.referentiepunt']['wl:DtcReferentiepunt.opschrift']}'",
+                        f"{wegaanduiding['wl:DtcWegaanduiding.tot']['wl:DtcRelatieveLocatie.afstand']}",
+                    ])
+                wegaanduidingen_values_array.append(record_array)
+
         wl_values_string = turn_list_of_lists_into_string(wl_values_array)
         wegsegmenten_values_string = turn_list_of_lists_into_string(wegsegmenten_values_array)
-        return wl_values_string, counter, wegsegmenten_values_string
+        wegaanduidingen_values_string = turn_list_of_lists_into_string(wegaanduidingen_values_array)
+        return wl_values_string, counter, wegsegmenten_values_string, wegaanduidingen_values_string
 
     @classmethod
     def perform_weglocatie_update_with_values(cls, cursor, values):
@@ -84,6 +105,25 @@ class WeglocatieGewijzigdProcessor(SpecificEventProcessor):
                 FROM s)        
             INSERT INTO public.weglocatie_wegsegmenten (assetUuid, oidn) 
             SELECT to_insert.assetUuid, to_insert.oidn
+            FROM to_insert;"""
+            cursor.execute(insert_query)
+
+    @classmethod
+    def perform_wegaanduidingen_update_with_values(cls, cursor, values):
+        if values != '':
+            insert_query = f"""
+            WITH s (assetUuid, wegnummer, van_wegnummer, van_ref_wegnummer, van_ref_opschrift, van_afstand, 
+                tot_wegnummer, tot_ref_wegnummer, tot_ref_opschrift, tot_afstand) 
+                AS (VALUES {values}),
+            to_insert AS (
+                SELECT assetUuid::uuid AS assetUuid, wegnummer, van_wegnummer, van_ref_wegnummer, van_ref_opschrift, van_afstand, 
+                tot_wegnummer, tot_ref_wegnummer, tot_ref_opschrift, tot_afstand
+                FROM s)        
+            INSERT INTO public.weglocatie_aanduidingen (assetUuid, wegnummer, van_wegnummer, van_ref_wegnummer, van_ref_opschrift, van_afstand, 
+                tot_wegnummer, tot_ref_wegnummer, tot_ref_opschrift, tot_afstand) 
+            SELECT to_insert.assetUuid, to_insert.wegnummer, to_insert.van_wegnummer, to_insert.van_ref_wegnummer, 
+                to_insert.van_ref_opschrift, to_insert.van_afstand, to_insert.tot_wegnummer, to_insert.tot_ref_wegnummer, 
+                to_insert.tot_ref_opschrift, to_insert.tot_afstand
             FROM to_insert;"""
             cursor.execute(insert_query)
 

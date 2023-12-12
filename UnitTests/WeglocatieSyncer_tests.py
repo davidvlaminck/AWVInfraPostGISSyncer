@@ -1,7 +1,6 @@
 from typing import Dict, Generator
 
 import pytest
-from psycopg2 import connect
 
 from AssetSyncer import AssetSyncer
 from AssetTypeUpdater import AssetTypeUpdater
@@ -63,7 +62,6 @@ def test_update_weglocaties(setup, subtests):
     asset_uuids = ['000ad2af-e393-4c45-b54f-b0d94524b1e1']
     processor.process_dicts(connection=connection, asset_uuids=asset_uuids,
                             asset_dicts=return_new_asset_dicts(asset_uuids))
-    connection.commit()
 
     cursor = connection.cursor()
     with subtests.test(msg='check weglocatie of asset'):
@@ -80,6 +78,23 @@ def test_update_weglocaties(setup, subtests):
         results = cursor.fetchall()
         assert results[0][0] == 347253
         assert results[1][0] == 347254
+        
+    with subtests.test(msg='check wegaanduiding of asset'):
+        select_wegsegmenten_query = ("SELECT wegnummer, van_wegnummer, van_ref_wegnummer, van_ref_opschrift, van_afstand,"
+                                     "  tot_wegnummer, tot_ref_wegnummer, tot_ref_opschrift, tot_afstand "
+                                     "FROM weglocatie_aanduidingen WHERE assetUuid = '{uuid}'")
+        cursor.execute(select_wegsegmenten_query.replace('{uuid}', '000ad2af-e393-4c45-b54f-b0d94524b1e1'))
+        results = cursor.fetchall()
+        assert results[0][0] == 'N7530002'
+        assert results[0][1] == 'N7530002_van'
+        assert results[0][2] == 'N7530001_van'
+        assert results[0][3] == '1.9'
+        assert results[0][4] == 99
+        assert results[0][5] == 'N7530002_tot'
+        assert results[0][6] == 'N7530001_tot'
+        assert results[0][7] == '2.0'
+        assert results[0][8] == 100
+
 
 def return_new_asset_dicts(asset_uuids: [str]) -> [Dict]:
     asset_list = [
@@ -156,27 +171,27 @@ def return_new_asset_dicts(asset_uuids: [str]) -> [Dict]:
                 {
                     "wl:DtcWegaanduiding.tot": {
                         "wl:DtcRelatieveLocatie.weg": {
-                            "wl:DtcWeg.nummer": "N7530002"
+                            "wl:DtcWeg.nummer": "N7530002_tot"
                         },
                         "wl:DtcRelatieveLocatie.referentiepunt": {
                             "wl:DtcReferentiepunt.weg": {
-                                "wl:DtcWeg.nummer": "N7530001"
+                                "wl:DtcWeg.nummer": "N7530001_tot"
                             },
-                            "wl:DtcReferentiepunt.opschrift": "1.9"
+                            "wl:DtcReferentiepunt.opschrift": "2.0"
                         },
-                        "wl:DtcRelatieveLocatie.afstand": 647
+                        "wl:DtcRelatieveLocatie.afstand": 100
                     },
                     "wl:DtcWegaanduiding.van": {
                         "wl:DtcRelatieveLocatie.weg": {
-                            "wl:DtcWeg.nummer": "N7530002"
+                            "wl:DtcWeg.nummer": "N7530002_van"
                         },
                         "wl:DtcRelatieveLocatie.referentiepunt": {
                             "wl:DtcReferentiepunt.weg": {
-                                "wl:DtcWeg.nummer": "N7530001"
+                                "wl:DtcWeg.nummer": "N7530001_van"
                             },
                             "wl:DtcReferentiepunt.opschrift": "1.9"
                         },
-                        "wl:DtcRelatieveLocatie.afstand": 647
+                        "wl:DtcRelatieveLocatie.afstand": 99
                     },
                     "wl:DtcWegaanduiding.weg": {
                         "wl:DtcWeg.nummer": "N7530002"
