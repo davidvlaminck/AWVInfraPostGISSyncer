@@ -48,11 +48,13 @@ class FeedEventsProcessor:
             end = time.time()
             avg = round((end - start) / len(uuids), 2)
             logging.info(
-                f'finished processing events of type {event_type} in {str(round(end - start, 2))} seconds. Average time per item = {str(avg)} seconds')
+                f'finished processing events of type {event_type} in {str(round(end - start, 2))} seconds. '
+                f'Average time per item = {str(avg)} seconds')
 
     def create_processor(self, event_type):
-        event_processor = EventProcessorFactory.create_event_processor(event_type=event_type,
-                                                                       resource=self.resource,
-                                                                       eminfra_importer=self.eminfra_importer,
-                                                                       postgis_connector=self.postgis_connector)
-        return event_processor
+        return EventProcessorFactory.create_event_processor(
+            event_type=event_type,
+            resource=self.resource,
+            eminfra_importer=self.eminfra_importer,
+            postgis_connector=self.postgis_connector,
+        )

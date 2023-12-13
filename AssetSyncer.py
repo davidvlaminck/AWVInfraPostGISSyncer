@@ -37,16 +37,19 @@ class AssetSyncer:
                 sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
                 if not sync_allowed_by_time:
                     self.update_view_tables(connection, color=self.color)
-                    logging.info(self.color + 'syncing is not allowed at this time. Trying again in 5 minutes')
+                    logging.info(
+                        f'{self.color}syncing is not allowed at this time. Trying again in 5 minutes'
+                    )
                     time.sleep(300)
                     continue
                 params = self.postgis_connector.get_params(connection)
-                current_page = params['page_assets']
                 completed_event_id = params['event_uuid_assets']
                 page_size = params['pagesize']
 
-                logging.info(self.color +
-                    f'starting a sync cycle for assets, page: {str(current_page)} event_uuid: {str(completed_event_id)}')
+                current_page = params['page_assets']
+                logging.info(
+                    f'{self.color}starting a sync cycle for assets, page: {str(current_page)} event_uuid: {str(completed_event_id)}'
+                )
                 start = time.time()
 
                 eventsparams_to_process = None
@@ -56,13 +59,15 @@ class AssetSyncer:
 
                     total_events = sum(len(lists) for lists in eventsparams_to_process.event_dict.values())
                     if total_events == 0:
-                        logging.info(self.color  + "The database is fully synced for assets. Continuing keep up to date in 30 seconds")
+                        logging.info(
+                            f"{self.color}The database is fully synced for assets. Continuing keep up to date in 30 seconds"
+                        )
                         self.postgis_connector.update_params(params={'last_update_utc_assets': datetime.utcnow()},
                                                              connection=connection)
                         time.sleep(30)  # wait 30 seconds to prevent overloading API
                         continue
                 except ConnectionError:
-                    logging.info(self.color + "failed connection, retrying in 1 minute")
+                    logging.info(f"{self.color}failed connection, retrying in 1 minute")
                     time.sleep(60)
                     continue
                 except Exception as err:
@@ -97,7 +102,7 @@ class AssetSyncer:
                     connection.rollback()
                     time.sleep(30)
             except ConnectionError:
-                logging.info(self.color + "failed connection, retrying in 1 minute")
+                logging.info(f"{self.color}failed connection, retrying in 1 minute")
                 time.sleep(60)
             except Exception as exc:
                 logging.error(f'{self.color}{exc}')
@@ -115,10 +120,12 @@ class AssetSyncer:
     @staticmethod
     def log_eventparams(event_dict, timespan: float, color):
         total = sum(len(events) for events in event_dict.values())
-        logging.info(color + f'fetched {total} assets events to sync in {timespan} seconds')
+        logging.info(
+            f'{color}fetched {total} assets events to sync in {timespan} seconds'
+        )
         for k, v in event_dict.items():
             if len(v) > 0:
-                logging.info(color + f'number of events of type {k}: {len(v)}')
+                logging.info(f'{color}number of events of type {k}: {len(v)}')
 
     def update_view_tables(self, connection, color):
         try:
@@ -135,24 +142,30 @@ class AssetSyncer:
 
                 for view_name in cursor.fetchall():
                     view_name = view_name[0]
-                    logging.info(color + f'creating fixed table for {view_name}')
+                    logging.info(f'{color}creating fixed table for {view_name}')
                     view_query = f"DROP TABLE IF EXISTS asset_views.table_{view_name}; " \
-                                 f"CREATE TABLE asset_views.table_{view_name} AS SELECT * FROM asset_views.{view_name};"
+                                         f"CREATE TABLE asset_views.table_{view_name} AS SELECT * FROM asset_views.{view_name};"
                     cursor.execute(view_query)
                     connection.commit()
 
             self.postgis_connector.update_params(params={'last_update_utc_views': datetime.utcnow()},
                                                  connection=connection)
         except Exception as exc:
-            logging.error(self.color + "Could not create view tables")
+            logging.error(f"{self.color}Could not create view tables")
             logging.error(exc)
             connection.rollback()
 
     def fill_resource(self, resource: ResourceEnum):
         fill_manager = FillManager(connector=self.postgis_connector,
                                    eminfra_importer=self.eminfra_importer)
-        fill_manager.create_params_for_table_fill(tables_to_fill=[resource],
-                                                  connection=self.postgis_connector.main_connection)
-        fill_manager.fill_resource(100, pagingcursor='', resource=resource)
-        fill_manager.delete_params_for_table_fill(tables_to_fill=[resource],
-                                                  connection=self.postgis_connector.main_connection)
+        try:
+            fill_manager.create_params_for_table_fill(tables_to_fill=[resource],
+                                                      connection=self.postgis_connector.main_connection)
+            fill_manager.fill_resource(100, pagingcursor='', resource=resource)
+        except Exception as exc:
+            logging.error(f"{self.color}Could not fill resource {resource}")
+            logging.error(exc)
+            self.postgis_connector.main_connection.rollback()
+        finally:
+            fill_manager.delete_params_for_table_fill(tables_to_fill=[resource],
+                                                      connection=self.postgis_connector.main_connection)

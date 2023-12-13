@@ -59,8 +59,8 @@ class WeglocatieGewijzigdProcessor(SpecificEventProcessor):
                 )
 
             if 'wl:Weglocatie.wegaanduiding' in asset_dict:
-                record_array = []
                 for wegaanduiding in asset_dict['wl:Weglocatie.wegaanduiding']:
+                    record_array = []
                     record_array.extend([
                         f"'{asset_uuid}'",
                         f"'{wegaanduiding['wl:DtcWegaanduiding.weg']['wl:DtcWeg.nummer']}'",
@@ -73,7 +73,7 @@ class WeglocatieGewijzigdProcessor(SpecificEventProcessor):
                         f"'{wegaanduiding['wl:DtcWegaanduiding.tot']['wl:DtcRelatieveLocatie.referentiepunt']['wl:DtcReferentiepunt.opschrift']}'",
                         f"{wegaanduiding['wl:DtcWegaanduiding.tot']['wl:DtcRelatieveLocatie.afstand']}",
                     ])
-                wegaanduidingen_values_array.append(record_array)
+                    wegaanduidingen_values_array.append(record_array)
 
         wl_values_string = turn_list_of_lists_into_string(wl_values_array)
         wegsegmenten_values_string = turn_list_of_lists_into_string(wegsegmenten_values_array)
