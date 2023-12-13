@@ -10,6 +10,7 @@ from EventProcessors.AssetProcessors.GeometrieOrLocatieGewijzigdProcessor import
 from EventProcessors.AssetProcessors.SchadebeheerderGewijzigdProcessor import SchadebeheerderGewijzigdProcessor
 from EventProcessors.AssetProcessors.ToezichtGewijzigdProcessor import ToezichtGewijzigdProcessor
 from EventProcessors.AssetProcessors.VplanGewijzigdProcessor import VplanGewijzigdProcessor
+from EventProcessors.AssetProcessors.WeglocatieGewijzigdProcessor import WeglocatieGewijzigdProcessor
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
 from Helpers import peek_generator
 
@@ -41,6 +42,8 @@ class AssetUpdater:
         ToezichtGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
                                                  asset_dicts=asset_dict_list)
         GeometrieOrLocatieGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
+                                                           asset_dicts=asset_dict_list)
+        WeglocatieGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
                                                            asset_dicts=asset_dict_list)
         AssetUpdater.update_elek_aansluiting_of_synced_assets(connection=connection, asset_uuids=asset_uuids,
                                                               eminfra_importer=eminfra_importer)
@@ -134,7 +137,7 @@ WHERE to_update.uuid = assets.uuid;"""
                     cursor.execute(update_query)
         except psycopg2.errors.NotNullViolation as exc:
             first_line = exc.args[0].split('\n')[0]
-            if first_line == 'null value in column "assettype" violates not-null constraint':
+            if 'null value in column "assettype"' in first_line and 'violates not-null constraint' in first_line:
                 if '\n' in str(exc):
                     logging.error(str(exc).split('\n')[1])
                 connection.rollback()
