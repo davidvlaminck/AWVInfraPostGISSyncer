@@ -112,6 +112,17 @@ class AssetRelatiesUpdater:
             else:
                 connection.rollback()
                 raise exc
+        except psycopg2.errors.NotNullViolation as exc:
+            first_line = exc.args[0].split('\n')[0]
+            if first_line == 'null value in column "relatietype" violates not-null constraint':
+                if '\n' in str(exc):
+                    logging.error(str(exc).split('\n')[1])
+                connection.rollback()
+                logging.error('raising RelatieTypeMissingError')
+                raise RelatieTypeMissingError()
+            else:
+                connection.rollback()
+                raise exc
         except Exception as exc:
             logging.error(colorama_table[ResourceEnum.assetrelaties] + f'raising unhandled error: {exc}')
             raise exc

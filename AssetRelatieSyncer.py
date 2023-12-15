@@ -11,6 +11,7 @@ from AssetRelatiesUpdater import AssetRelatiesUpdater
 from EMInfraImporter import EMInfraImporter
 from Exceptions.AssetMissingError import AssetMissingError
 from Exceptions.RelatieTypeMissingError import RelatieTypeMissingError
+from FillManager import FillManager
 from PostGISConnector import PostGISConnector
 from ResourceEnum import colorama_table, ResourceEnum
 from SyncTimer import SyncTimer
@@ -76,8 +77,8 @@ class AssetRelatieSyncer:
                     continue
                 except RelatieTypeMissingError:
                     # TODO
-                    raise NotImplementedError
-                    time.sleep(60)
+                    connection.rollback()
+                    self.fill_resource(ResourceEnum.relatietypes)
                     continue
                 except Exception as exc:
                     traceback.print_exception(exc)
@@ -99,3 +100,18 @@ class AssetRelatieSyncer:
         for k, v in event_dict.items():
             if len(v) > 0:
                 logging.info(color + f'number of events of type {k}: {len(v)}')
+
+    def fill_resource(self, resource: ResourceEnum):
+        fill_manager = FillManager(connector=self.postgis_connector,
+                                   eminfra_importer=self.eminfra_importer)
+        try:
+            fill_manager.create_params_for_table_fill(tables_to_fill=[resource],
+                                                      connection=self.postgis_connector.main_connection)
+            fill_manager.fill_resource(100, pagingcursor='', resource=resource)
+        except Exception as exc:
+            logging.error(f"{self.color}Could not fill resource {resource}")
+            logging.error(exc)
+            self.postgis_connector.main_connection.rollback()
+        finally:
+            fill_manager.delete_params_for_table_fill(tables_to_fill=[resource],
+                                                      connection=self.postgis_connector.main_connection)
