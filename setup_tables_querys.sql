@@ -8,6 +8,7 @@ CREATE TABLE public.agents
     void uuid,
     actief boolean NOT NULL,
     contact_info json,
+    ovo_code text,
     PRIMARY KEY (uuid)
 );
 
