@@ -1,6 +1,7 @@
 import json
 
 from requests import Response
+from requests.exceptions import ConnectionError
 
 
 class RequestHandler:

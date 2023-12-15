@@ -97,6 +97,9 @@ class AssetSyncer:
                 except BestekMissingError:
                     connection.rollback()
                     self.fill_resource(ResourceEnum.bestekken)
+                except ConnectionError:
+                    logging.info(f"{self.color}failed connection, retrying in 1 minute")
+                    time.sleep(60)
                 except Exception as exc:
                     traceback.print_exception(exc)
                     connection.rollback()
