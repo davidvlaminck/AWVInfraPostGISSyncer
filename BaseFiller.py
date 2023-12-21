@@ -3,6 +3,7 @@ import time
 from abc import ABC
 
 from EMInfraImporter import EMInfraImporter
+from EventProcessors.AssetProcessors.NieuwAssetProcessor import NieuwAssetProcessor
 from Exceptions.AgentMissingError import AgentMissingError
 from Exceptions.AssetMissingError import AssetMissingError
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
@@ -70,13 +71,15 @@ class BaseFiller(ABC):
                             connection=connection)
                         connection.commit()
                         break
-            except AssetMissingError:
+            except AssetMissingError as exc:
                 connection.rollback()
                 params = self.postgis_connector.get_params(connection)
                 if 'assets_fill' in params and params['assets_fill']:
                     logging.info(self.color + 'Asset(s) missing while filling. This is normal behaviour. Trying again in 60 seconds')
                     self.intermittent_sleep(break_when=[self.fill_manager.reset_called])
                     continue
+                elif len(exc.asset_uuids) > 0:
+                    self.add_missing_assets_after_fill(connection=connection, asset_uuids=exc.asset_uuids)
             except AgentMissingError:
                 connection.rollback()
                 params = self.postgis_connector.get_params(connection)
@@ -164,3 +167,6 @@ class BaseFiller(ABC):
             count = cursor.fetchone()[0]
         return count
 
+    def add_missing_assets_after_fill(self, connection, asset_uuids):
+        event_processor = NieuwAssetProcessor(eminfra_importer=self.eminfra_importer)
+        event_processor.process(asset_uuids, connection=connection)
