@@ -10,6 +10,7 @@ from Exceptions.AttribuutMissingError import AttribuutMissingError
 from Exceptions.BeheerderMissingError import BeheerderMissingError
 from Exceptions.FillResetError import FillResetError
 from Exceptions.IdentiteitMissingError import IdentiteitMissingError
+from Exceptions.RelatieTypeMissingError import RelatieTypeMissingError
 from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 from FillManager import FillManager
 from PostGISConnector import PostGISConnector
@@ -140,6 +141,13 @@ class BaseFiller(ABC):
                         connection=connection)
                     self.fill_manager.reset_called = True
                     raise FillResetError()
+            except RelatieTypeMissingError:
+                logging.info(self.color + 'Refilling Relatietypes. Sending reset signal to all processes.')
+                self.postgis_connector.update_params(
+                    params={'relatietypes_fill': True, 'relatietypes_cursor': ''},
+                    connection=connection)
+                self.fill_manager.reset_called = True
+                raise FillResetError()
             except Exception as err:
                 connection.rollback()
                 logging.error(self.color + f'Found unknown error in {type(self).__name__}.')

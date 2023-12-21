@@ -76,7 +76,6 @@ class AssetRelatieSyncer:
                     time.sleep(60)
                     continue
                 except RelatieTypeMissingError:
-                    # TODO
                     connection.rollback()
                     self.fill_resource(ResourceEnum.relatietypes)
                     continue
