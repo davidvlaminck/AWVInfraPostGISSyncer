@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from typing import Iterator
 
 import psycopg2
@@ -49,7 +50,7 @@ class BetrokkeneRelatiesUpdater:
                 contact_info = betrokkenerelatie_dict['HeeftBetrokkene.specifiekeContactinfo']
                 contact_info_value = "'" + json.dumps(contact_info).replace("'", "''") + "'"
             record_array.append(contact_info_value)
-            
+
             start_datum = betrokkenerelatie_dict.get('HeeftBetrokkene.datumAanvang', None)
             eind_datum = betrokkenerelatie_dict.get('HeeftBetrokkene.datumEinde', None)
 
@@ -99,11 +100,15 @@ class BetrokkeneRelatiesUpdater:
                 raise AgentMissingError()
 
             elif first_line == 'insert or update on table "betrokkenerelaties" violates foreign key constraint "betrokkenerelaties_bron_assets_fkey"':
+                exception_to_raise = AssetMissingError()
                 if '\n' in str(exc):
-                    logging.error(colorama_table[ResourceEnum.betrokkenerelaties] + str(exc).split('\n')[1])
+                    detail_line = str(exc).split('\n')[1]
+                    #regex, get the uuid after 'DETAIL:  Key (bronassetuuid)=(' and ')'
+                    exception_to_raise.asset_uuids = re.findall(r"Key \(bronassetuuid\)=\('(.*)'\)", detail_line)
+                    logging.error(f'{colorama_table[ResourceEnum.betrokkenerelaties]}{detail_line}')
                 connection.rollback()
                 logging.error(colorama_table[ResourceEnum.betrokkenerelaties] + 'raising AssetMissingError')
-                raise AssetMissingError()
+                raise exception_to_raise
             else:
                 connection.rollback()
                 raise exc
