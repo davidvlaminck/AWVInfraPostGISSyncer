@@ -103,8 +103,7 @@ class BetrokkeneRelatiesUpdater:
                 exception_to_raise = AssetMissingError()
                 if '\n' in str(exc):
                     detail_line = str(exc).split('\n')[1]
-                    #regex, get the uuid after 'DETAIL:  Key (bronassetuuid)=(' and ')'
-                    exception_to_raise.asset_uuids = re.findall(r"Key \(bronassetuuid\)=\('(.*)'\)", detail_line)
+                    exception_to_raise.asset_uuids = re.findall(r"bronassetuuid\)=\((.*?)\)", detail_line)
                     logging.error(f'{colorama_table[ResourceEnum.betrokkenerelaties]}{detail_line}')
                 connection.rollback()
                 logging.error(colorama_table[ResourceEnum.betrokkenerelaties] + 'raising AssetMissingError')
