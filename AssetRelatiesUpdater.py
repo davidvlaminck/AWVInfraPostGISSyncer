@@ -22,9 +22,9 @@ class AssetRelatiesUpdater:
         for assetrelatie_dict in object_generator:
             counter += 1
             record_array = [
-                f"'{assetrelatie_dict['@id'].replace('https://data.awvvlaanderen.be/id/assetrelatie/', '')[0:36]}'",
-                f"'{assetrelatie_dict['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]}'",
-                f"'{assetrelatie_dict['RelatieObject.doel']['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]}'"]
+                f"'{assetrelatie_dict['@id'].replace('https://data.awvvlaanderen.be/id/assetrelatie/', '')[:36]}'",
+                f"'{assetrelatie_dict['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[:36]}'",
+                f"'{assetrelatie_dict['RelatieObject.doel']['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[:36]}'"]
 
             if 'RelatieObject.typeURI' in assetrelatie_dict:
                 record_array.append(f"'{assetrelatie_dict['RelatieObject.typeURI']}'")
@@ -114,7 +114,7 @@ class AssetRelatiesUpdater:
                 raise exc
         except psycopg2.errors.NotNullViolation as exc:
             first_line = exc.args[0].split('\n')[0]
-            if first_line == 'null value in column "relatietype" violates not-null constraint':
+            if 'null value in column "relatietype"' in first_line and 'violates not-null constraint' in first_line:
                 if '\n' in str(exc):
                     logging.error(str(exc).split('\n')[1])
                 connection.rollback()
@@ -124,8 +124,8 @@ class AssetRelatiesUpdater:
                 connection.rollback()
                 raise exc
         except Exception as exc:
-            logging.error(colorama_table[ResourceEnum.assetrelaties] + f'raising unhandled error: {exc}')
+            logging.error(f'{colorama_table[ResourceEnum.assetrelaties]}raising unhandled error: {exc}')
             raise exc
 
-        logging.info(colorama_table[ResourceEnum.assetrelaties] +f'done batch of {counter} assetrelaties')
+        logging.info(f'{colorama_table[ResourceEnum.assetrelaties]}done batch of {counter} assetrelaties')
         return counter
