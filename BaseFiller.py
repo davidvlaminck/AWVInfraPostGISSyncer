@@ -52,9 +52,6 @@ class BaseFiller(ABC):
                 if self.resource == 'assets':
                     self.updater.update_objects(object_generator=object_generator, connection=connection,
                                                 eminfra_importer=self.eminfra_importer)
-                elif self.resource == 'controlefiches':
-                    self.updater.update_objects(object_generator=object_generator, connection=connection,
-                                                eminfra_importer=self.eminfra_importer, controlefiches=True)
                 else:
                     params = self.postgis_connector.get_params(connection)
                     # TODO what does safe_insert do? when is it used?

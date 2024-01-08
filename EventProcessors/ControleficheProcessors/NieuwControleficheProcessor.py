@@ -1,7 +1,7 @@
 import logging
 import time
 
-from AssetUpdater import AssetUpdater
+from ControleficheUpdater import ControleficheUpdater
 from EventProcessors.AssetProcessors.SpecificEventProcessor import SpecificEventProcessor
 from Helpers import chunked
 
@@ -17,11 +17,10 @@ class NieuwControleficheProcessor(SpecificEventProcessor):
         asset_count = 0
         for uuids in chunked(uuids, 100):
             generator = self.eminfra_importer.import_resource_from_webservice_by_uuids(uuids=uuids,
-                                                                                       resource='assets')
+                                                                                       resource='controlefiches')
 
-            asset_count += AssetUpdater.update_objects(object_generator=generator, connection=connection,
-                                                       insert_only=True, eminfra_importer=self.eminfra_importer,
-                                                       controlefiches=True)
+            asset_count += ControleficheUpdater.update_objects(object_generator=generator, connection=connection,
+                                                               insert_only=True, eminfra_importer=self.eminfra_importer)
 
         end = time.time()
         logging.info(f'created {asset_count} controlefiches in {str(round(end - start, 2))} seconds.')

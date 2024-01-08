@@ -18,7 +18,7 @@ from Helpers import peek_generator
 class AssetUpdater:
     @staticmethod
     def update_objects(object_generator: Iterator[dict], connection, eminfra_importer: EMInfraImporter,
-                       insert_only: bool = False, safe_insert: bool = False, controlefiches: bool = False) -> int:
+                       insert_only: bool = False, safe_insert: bool = False) -> int:
         object_generator = peek_generator(object_generator)
         if object_generator is None:
             return 0

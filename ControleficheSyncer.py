@@ -5,7 +5,7 @@ from datetime import datetime
 
 from requests.exceptions import ConnectionError
 
-from AssetUpdater import AssetUpdater
+from ControleficheUpdater import ControleficheUpdater
 from ControleficheFeedEventsCollector import ControleficheFeedEventsCollector
 from ControleficheFeedEventsProcessor import ControleficheFeedEventsProcessor
 from EMInfraImporter import EMInfraImporter
@@ -21,7 +21,7 @@ class ControleficheSyncer:
     def __init__(self, postgis_connector: PostGISConnector, eminfra_importer: EMInfraImporter):
         self.postgis_connector: PostGISConnector = postgis_connector
         self.eminfra_importer: EMInfraImporter = eminfra_importer
-        self.updater: AssetUpdater = AssetUpdater()
+        self.updater: ControleficheUpdater = ControleficheUpdater()
         self.events_collector: ControleficheFeedEventsCollector = ControleficheFeedEventsCollector(eminfra_importer)
         self.events_processor: ControleficheFeedEventsProcessor = ControleficheFeedEventsProcessor(
             postgis_connector=postgis_connector, eminfra_importer=eminfra_importer)
@@ -32,7 +32,6 @@ class ControleficheSyncer:
             try:
                 sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
                 if not sync_allowed_by_time:
-                    self.update_view_tables(connection, color=self.color)
                     logging.info(
                         f'{self.color}syncing is not allowed at this time. Trying again in 5 minutes'
                     )
@@ -99,10 +98,10 @@ class ControleficheSyncer:
         self.eminfra_importer.paging_cursors['controlefiches_ad_hoc'] = ''
 
         object_generator = self.eminfra_importer.import_resource_from_webservice_by_uuids(
-            resource='assets', uuids=uuids)
+            resource='controlefiches', uuids=uuids)
 
         self.updater.update_objects(object_generator=object_generator, connection=connection,
-                                    eminfra_importer=self.eminfra_importer, controlefiches=True)
+                                    eminfra_importer=self.eminfra_importer)
 
     @staticmethod
     def log_eventparams(event_dict, timespan: float, color):
@@ -113,34 +112,6 @@ class ControleficheSyncer:
         for k, v in event_dict.items():
             if len(v) > 0:
                 logging.info(f'{color}number of events of type {k}: {len(v)}')
-
-    def update_view_tables(self, connection, color):
-        try:
-            params = self.postgis_connector.get_params(connection)
-            last_update_views_date = params['last_update_utc_views'].date()
-            today_date = (datetime.utcnow()).date()
-
-            if today_date <= last_update_views_date:
-                return
-
-            select_view_names_query = "select viewname from pg_catalog.pg_views where schemaname = 'asset_views'"
-            with connection.cursor() as cursor:
-                cursor.execute(select_view_names_query)
-
-                for view_name in cursor.fetchall():
-                    view_name = view_name[0]
-                    logging.info(f'{color}creating fixed table for {view_name}')
-                    view_query = f"DROP TABLE IF EXISTS asset_views.table_{view_name}; " \
-                                         f"CREATE TABLE asset_views.table_{view_name} AS SELECT * FROM asset_views.{view_name};"
-                    cursor.execute(view_query)
-                    connection.commit()
-
-            self.postgis_connector.update_params(params={'last_update_utc_views': datetime.utcnow()},
-                                                 connection=connection)
-        except Exception as exc:
-            logging.error(f"{self.color}Could not create view tables")
-            logging.error(exc)
-            connection.rollback()
 
     def fill_resource(self, resource: ResourceEnum):
         fill_manager = FillManager(connector=self.postgis_connector,
