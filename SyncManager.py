@@ -8,6 +8,7 @@ from AgentSyncer import AgentSyncer
 from AssetRelatieSyncer import AssetRelatieSyncer
 from AssetSyncer import AssetSyncer
 from BetrokkeneRelatieSyncer import BetrokkeneRelatieSyncer
+from ControleficheSyncer import ControleficheSyncer
 from EMInfraImporter import EMInfraImporter
 from FeedEventsCollector import FeedEventsCollector
 from FeedEventsProcessor import FeedEventsProcessor
@@ -32,6 +33,9 @@ class SyncerFactory:
         elif feed == 'betrokkenerelaties':
             time.sleep(4)
             return BetrokkeneRelatieSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
+        elif feed == 'controlefiches':
+            time.sleep(5)
+            return ControleficheSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
 
 
 class SyncManager:
@@ -75,10 +79,10 @@ class SyncManager:
         syncer.sync(connection=connection)
 
     def perform_multiprocessing_syncing(self):
-        feeds = ['assets', 'agents', 'assetrelaties', 'betrokkenerelaties']
+        feeds = ['assets', 'agents', 'assetrelaties', 'betrokkenerelaties', 'controlefiches']
 
         # use multithreading
-        executor = ThreadPoolExecutor(4)
+        executor = ThreadPoolExecutor(5)
         futures = [executor.submit(self.start_sync_by_feed, feed=feed)
                    for feed in feeds]
         concurrent.futures.wait(futures)

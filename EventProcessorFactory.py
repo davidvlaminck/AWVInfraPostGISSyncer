@@ -36,6 +36,7 @@ from EventProcessors.AssetProcessors.SchadebeheerderGewijzigdProcessor import Sc
 from EventProcessors.AssetProcessors.SpecificEventProcessor import SpecificEventProcessor
 from EventProcessors.AssetProcessors.ToestandGewijzigdProcessor import ToestandGewijzigdProcessor
 from EventProcessors.AssetProcessors.ToezichtGewijzigdProcessor import ToezichtGewijzigdProcessor
+from EventProcessors.ControleficheProcessors.NieuwControleficheProcessor import NieuwControleficheProcessor
 from PostGISConnector import PostGISConnector
 
 
@@ -54,6 +55,9 @@ class EventProcessorFactory:
                 event_type=event_type, eminfra_importer=eminfra_importer)
         elif resource == 'assets':
             return EventProcessorFactory.create_asset_event_processor(
+                event_type=event_type, eminfra_importer=eminfra_importer)
+        elif resource == 'controlefiches':
+            return EventProcessorFactory.create_controlefiche_event_processor(
                 event_type=event_type, eminfra_importer=eminfra_importer)
 
         raise NotImplementedError
@@ -153,3 +157,11 @@ class EventProcessorFactory:
             return AssetrelatieEigenschappenGewijzigdProcessor(eminfra_importer=eminfra_importer)
         else:
             raise NotImplementedError(f"can't create an betrokkenerelatie event processor with type: {event_type}")
+
+    @classmethod
+    def create_controlefiche_event_processor(cls, event_type: str, eminfra_importer: EMInfraImporter
+                                             ) -> SpecificEventProcessor:
+        if event_type == 'NIEUWE_CONTROLEFICHE':
+            return NieuwControleficheProcessor(eminfra_importer)
+        else:
+            raise NotImplementedError(f"can't create an asset event processor with type: {event_type}")

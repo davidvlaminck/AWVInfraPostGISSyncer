@@ -16,6 +16,7 @@ class ResourceEnum(str, Enum):
     assetrelaties = 'assetrelaties'
     assets = 'assets'
     bestekkoppelingen = 'bestekkoppelingen'
+    controlefiches = 'controlefiches'
 
 
 colorama_table = {
@@ -29,5 +30,6 @@ colorama_table = {
     ResourceEnum.relatietypes: colorama.Fore.LIGHTGREEN_EX,
     ResourceEnum.assettypes: colorama.Fore.LIGHTMAGENTA_EX,
     ResourceEnum.beheerders: colorama.Fore.LIGHTRED_EX,
-    ResourceEnum.bestekkoppelingen: colorama.Fore.BLUE
+    ResourceEnum.bestekkoppelingen: colorama.Fore.BLUE,
+    ResourceEnum.controlefiches: colorama.Fore.LIGHTYELLOW_EX
 }

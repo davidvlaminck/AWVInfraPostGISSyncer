@@ -18,7 +18,7 @@ from Helpers import peek_generator
 class AssetUpdater:
     @staticmethod
     def update_objects(object_generator: Iterator[dict], connection, eminfra_importer: EMInfraImporter,
-                       insert_only: bool = False, safe_insert: bool = False) -> int:
+                       insert_only: bool = False, safe_insert: bool = False, controlefiches: bool = False) -> int:
         object_generator = peek_generator(object_generator)
         if object_generator is None:
             return 0
@@ -30,25 +30,27 @@ class AssetUpdater:
         counter, values = AssetUpdater.fill_values_from_object_generator(
             asset_dict_list, asset_uuids, counter, object_generator, values)
 
-        if len(asset_uuids) == 0:
+        if not asset_uuids:
             return 0
 
         AssetUpdater.perform_insert_update_from_values(connection, insert_only, values)
 
         AttributenGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
                                                    asset_dicts=asset_dict_list)
-        SchadebeheerderGewijzigdProcessor.process_dicts(connection=connection,
-                                                        asset_dicts=asset_dict_list)
-        ToezichtGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
-                                                 asset_dicts=asset_dict_list)
-        GeometrieOrLocatieGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
-                                                           asset_dicts=asset_dict_list)
-        WeglocatieGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
-                                                           asset_dicts=asset_dict_list)
-        AssetUpdater.update_elek_aansluiting_of_synced_assets(connection=connection, asset_uuids=asset_uuids,
-                                                              eminfra_importer=eminfra_importer)
-        AssetUpdater.update_vplan_of_synced_assets(connection=connection, asset_uuids=asset_uuids,
-                                                   eminfra_importer=eminfra_importer)
+
+        if not controlefiches:
+            SchadebeheerderGewijzigdProcessor.process_dicts(connection=connection,
+                                                            asset_dicts=asset_dict_list)
+            ToezichtGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
+                                                     asset_dicts=asset_dict_list)
+            GeometrieOrLocatieGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
+                                                               asset_dicts=asset_dict_list)
+            WeglocatieGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
+                                                               asset_dicts=asset_dict_list)
+            AssetUpdater.update_elek_aansluiting_of_synced_assets(connection=connection, asset_uuids=asset_uuids,
+                                                                  eminfra_importer=eminfra_importer)
+            AssetUpdater.update_vplan_of_synced_assets(connection=connection, asset_uuids=asset_uuids,
+                                                       eminfra_importer=eminfra_importer)
 
         logging.info(f'Updated or inserted {counter} assets, including legacy info.')
         return counter
@@ -175,5 +177,5 @@ WHERE to_update.uuid = assets.uuid;"""
                 values += 'NULL,'
             else:
                 values += f"'{attribute}',"
-        values = values[:-1] + '),'
+        values = f'{values[:-1]}),'
         return values

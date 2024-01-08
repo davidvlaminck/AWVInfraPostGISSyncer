@@ -15,6 +15,7 @@ FILLER_FACTORY_DICT = {
     ResourceEnum.beheerders: 'BeheerderFiller',
     ResourceEnum.assetrelaties: 'AssetRelatieFiller',
     ResourceEnum.betrokkenerelaties: 'BetrokkeneRelatieFiller',
+    ResourceEnum.controlefiches: 'ControleficheFiller',
 }
 
 
@@ -25,6 +26,5 @@ class FillerFactory:
         name = FILLER_FACTORY_DICT[resource]
         module = importlib.import_module(name)
         class_ = getattr(module, name)
-        instance = class_(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector,
-                          resource=resource, fill_manager=fill_manager)
-        return instance
+        return class_(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector,
+                      resource=resource, fill_manager=fill_manager)

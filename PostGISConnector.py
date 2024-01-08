@@ -55,6 +55,12 @@ class PostGISConnector:
             'assets_ad_hoc': 'text',
             'betrokkenerelaties_ad_hoc': 'text',
             'assetrelaties_ad_hoc': 'text',
+            'controlefiches_ad_hoc': 'text',
+            'controlefiches_fill': 'bool',
+            'controlefiches_cursor': 'text',
+            'page_controlefiches': 'int',
+            'event_uuid_controlefiches': 'text',
+            'last_update_utc_controlefiches': 'timestamp',
         }
 
     def set_up_tables(self, file_path=Path(THIS_DIR / 'setup_tables_querys.sql')):
