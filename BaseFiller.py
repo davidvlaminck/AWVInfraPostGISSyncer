@@ -165,6 +165,14 @@ class BaseFiller(ABC):
 
     @staticmethod
     def get_count(resource, connection) -> int:
+        if resource == 'aanleidingen':
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                SELECT count(*) FROM assets 
+                INNER JOIN assettypes a ON a.uuid = assets.assettype 
+                    AND a.uri LIKE '%https://bz.data.wegenenverkeer.be/ns/aanleiding#%'""")
+                count = cursor.fetchone()[0]
+            return count
         with connection.cursor() as cursor:
             cursor.execute(f'SELECT count(*) FROM (SELECT uuid FROM {resource} a LIMIT 1) s;')
             count = cursor.fetchone()[0]

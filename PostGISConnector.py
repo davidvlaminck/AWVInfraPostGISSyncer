@@ -61,6 +61,8 @@ class PostGISConnector:
             'page_controlefiches': 'int',
             'event_uuid_controlefiches': 'text',
             'last_update_utc_controlefiches': 'timestamp',
+            'aanleidingen_fill': 'bool',
+            'aanleidingen_cursor': 'text',
         }
 
     def set_up_tables(self, file_path=Path(THIS_DIR / 'setup_tables_querys.sql')):

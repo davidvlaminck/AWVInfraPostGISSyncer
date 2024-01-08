@@ -16,6 +16,7 @@ FILLER_FACTORY_DICT = {
     ResourceEnum.assetrelaties: 'AssetRelatieFiller',
     ResourceEnum.betrokkenerelaties: 'BetrokkeneRelatieFiller',
     ResourceEnum.controlefiches: 'ControleficheFiller',
+    ResourceEnum.aanleidingen: 'AanleidingFiller',
 }
 
 

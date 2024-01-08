@@ -66,6 +66,12 @@ class EMInfraImporter:
             yield from self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size,
                                                                   filter_string=filter_string)
 
+    def import_aanleidingen_from_webservice_page_by_page(self, page_size: int, uri_list: [str]) -> Iterator[dict]:
+        filter_string = '{ "typeUri": ' + '["' + '","'.join(uri_list) + '"]' + ' }'
+        yield from self.get_objects_from_oslo_search_endpoint(url_part='assets', size=page_size,
+                                                              filter_string=filter_string,
+                                                              cursor_name=ResourceEnum.aanleidingen)
+
     def import_resource_from_webservice_page_by_page(self, page_size: int, resource: ResourceEnum) -> Iterator[dict]:
         if resource == 'agents':
             expansions_string = '{"fields": ["contactInfo"]}'

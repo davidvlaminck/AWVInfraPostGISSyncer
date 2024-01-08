@@ -9,6 +9,7 @@ from AssetRelatieFeedEventsCollector import AssetRelatieFeedEventsCollector
 from AssetRelatieFeedEventsProcessor import AssetRelatieFeedEventsProcessor
 from AssetRelatiesUpdater import AssetRelatiesUpdater
 from EMInfraImporter import EMInfraImporter
+from Exceptions.AanleidingMissingError import AanleidingMissingError
 from Exceptions.AssetMissingError import AssetMissingError
 from Exceptions.RelatieTypeMissingError import RelatieTypeMissingError
 from FillManager import FillManager
@@ -78,6 +79,12 @@ class AssetRelatieSyncer:
                 except RelatieTypeMissingError:
                     connection.rollback()
                     self.fill_resource(ResourceEnum.relatietypes)
+                    continue
+                except AanleidingMissingError:
+                    connection.rollback()
+                    # TODO remove comment
+                    # self.fill_resource(ResourceEnum.assettypes)
+                    self.fill_resource(ResourceEnum.aanleidingen)
                     continue
                 except Exception as exc:
                     traceback.print_exception(exc)

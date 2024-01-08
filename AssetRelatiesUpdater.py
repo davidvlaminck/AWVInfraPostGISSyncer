@@ -1,9 +1,11 @@
 import json
 import logging
+import re
 from typing import Iterator
 
 import psycopg2
 
+from Exceptions.AanleidingMissingError import AanleidingMissingError
 from Exceptions.AssetMissingError import AssetMissingError
 from Exceptions.RelatieTypeMissingError import RelatieTypeMissingError
 from Helpers import peek_generator, turn_list_of_lists_into_string
@@ -17,6 +19,8 @@ class AssetRelatiesUpdater:
         if object_generator is None:
             return 0
 
+        objects_dict = {}
+
         values_array = []
         counter = 0
         for assetrelatie_dict in object_generator:
@@ -25,6 +29,10 @@ class AssetRelatiesUpdater:
                 f"'{assetrelatie_dict['@id'].replace('https://data.awvvlaanderen.be/id/assetrelatie/', '')[:36]}'",
                 f"'{assetrelatie_dict['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[:36]}'",
                 f"'{assetrelatie_dict['RelatieObject.doel']['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[:36]}'"]
+
+            objects_dict[record_array[0][1:37]] = assetrelatie_dict['@type']
+            objects_dict[record_array[1][1:37]] = assetrelatie_dict['RelatieObject.bron']['@type']
+            objects_dict[record_array[2][1:37]] = assetrelatie_dict['RelatieObject.doel']['@type']
 
             if 'RelatieObject.typeURI' in assetrelatie_dict:
                 record_array.append(f"'{assetrelatie_dict['RelatieObject.typeURI']}'")
@@ -92,15 +100,29 @@ class AssetRelatiesUpdater:
         except psycopg2.errors.ForeignKeyViolation as exc:
             first_line = exc.args[0].split('\n')[0]
             if first_line == 'insert or update on table "assetrelaties" violates foreign key constraint "assetrelaties_bronuuid_fkey"':
-                if '\n' in str(exc):
-                    logging.error(str(exc).split('\n')[1])
                 connection.rollback()
+                if '\n' in str(exc):
+                    error_detail = str(exc).split('\n')[1]
+                    logging.error(error_detail)
+                    problem_uuids = re.findall(r"bronuuid\)=\((.*?)\)", error_detail)
+                    problem_uuid = problem_uuids[0]
+                    problem_type = objects_dict[problem_uuid]
+                    if problem_type.startswith('https://bz.data.wegenenverkeer.be/ns/aanleiding#'):
+                        logging.error('raising AanleidingMissingError')
+                        raise AanleidingMissingError()
                 logging.error('raising AssetMissingError')
                 raise AssetMissingError()
             elif first_line == 'insert or update on table "assetrelaties" violates foreign key constraint "assetrelaties_doeluuid_fkey"':
-                if '\n' in str(exc):
-                    logging.error(str(exc).split('\n')[1])
                 connection.rollback()
+                if '\n' in str(exc):
+                    error_detail = str(exc).split('\n')[1]
+                    logging.error(error_detail)
+                    problem_uuids = re.findall(r"doeluuid\)=\((.*?)\)", error_detail)
+                    problem_uuid = problem_uuids[0]
+                    problem_type = objects_dict[problem_uuid]
+                    if problem_type.startswith('https://bz.data.wegenenverkeer.be/ns/aanleiding#'):
+                        logging.error('raising AanleidingMissingError')
+                        raise AanleidingMissingError()
                 logging.error('raising AssetMissingError')
                 raise AssetMissingError()
             elif first_line == 'insert or update on table "assetrelaties" violates foreign key constraint "assetrelaties_relatietype_fkey"':
