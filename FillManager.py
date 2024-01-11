@@ -6,7 +6,6 @@ from concurrent.futures import ThreadPoolExecutor
 import urllib3
 from urllib3.exceptions import NewConnectionError
 
-from BestekKoppelingSyncer import BestekKoppelingSyncer
 from EMInfraImporter import EMInfraImporter
 from Exceptions.FillResetError import FillResetError
 from FeedEventsCollector import FeedEventsCollector
@@ -28,10 +27,7 @@ class FillManager:
         if not fill:
             return
 
-        if table_to_fill == ResourceEnum.bestekkoppelingen.name:
-            self.fill_bestekkoppelingen(page_size, cursor)
-        else:
-            self.fill_resource(page_size=page_size, pagingcursor=cursor, resource=table_to_fill)
+        self.fill_resource(page_size=page_size, pagingcursor=cursor, resource=table_to_fill)
 
     def fill(self, params: dict):
         logging.info('Filling the database with data')
@@ -62,24 +58,24 @@ class FillManager:
                     params = self.connector.get_params(self.connector.main_connection)
 
                 tables_to_fill_filtered = [table_to_fill for table_to_fill in tables_to_fill
-                                           if params[table_to_fill + '_fill']]
+                                           if params[f'{table_to_fill}_fill']]
 
                 # use multithreading
                 logging.info(f'filling {len(tables_to_fill_filtered)} tables ...')
                 with concurrent.futures.ThreadPoolExecutor(len(tables_to_fill_filtered)) as executor:
-                    futures = [executor.submit(self.fill_table, table_to_fill=table_to_fill,
-                                               fill=params[table_to_fill + '_fill'],
-                                               cursor=params[table_to_fill + '_cursor'], page_size=params['pagesize'])
-                               for table_to_fill in tables_to_fill_filtered]
+                    futures = [
+                        executor.submit(self.fill_table, table_to_fill=table_to_fill,
+                                        fill=params[f'{table_to_fill}_fill'], cursor=params[f'{table_to_fill}_cursor'],
+                                        page_size=params['pagesize']) for table_to_fill in tables_to_fill_filtered]
                     concurrent.futures.wait(futures)
 
                 self.reset_called = False
 
                 params = self.connector.get_params(self.connector.main_connection)
-                done = True
-                for table_to_fill in tables_to_fill:
-                    if params[table_to_fill + '_fill']:
-                        done = False
+                done = not any(
+                    params[f'{table_to_fill}_fill']
+                    for table_to_fill in tables_to_fill
+                )
                 if done:
                     break
 
@@ -102,38 +98,20 @@ class FillManager:
     def delete_params_for_table_fill(self, tables_to_fill: [ResourceEnum], connection):
         param_dict = {}
         for table_to_fill in tables_to_fill:
-            param_dict[table_to_fill + '_fill'] = True
-            param_dict[table_to_fill + '_cursor'] = True
+            param_dict[f'{table_to_fill}_fill'] = True
+            param_dict[f'{table_to_fill}_cursor'] = True
         self.connector.delete_params(param_dict, connection)
 
     def create_params_for_table_fill(self, tables_to_fill: [ResourceEnum], connection):
         param_dict = {}
         for table_to_fill in tables_to_fill:
-            param_dict[table_to_fill + '_fill'] = True
-            param_dict[table_to_fill + '_cursor'] = ''
+            param_dict[f'{table_to_fill}_fill'] = True
+            param_dict[f'{table_to_fill}_cursor'] = ''
         self.connector.create_params(param_dict, connection)
-
-    def fill_bestekkoppelingen(self, page_size, pagingcursor):
-        # TODO write own loop to check for assets_fill
-        # else: use fill_resource
-        logging.info(colorama_table[ResourceEnum.bestekkoppelingen] + 'Filling bestekkoppelingen table')
-        params = self.connector.get_params(self.connector.main_connection)
-        if 'assets_fill' not in params:
-            raise ValueError('missing assets_fill in params')
-        if params['assets_fill']:
-            logging.info(colorama_table[ResourceEnum.bestekkoppelingen] + 'Waiting for assets to be filled')
-            return
-
-        start = time.time()
-        bestek_koppeling_syncer = BestekKoppelingSyncer(em_infra_importer=self.eminfra_importer,
-                                                        postGIS_connector=self.connector)
-        bestek_koppeling_syncer.sync_bestekkoppelingen()
-        end = time.time()
-        logging.info(colorama_table[ResourceEnum.bestekkoppelingen] + f'time for all bestekkoppelingen: {round(end - start, 2)}')
 
     def fill_resource(self, page_size, pagingcursor, resource: ResourceEnum):
         color = colorama_table[resource]
-        logging.info(color + f'Filling {resource} table')
+        logging.info(f'{color}Filling {resource} table')
         connection = self.connector.get_connection()
 
         filler = FillerFactory.create_filler(eminfra_importer=self.eminfra_importer, resource=resource,

@@ -5,6 +5,7 @@ import psycopg2
 
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.AssetProcessors.AttributenGewijzigdProcessor import AttributenGewijzigdProcessor
+from EventProcessors.AssetProcessors.BestekGewijzigdProcessor import BestekGewijzigdProcessor
 from EventProcessors.AssetProcessors.ElekAansluitingGewijzigdProcessor import ElekAansluitingGewijzigdProcessor
 from EventProcessors.AssetProcessors.GeometrieOrLocatieGewijzigdProcessor import GeometrieOrLocatieGewijzigdProcessor
 from EventProcessors.AssetProcessors.SchadebeheerderGewijzigdProcessor import SchadebeheerderGewijzigdProcessor
@@ -23,34 +24,38 @@ class AssetUpdater:
         if object_generator is None:
             return 0
 
-        values = ''
-        counter = 0
-        asset_dict_list = []
-        asset_uuids = []
-        counter, values = AssetUpdater.fill_values_from_object_generator(
-            asset_dict_list, asset_uuids, counter, object_generator, values)
+        # TODO update this to be a dict of dicts
+
+        asset_dicts_dict = AssetUpdater.get_dict_from_object_generator(object_generator)
+        counter = len(asset_dicts_dict)
+        asset_uuids = list(asset_dicts_dict.keys())
+        asset_dict_list = list(asset_dicts_dict.values())
 
         if not asset_uuids:
             return 0
+
+        values = ''
+        for asset_uuid, asset_dict in asset_dicts_dict.items():
+            values = AssetUpdater.append_values(asset_dict, asset_uuid, values)
 
         AssetUpdater.perform_insert_update_from_values(connection, insert_only, values)
 
         AttributenGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
                                                    asset_dicts=asset_dict_list)
 
-        if not controlefiches:
-            SchadebeheerderGewijzigdProcessor.process_dicts(connection=connection,
-                                                            asset_dicts=asset_dict_list)
-            ToezichtGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
-                                                     asset_dicts=asset_dict_list)
-            GeometrieOrLocatieGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
-                                                               asset_dicts=asset_dict_list)
-            WeglocatieGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
-                                                               asset_dicts=asset_dict_list)
-            AssetUpdater.update_elek_aansluiting_of_synced_assets(connection=connection, asset_uuids=asset_uuids,
-                                                                  eminfra_importer=eminfra_importer)
-            AssetUpdater.update_vplan_of_synced_assets(connection=connection, asset_uuids=asset_uuids,
-                                                       eminfra_importer=eminfra_importer)
+        SchadebeheerderGewijzigdProcessor.process_dicts(connection=connection,
+                                                        asset_dicts=asset_dict_list)
+        ToezichtGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
+                                                 asset_dicts=asset_dict_list)
+        GeometrieOrLocatieGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
+                                                           asset_dicts=asset_dict_list)
+        WeglocatieGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
+                                                   asset_dicts=asset_dict_list)
+        AssetUpdater.update_elek_aansluiting_of_synced_assets(connection=connection, asset_uuids=asset_uuids,
+                                                              eminfra_importer=eminfra_importer)
+        AssetUpdater.update_vplan_of_synced_assets(connection=connection, asset_uuids=asset_uuids,
+                                                   eminfra_importer=eminfra_importer)
+        BestekGewijzigdProcessor.update_bestekkoppelingen(connection=connection, asset_dicts_dict=asset_dicts_dict)
 
         logging.info(f'Updated or inserted {counter} assets, including legacy info.')
         return counter
@@ -65,6 +70,15 @@ class AssetUpdater:
 
             values = AssetUpdater.append_values(asset_dict, asset_uuid, values)
         return counter, values
+
+    @staticmethod
+    def get_dict_from_object_generator(object_generator) -> dict:
+        d = {}
+        for asset_dict in object_generator:
+            asset_uuid = asset_dict['@id'].split('/')[-1][:36]
+            d[asset_uuid] = asset_dict
+
+        return d
 
     @staticmethod
     def update_vplan_of_synced_assets(connection, asset_uuids, eminfra_importer):

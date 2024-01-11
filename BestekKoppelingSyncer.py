@@ -36,7 +36,7 @@ class BestekKoppelingSyncer:
             params = self.postGIS_connector.get_params(connection)
 
         if params['bestekkoppelingen_cursor'] == 'setup done':
-            # go through all of the table and flag as sync'd when done, allow for parameter batch size
+            # go through all the table and flag as sync'd when done, allow for parameter batch size
             self.loop_using_temp_table_and_sync_koppelingen(batch_size=batch_size, connection=connection)
             self.postGIS_connector.update_params(params={'bestekkoppelingen_cursor': 'syncing done'},
                                                  connection=connection)
@@ -57,11 +57,64 @@ class BestekKoppelingSyncer:
         yield from self.eminfra_importer.get_all_bestekkoppelingen_from_webservice_by_asset_uuids_installaties(
             asset_uuids=asset_uuids)
 
+
+    @classmethod
+    def update_bestekkoppelingen(cls, connection, asset_dicts_dict: dict[str, dict]) -> int:
+        if not asset_dicts_dict:
+            return 0
+
+        asset_uuids = list(asset_dicts_dict.keys())
+        delete_query = "DELETE FROM public.bestekkoppelingen WHERE assetUuid IN (VALUES ('" + "'::uuid),('".join(
+            asset_uuids) + "'::uuid));"
+        with connection.cursor() as cursor:
+            cursor.execute(delete_query)
+
+            for asset_uuid, asset_dict in asset_dicts_dict.items():
+                values = ''
+                bestek_koppelingen_list= asset_dict.get('bs:Bestek.bestekkoppeling')
+                if bestek_koppelingen_list is None or not bestek_koppelingen_list:
+                    continue
+
+                for bestek_koppeling_dict in bestek_koppelingen_list:
+                    bestek_uuid = bestek_koppeling_dict['bs:DtcBestekkoppeling.bestekId']['DtcIdentificator.identificator'][0:36]
+                    start_datum = bestek_koppeling_dict['bs:DtcBestekkoppeling.actiefVan']
+                    eind_datum = bestek_koppeling_dict.get('bs:DtcBestekkoppeling.actiefTot', '')
+
+                    koppeling_status = bestek_koppeling_dict['bs:DtcBestekkoppeling.status'].split('/')[-1]
+
+                    values += f"('{asset_uuid}','{bestek_uuid}','{start_datum}',"
+                    values += 'NULL' if eind_datum == '' else f"'{eind_datum}'"
+                    values += f", '{koppeling_status}'),"
+
+                if values == '':
+                    continue
+
+                insert_query = f"""
+            WITH s (assetUuid, bestekUuid, startDatum, eindDatum, koppelingStatus) 
+                AS (VALUES {values[:-1]}),
+            to_insert AS (
+                SELECT assetUuid::uuid AS assetUuid, bestekUuid::uuid AS bestekUuid, startDatum::TIMESTAMP as startDatum, eindDatum::TIMESTAMP as eindDatum, koppelingStatus
+                FROM s)
+            INSERT INTO public.bestekkoppelingen (assetUuid, bestekUuid, startDatum, eindDatum, koppelingStatus) 
+            SELECT to_insert.assetUuid, to_insert.bestekUuid, to_insert.startDatum, to_insert.eindDatum, to_insert.koppelingStatus
+            FROM to_insert;"""
+
+                try:
+                    cursor.execute(insert_query)
+                except psycopg2.Error as exc:
+                    if str(exc).split('\n')[0] == 'insert or update on table "bestekkoppelingen" violates foreign key ' \
+                                                  'constraint "bestekkoppelingen_bestekken_fkey"':
+                        raise BestekMissingError() from exc
+                    else:
+                        raise exc
+
+        return len(asset_uuids)
+
     @staticmethod
     def update_bestekkoppelingen_by_asset_uuids(connection, asset_uuids: [str],
-                                                bestek_koppelingen_dicts_list: [[dict]]) -> None:
+                                                bestek_koppelingen_dicts_list: [[dict]]) -> int:
         if len(asset_uuids) == 0:
-            return
+            return 0
 
         delete_query = "DELETE FROM public.bestekkoppelingen WHERE assetUuid IN (VALUES ('" + "'::uuid),('".join(
             asset_uuids) + "'::uuid));"
@@ -82,10 +135,7 @@ class BestekKoppelingSyncer:
                     koppeling_status = bestek_koppeling_dict['status']
 
                     values += f"('{asset_uuid}','{bestek_uuid}','{start_datum}',"
-                    if eind_datum is None:
-                        values += 'NULL'
-                    else:
-                        values += f"'{eind_datum}'"
+                    values += 'NULL' if eind_datum is None else f"'{eind_datum}'"
                     values += f", '{koppeling_status}'),"
 
                 if values == '':
@@ -105,10 +155,12 @@ class BestekKoppelingSyncer:
                     cursor.execute(insert_query)
                 except psycopg2.Error as exc:
                     if str(exc).split('\n')[0] == 'insert or update on table "bestekkoppelingen" violates foreign key ' \
-                                                  'constraint "bestekkoppelingen_bestekken_fkey"':
-                        raise BestekMissingError()
+                                                          'constraint "bestekkoppelingen_bestekken_fkey"':
+                        raise BestekMissingError() from exc
                     else:
                         raise exc
+
+        return len(asset_uuids)
 
     @staticmethod
     def create_temp_table_for_sync_bestekkoppelingen(connection):
@@ -159,24 +211,23 @@ SELECT uuid FROM bestek_assets;"""
                                                              bestek_koppelingen_dicts_list=[list(koppelingen)])
                 with connection.cursor() as cursor:
                     update_temp_table_query = "UPDATE public.temp_sync_bestekkoppelingen SET done = TRUE WHERE " \
-                                              "assetUuid = '" + asset_uuid + "'::uuid;"
+                                                  "assetUuid = '" + asset_uuid + "'::uuid;"
                     cursor.execute(update_temp_table_query)
             end = time.time()
-            logging.info(self.color + f'updated bestekkoppelingen for 1 asset in {str(round(end - start, 2))} seconds.')
+            logging.info(f'{self.color}updated bestekkoppelingen for 1 asset in {str(round(end - start, 2))} seconds.')
         except Exception as exc:
             print(exc.args[0])
-            pass
         finally:
             if connection is not None:
                 self.postGIS_connector.kill_connection(connection)
 
     def loop_using_temp_table_and_sync_koppelingen(self, batch_size: int, connection):
         select_from_temp_table_query = "SELECT assetuuid, CASE WHEN t.uri LIKE '%/ns/onderdeel#%' THEN 'onderdelen' ELSE 'installaties' END AS asset_cat " \
-                                       "FROM public.temp_sync_bestekkoppelingen " \
-                                       "LEFT JOIN assets a ON a.uuid = assetUuid " \
-                                       "LEFT JOIN assettypes t ON a.assettype = t.uuid " \
-                                       "WHERE done IS NULL " \
-                                       f"LIMIT {batch_size}; "
+                                           "FROM public.temp_sync_bestekkoppelingen " \
+                                           "LEFT JOIN assets a ON a.uuid = assetUuid " \
+                                           "LEFT JOIN assettypes t ON a.assettype = t.uuid " \
+                                           "WHERE done IS NULL " \
+                                           f"LIMIT {batch_size}; "
         with connection.cursor() as cursor:
             start = time.time()
             cursor.execute(select_from_temp_table_query)
@@ -207,5 +258,4 @@ SELECT uuid FROM bestek_assets;"""
                 installaties_to_update = list(map(lambda x: x[0], filter(lambda x: x[1] == 'installaties', all_rows)))
 
             end = time.time()
-            logging.info(
-                self.color + f'updated {batch_size} bestekkoppelingen in {str(round(end - start, 2))} seconds.')
+            logging.info(f'{self.color}updated {batch_size} bestekkoppelingen in {str(round(end - start, 2))} seconds.')

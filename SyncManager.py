@@ -46,6 +46,7 @@ class SyncManager:
         self.eminfra_importer = eminfra_importer
         self.events_collector = FeedEventsCollector(eminfra_importer)
         self.events_processor = FeedEventsProcessor(connector, eminfra_importer=eminfra_importer)
+        self.feeds = ['assets', 'agents', 'assetrelaties', 'betrokkenerelaties', 'controlefiches']
         self.settings = settings
         if 'time' in self.settings:
             SyncTimer.sync_start = self.settings['time']['start']
@@ -79,10 +80,8 @@ class SyncManager:
         syncer.sync(connection=connection)
 
     def perform_multiprocessing_syncing(self):
-        feeds = ['assets', 'agents', 'assetrelaties', 'betrokkenerelaties', 'controlefiches']
-
         # use multithreading
         executor = ThreadPoolExecutor(5)
         futures = [executor.submit(self.start_sync_by_feed, feed=feed)
-                   for feed in feeds]
+                   for feed in self.feeds]
         concurrent.futures.wait(futures)

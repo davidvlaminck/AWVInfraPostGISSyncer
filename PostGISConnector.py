@@ -45,8 +45,6 @@ class PostGISConnector:
             'relatietypes_cursor': 'text',
             'assets_fill': 'bool',
             'assets_cursor': 'text',
-            'bestekkoppelingen_fill': 'bool',
-            'bestekkoppelingen_cursor': 'text',
             'betrokkenerelaties_fill': 'bool',
             'betrokkenerelaties_cursor': 'text',
             'assetrelaties_fill': 'bool',

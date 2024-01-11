@@ -39,7 +39,7 @@ class BestekUpdater:
                 values_array.append(record_array)
             except KeyError as exc:
                 logging.error(colorama_table[ResourceEnum.bestekken] + f'Could not create a bestek from the following respoonse:\n{bestek_dict}\nError:{exc}')
-                continue
+                raise exc
 
         values_string = turn_list_of_lists_into_string(values_array)
 
