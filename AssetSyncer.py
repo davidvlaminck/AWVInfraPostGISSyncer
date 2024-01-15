@@ -146,8 +146,8 @@ class AssetSyncer:
                 for view_name in cursor.fetchall():
                     view_name = view_name[0]
                     logging.info(f'{color}creating fixed table for {view_name}')
-                    view_query = f"DROP TABLE IF EXISTS asset_views.table_{view_name}; " \
-                                         f"CREATE TABLE asset_views.table_{view_name} AS SELECT * FROM asset_views.{view_name};"
+                    view_query = f"DROP TABLE IF EXISTS asset_daily_views.{view_name}; " \
+                                 f"CREATE TABLE asset_daily_views.{view_name} AS SELECT * FROM asset_views.{view_name};"
                     cursor.execute(view_query)
                     connection.commit()
 
