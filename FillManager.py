@@ -60,6 +60,9 @@ class FillManager:
                 tables_to_fill_filtered = [table_to_fill for table_to_fill in tables_to_fill
                                            if params[f'{table_to_fill}_fill']]
 
+                if len(tables_to_fill_filtered) == 0:
+                    break
+
                 # use multithreading
                 logging.info(f'filling {len(tables_to_fill_filtered)} tables ...')
                 with concurrent.futures.ThreadPoolExecutor(len(tables_to_fill_filtered)) as executor:
