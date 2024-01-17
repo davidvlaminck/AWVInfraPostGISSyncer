@@ -162,8 +162,13 @@ class BaseFiller(ABC):
 
     @staticmethod
     def get_count(resource, connection) -> int:
+        count_query = f'SELECT count(*) FROM (SELECT uuid FROM {resource} a LIMIT 1) s;'
+        if resource == ResourceEnum.controlefiches:
+            count_query = """SELECT count(*) FROM assets 
+                INNER JOIN assettypes a ON assets.assettype = a.uuid
+                WHERE a.uri LIKE '%controlefiche%';"""
         with connection.cursor() as cursor:
-            cursor.execute(f'SELECT count(*) FROM (SELECT uuid FROM {resource} a LIMIT 1) s;')
+            cursor.execute(count_query)
             count = cursor.fetchone()[0]
         return count
 
