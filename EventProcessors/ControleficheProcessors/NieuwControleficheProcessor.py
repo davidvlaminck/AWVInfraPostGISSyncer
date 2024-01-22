@@ -20,7 +20,7 @@ class NieuwControleficheProcessor(SpecificEventProcessor):
                                                                                        resource='controlefiches')
 
             asset_count += ControleficheUpdater.update_objects(object_generator=generator, connection=connection,
-                                                               insert_only=True, eminfra_importer=self.eminfra_importer)
+                                                               insert_only=True)
 
         end = time.time()
         logging.info(f'created {asset_count} controlefiches in {str(round(end - start, 2))} seconds.')
