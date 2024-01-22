@@ -108,13 +108,13 @@ class FillManager:
     def create_params_for_table_fill(self, tables_to_fill: [ResourceEnum], connection):
         param_dict = {}
         for table_to_fill in tables_to_fill:
-            param_dict[f'{table_to_fill}_fill'] = True
-            param_dict[f'{table_to_fill}_cursor'] = ''
+            param_dict[f'{table_to_fill.value}_fill'] = True
+            param_dict[f'{table_to_fill.value}_cursor'] = ''
         self.connector.create_params(param_dict, connection)
 
     def fill_resource(self, page_size, pagingcursor, resource: ResourceEnum):
         color = colorama_table[resource]
-        logging.info(f'{color}Filling {resource} table')
+        logging.info(f'{color}Filling {resource.value} table')
         connection = self.connector.get_connection()
 
         filler = FillerFactory.create_filler(eminfra_importer=self.eminfra_importer, resource=resource,

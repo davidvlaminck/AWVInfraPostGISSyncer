@@ -45,7 +45,7 @@ class BaseFiller(ABC):
                 return False
             try:
                 params = self.postgis_connector.get_params(connection)
-                self.eminfra_importer.paging_cursors[self.resource] = params[f'{self.resource}_cursor']
+                self.eminfra_importer.paging_cursors[self.resource] = params[f'{self.resource.value}_cursor']
 
                 object_generator = self.eminfra_importer.import_resource_from_webservice_page_by_page(
                     resource=self.resource, page_size=page_size)
@@ -60,14 +60,14 @@ class BaseFiller(ABC):
                                                 safe_insert=safe_insert)
                 if save_pagingcursor_to_db:
                     self.postgis_connector.update_params(
-                        params={f'{self.resource}_cursor': self.eminfra_importer.paging_cursors[self.resource]},
+                        params={f'{self.resource.value}_cursor': self.eminfra_importer.paging_cursors[self.resource]},
                         connection=connection)
 
                 if self.eminfra_importer.paging_cursors[self.resource] == '':
                     count = self.get_count(self.resource, connection)
                     if count > 0:
                         self.postgis_connector.update_params(
-                            params={f'{self.resource}_fill': False},
+                            params={f'{self.resource.value}_fill': False},
                             connection=connection)
                         connection.commit()
                         break
@@ -162,7 +162,7 @@ class BaseFiller(ABC):
 
     @staticmethod
     def get_count(resource, connection) -> int:
-        count_query = f'SELECT count(*) FROM (SELECT uuid FROM {resource} a LIMIT 1) s;'
+        count_query = f'SELECT count(*) FROM (SELECT uuid FROM {resource.value} a LIMIT 1) s;'
         if resource == ResourceEnum.controlefiches:
             count_query = """SELECT count(*) FROM assets 
                 INNER JOIN assettypes a ON assets.assettype = a.uuid
