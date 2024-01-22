@@ -13,7 +13,7 @@ from ResourceEnum import colorama_table, ResourceEnum
 
 class BetrokkeneRelatiesUpdater:
     @staticmethod
-    def update_objects(object_generator: Iterator[dict], connection, safe_insert: bool = False) -> int:
+    def update_objects(object_generator: Iterator[dict], connection, safe_insert: bool = True) -> int:
         object_generator = peek_generator(object_generator)
         if object_generator is None:
             return 0
@@ -85,6 +85,28 @@ class BetrokkeneRelatiesUpdater:
         SELECT to_insert.uuid, to_insert.doelUuid, to_insert.bronUuid, to_insert.rol, to_insert.bronAgentUuid, 
             to_insert.bronAssetUuid, to_insert.actief, to_insert.contact_info, to_insert.startDatum, to_insert.eindDatum
         FROM to_insert;"""
+
+        if safe_insert:
+            insert_query = f"""
+            WITH s (uuid, doelUuid, bronUuid, rol, bronAgentUuid, bronAssetUuid, actief, contact_info, startDatum, 
+                eindDatum) AS (VALUES {values_string}),
+            t AS (
+                SELECT uuid::uuid AS uuid, doelUuid::uuid AS doelUuid, bronUuid::uuid AS bronUuid, rol, 
+                    bronAgentUuid::uuid AS bronAgentUuid, bronAssetUuid::uuid AS bronAssetUuid, actief, 
+                    contact_info::json as contact_info, startDatum::TIMESTAMP as startDatum, 
+                    eindDatum::TIMESTAMP as eindDatum
+                FROM s),
+            to_insert AS (
+                SELECT t.*
+                FROM t
+                    LEFT JOIN public.betrokkeneRelaties AS betrokkeneRelaties ON betrokkeneRelaties.uuid = t.uuid
+                WHERE betrokkeneRelaties.uuid IS NULL)
+            INSERT INTO public.betrokkeneRelaties (uuid, doelUuid, bronUuid, rol, bronAgentUuid, bronAssetUuid, actief, 
+                contact_info, startDatum, eindDatum) 
+            SELECT to_insert.uuid, to_insert.doelUuid, to_insert.bronUuid, to_insert.rol, to_insert.bronAgentUuid, 
+                to_insert.bronAssetUuid, to_insert.actief, to_insert.contact_info, to_insert.startDatum, to_insert.eindDatum
+            FROM to_insert
+            ;"""
 
         try:
             with connection.cursor() as cursor:
