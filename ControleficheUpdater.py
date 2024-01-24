@@ -110,6 +110,6 @@ WHERE to_update.uuid = assets.uuid;"""
                 logging.error('raising AssetTypeMissingError')
                 raise AssetTypeMissingError() from exc
         except psycopg2.Error as exc:
-            print(exc)
+            logging.error(exc)
             connection.rollback()
             raise exc

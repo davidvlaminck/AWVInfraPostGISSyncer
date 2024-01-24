@@ -11,12 +11,11 @@ class RequestHandler:
     def get_jsondict(self, url):
         response = self.perform_get_request(url)
         decoded_string = response.content.decode("utf-8")
-        dict_obj = json.loads(decoded_string)
-        return dict_obj
+        return json.loads(decoded_string)
 
     def perform_get_request(self, url) -> Response:
         response = self.requester.get(url=url)
-        if str(response.status_code)[0:1] != '2':
+        if str(response.status_code)[:1] != '2':
             raise ConnectionError(f'status {response.status_code}')
         return response
 
@@ -24,6 +23,6 @@ class RequestHandler:
         if json_data is not None:
             kwargs['json'] = json_data
         response = self.requester.post(url=url, **kwargs)
-        if str(response.status_code)[0:1] != '2':
+        if str(response.status_code)[:1] != '2':
             raise ConnectionError(f'status {response.status_code}')
         return response

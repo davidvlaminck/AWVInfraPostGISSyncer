@@ -1,3 +1,4 @@
+import logging
 from typing import Iterator
 
 from EMInfraImporter import EMInfraImporter
@@ -344,10 +345,10 @@ class AssetTypeUpdater:
                 {geometry_part2}
                 {attribute_joins} WHERE assettype = '{type_uuid}' and assets.actief = TRUE;"""
             try:
-                continue # TODO workaround
                 cursor.execute(create_view_query)
             except Exception as exc:
-                print(create_view_query)
+                logging.error(exc)
+                logging.debug(create_view_query)
                 raise exc
 
     def sync_attribuut_and_koppeling(self, assettype_uuid, attribuut, cursor, force_update: bool):

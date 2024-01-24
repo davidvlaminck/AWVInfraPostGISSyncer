@@ -23,7 +23,7 @@ class FillManager:
         self.events_processor = FeedEventsProcessor(connector, eminfra_importer)
         self.reset_called: bool = False
 
-    def fill_table(self, table_to_fill: ResourceEnum, page_size, fill, cursor):
+    def fill_table(self, table_to_fill: ResourceEnum, page_size: int, fill: str, cursor: str):
         if not fill:
             return
 
@@ -33,7 +33,7 @@ class FillManager:
         logging.info('Filling the database with data')
         page_size = params['pagesize']
         if 'page_assets' not in params or 'page_assetrelaties' not in params or 'page_controlefiches' not in params or \
-                'page_agents' not in params or 'page_betrokkenerelaties' not in params:
+                        'page_agents' not in params or 'page_betrokkenerelaties' not in params:
             logging.info('Getting the last pages for feeds')
             feeds = [ResourceEnum.assets.name, ResourceEnum.agents.name, ResourceEnum.assetrelaties.name,
                      ResourceEnum.betrokkenerelaties.name, ResourceEnum.controlefiches.name]
@@ -50,69 +50,66 @@ class FillManager:
 
         while True:
             try:
-                tables_to_fill = ResourceEnum.__members__
+                resources_to_fill = list(ResourceEnum)
 
                 params = self.connector.get_params(self.connector.main_connection)
                 if 'assets_fill' not in params:
-                    self.create_params_for_table_fill(tables_to_fill, self.connector.main_connection)
+                    self.create_params_for_table_fill(resources_to_fill, self.connector.main_connection)
                     params = self.connector.get_params(self.connector.main_connection)
 
-                tables_to_fill_filtered = [table_to_fill for table_to_fill in tables_to_fill
+                resources_to_fill_filtered = [table_to_fill for table_to_fill in resources_to_fill
                                            if params[f'{table_to_fill}_fill']]
 
-                if len(tables_to_fill_filtered) == 0:
+                if not resources_to_fill_filtered:
                     break
 
                 # use multithreading
-                logging.info(f'filling {len(tables_to_fill_filtered)} tables ...')
-                with concurrent.futures.ThreadPoolExecutor(len(tables_to_fill_filtered)) as executor:
+                logging.info(f'filling {len(resources_to_fill_filtered)} tables ...')
+                with concurrent.futures.ThreadPoolExecutor(len(resources_to_fill_filtered)) as executor:
                     futures = [
-                        executor.submit(self.fill_table, table_to_fill=table_to_fill,
-                                        fill=params[f'{table_to_fill}_fill'], cursor=params[f'{table_to_fill}_cursor'],
-                                        page_size=params['pagesize']) for table_to_fill in tables_to_fill_filtered]
+                        executor.submit(self.fill_table, table_to_fill=resource_to_fill,
+                                        fill=params[f'{resource_to_fill.value}_fill'], cursor=params[f'{resource_to_fill.value}_cursor'],
+                                        page_size=params['pagesize']) for resource_to_fill in resources_to_fill_filtered]
                     concurrent.futures.wait(futures)
 
                 self.reset_called = False
 
                 params = self.connector.get_params(self.connector.main_connection)
                 done = not any(
-                    params[f'{table_to_fill}_fill']
-                    for table_to_fill in tables_to_fill
+                    params[f'{resource_to_fill.value}_fill']
+                    for resource_to_fill in resources_to_fill
                 )
                 if done:
                     break
 
-            except ConnectionError as err:
-                print(err)
+            except (ConnectionError, NewConnectionError) as exc:
+                logging.error(exc)
                 logging.info("failed connection, retrying in 1 minute")
                 time.sleep(60)
-            except NewConnectionError as exc:
+            except Exception as exc:
                 logging.error(exc)
-                logging.info('failed connection, retrying in 1 minute')
-                time.sleep(60)
-            except Exception as err:
                 self.connector.main_connection.rollback()
-                raise err
+                raise exc
 
-        print('Done with filling')
-        self.delete_params_for_table_fill(tables_to_fill, connection=self.connector.main_connection)
+        logging.info('Done with filling')
+        self.delete_params_for_table_fill(resources_to_fill, connection=self.connector.main_connection)
         self.connector.update_params(connection=self.connector.main_connection, params={'fresh_start': False})
 
-    def delete_params_for_table_fill(self, tables_to_fill: [ResourceEnum], connection):
+    def delete_params_for_table_fill(self, resources_to_fill: [ResourceEnum], connection):
         param_dict = {}
-        for table_to_fill in tables_to_fill:
-            param_dict[f'{table_to_fill}_fill'] = True
-            param_dict[f'{table_to_fill}_cursor'] = True
+        for resource_to_fill in resources_to_fill:
+            param_dict[f'{resource_to_fill.value}_fill'] = True
+            param_dict[f'{resource_to_fill.value}_cursor'] = True
         self.connector.delete_params(param_dict, connection)
 
-    def create_params_for_table_fill(self, tables_to_fill: [ResourceEnum], connection):
+    def create_params_for_table_fill(self, resources_to_fill: [ResourceEnum], connection):
         param_dict = {}
-        for table_to_fill in tables_to_fill:
-            param_dict[f'{table_to_fill.value}_fill'] = True
-            param_dict[f'{table_to_fill.value}_cursor'] = ''
+        for resource_to_fill in resources_to_fill:
+            param_dict[f'{resource_to_fill.value}_fill'] = True
+            param_dict[f'{resource_to_fill.value}_cursor'] = ''
         self.connector.create_params(param_dict, connection)
 
-    def fill_resource(self, page_size, pagingcursor, resource: ResourceEnum):
+    def fill_resource(self, page_size: int, pagingcursor: str, resource: ResourceEnum):
         color = colorama_table[resource]
         logging.info(f'{color}Filling {resource.value} table')
         connection = self.connector.get_connection()
@@ -127,16 +124,16 @@ class FillManager:
                 return
             except ConnectionError as exc:
                 logging.error(exc)
-                logging.info(color + 'Connection error: trying again in 60 seconds...')
+                logging.info(f'{color}Connection error: trying again in 60 seconds...')
                 time.sleep(60)
                 continue
             except urllib3.exceptions.ConnectionError as exc:
                 logging.error(exc)
-                logging.info(color + 'Connection error: trying again in 60 seconds...')
+                logging.info(f'{color}Connection error: trying again in 60 seconds...')
                 time.sleep(60)
                 continue
             except Exception as exc:
-                logging.error(color + 'Unknown error. Hiding it!!')
+                logging.error(f'{color}Unknown error. Hiding it!!')
                 logging.error(exc)
                 time.sleep(10)
                 continue

@@ -1,6 +1,5 @@
 import logging
 import time
-import traceback
 from datetime import datetime
 
 from requests.exceptions import ConnectionError
@@ -71,7 +70,7 @@ class AssetSyncer:
                     time.sleep(60)
                     continue
                 except Exception as err:
-                    print(err)
+                    logging.error(err)
                     end = time.time()
                     self.log_eventparams(eventsparams_to_process.event_dict, round(end - start, 2), self.color)
                     time.sleep(30)
@@ -101,7 +100,7 @@ class AssetSyncer:
                     logging.info(f"{self.color}failed connection, retrying in 1 minute")
                     time.sleep(60)
                 except Exception as exc:
-                    traceback.print_exception(exc)
+                    logging.error(exc)
                     connection.rollback()
                     time.sleep(30)
             except ConnectionError:
@@ -162,7 +161,7 @@ class AssetSyncer:
         fill_manager = FillManager(connector=self.postgis_connector,
                                    eminfra_importer=self.eminfra_importer)
         try:
-            fill_manager.create_params_for_table_fill(tables_to_fill=[resource],
+            fill_manager.create_params_for_table_fill(resources_to_fill=[resource],
                                                       connection=self.postgis_connector.main_connection)
             fill_manager.fill_resource(100, pagingcursor='', resource=resource)
         except Exception as exc:
@@ -170,5 +169,5 @@ class AssetSyncer:
             logging.error(exc)
             self.postgis_connector.main_connection.rollback()
         finally:
-            fill_manager.delete_params_for_table_fill(tables_to_fill=[resource],
+            fill_manager.delete_params_for_table_fill(resources_to_fill=[resource],
                                                       connection=self.postgis_connector.main_connection)

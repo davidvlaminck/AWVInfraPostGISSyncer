@@ -13,5 +13,4 @@ class SyncTimer:
         now = datetime.utcnow().time()
         start = now.replace(hour=start_struct.tm_hour, minute=start_struct.tm_min, second=start_struct.tm_sec)
         end = now.replace(hour=end_struct.tm_hour, minute=end_struct.tm_min, second=end_struct.tm_sec)
-        v = start < now < end
-        return v
+        return start < now < end

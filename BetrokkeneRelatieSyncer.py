@@ -61,7 +61,7 @@ class BetrokkeneRelatieSyncer:
                     time.sleep(60)
                     continue
                 except Exception as err:
-                    print(err)
+                    logging.error(err)
                     end = time.time()
                     self.log_eventparams(eventsparams_to_process.event_dict, round(end - start, 2), self.color)
                     time.sleep(30)
@@ -75,7 +75,7 @@ class BetrokkeneRelatieSyncer:
                     time.sleep(60)
                     continue
                 except Exception as exc:
-                    traceback.print_exception(exc)
+                    logging.error(exc)
                     connection.rollback()
                     time.sleep(30)
             except ConnectionError:

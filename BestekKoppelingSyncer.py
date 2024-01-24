@@ -216,7 +216,7 @@ SELECT uuid FROM bestek_assets;"""
             end = time.time()
             logging.info(f'{self.color}updated bestekkoppelingen for 1 asset in {str(round(end - start, 2))} seconds.')
         except Exception as exc:
-            print(exc.args[0])
+            logging.error(exc.args[0])
         finally:
             if connection is not None:
                 self.postGIS_connector.kill_connection(connection)
