@@ -1,4 +1,5 @@
 import logging
+from collections import namedtuple, Counter
 from typing import Iterator
 
 from EMInfraImporter import EMInfraImporter
@@ -94,16 +95,17 @@ class AssetTypeUpdater:
             kenmerken = self.eminfra_importer.get_kenmerken_by_assettype_uuids(assettype_uuid=assettype_uuid)
             eigenschappenkenmerk = list(filter(lambda x: x.get('standard', False), kenmerken))
             if eigenschappenkenmerk is not None and len(eigenschappenkenmerk) > 0:
-                attributen = self.eminfra_importer.get_eigenschappen_by_kenmerk_uuid(kenmerk_uuid=eigenschappenkenmerk[0]['kenmerkType']['uuid'])
-                
+                attributen = self.eminfra_importer.get_eigenschappen_by_kenmerk_uuid(
+                    kenmerk_uuid=eigenschappenkenmerk[0]['kenmerkType']['uuid'])
+
                 remove_existing_koppelingen_query = f'DELETE FROM attribuutKoppelingen ' \
                                                     f"WHERE assettypeUuid = '{assettype_uuid}'::uuid;"
                 cursor.execute(remove_existing_koppelingen_query)
-                
+
                 for attribuut in attributen:
                     self.sync_attribuut_and_koppeling(assettype_uuid=assettype_uuid, attribuut=attribuut, cursor=cursor,
                                                       force_update=force_update)
-                    
+
             finish_assettype_query = f"UPDATE public.assettypes SET attributen = TRUE WHERE uuid = '{assettype_uuid}'::uuid;"
             cursor.execute(finish_assettype_query)
 
@@ -174,7 +176,8 @@ class AssetTypeUpdater:
         assettypes_to_update = list(map(lambda x: x[0], cursor.fetchall()))
 
         types_with_gevoed_door_dicts = list(
-            self.eminfra_importer.get_assettypes_with_kenmerk_gevoed_door_by_uuids(assettype_uuids=assettypes_to_update))
+            self.eminfra_importer.get_assettypes_with_kenmerk_gevoed_door_by_uuids(
+                assettype_uuids=assettypes_to_update))
         types_with_gevoed_door = list(map(lambda x: x['uuid'], types_with_gevoed_door_dicts))
         types_without_gevoed_door = list(set(assettypes_to_update) - set(types_with_gevoed_door))
 
@@ -269,15 +272,31 @@ class AssetTypeUpdater:
                            "'::uuid),('".join(types_without_vplan) + "'::uuid));"
             cursor.execute(update_query)
 
-    @staticmethod
-    def create_views_for_assettypes_with_attributes(connection):
+    @classmethod
+    def get_assettypes_with_geometries(cls, connection) -> [()]:
         cursor = connection.cursor()
         get_assettypes_with_geometrie_query = """SELECT uuid, uri, geometrie FROM assettypes;"""
         cursor.execute(get_assettypes_with_geometrie_query)
-        assettype_with_geometrie = cursor.fetchall()
-        reserved_chars_for_name = [' ', '>', '.', ',', '/', '-', '+', "'", '?', '(', ')', '&']
+        return cursor.fetchall()
 
-        for assettype_record in assettype_with_geometrie:
+    @classmethod
+    def get_attributes_by_type_uri(cls, type_uri, connection) -> [()]:
+        cursor = connection.cursor()
+        get_attributen_query = f"""
+            SELECT attributen.uuid, attributen.naam, attributen.datatypetype 
+            FROM assettypes 
+                LEFT JOIN attribuutkoppelingen ON attribuutkoppelingen.assettypeuuid = assettypes.uuid 
+                LEFT JOIN attributen ON attribuutkoppelingen.attribuutuuid = attributen.uuid 
+            WHERE assettypes.uri = '{type_uri}' AND attribuutkoppelingen.actief = TRUE;"""
+        cursor.execute(get_attributen_query)
+        return cursor.fetchall()
+
+    @classmethod
+    def create_views_for_assettypes_with_attributes(cls, connection):
+        assettypes_with_geometrie = cls.get_assettypes_with_geometries(connection=connection)
+
+        reserved_chars_for_name = {' ', '>', '.', ',', '/', '-', '+', "'", '?', '(', ')', '&'}
+        for assettype_record in assettypes_with_geometrie:
             type_uuid = assettype_record[0]
             if type_uuid == 'b0fa91d4-d061-479c-a23d-f9244a86c4c2':  # DUMMY
                 continue
@@ -285,67 +304,85 @@ class AssetTypeUpdater:
             has_geometry = assettype_record[2]
             view_name = type_uri.split('/ns/')[1].replace('#', '_').replace('.', '_').replace('-', '_')
 
-            get_attributen_query = f"""
-            SELECT attributen.uuid, attributen.naam, attributen.datatypetype 
-            FROM assettypes 
-                LEFT JOIN attribuutkoppelingen ON attribuutkoppelingen.assettypeuuid = assettypes.uuid 
-                LEFT JOIN attributen ON attribuutkoppelingen.attribuutuuid = attributen.uuid 
-            WHERE assettypes.uri = '{type_uri}' AND attribuutkoppelingen.actief = TRUE;"""
-            cursor.execute(get_attributen_query)
-            attributes_of_type = cursor.fetchall()
-            attribute_columns = ''
+            attributes_of_type = cls.get_attributes_by_type_uri(type_uri=type_uri, connection=connection)
             attribute_joins = ''
+            attribute_dict_list = []
 
             attribute_counter = 0
             for attribute_record in attributes_of_type:
                 if attribute_record[0] is None:
                     continue
 
+                attribute_dict = {}
+
                 attribute_counter += 1
                 attribute_table_id = str(attribute_counter)
                 while len(attribute_table_id) < 3:
                     attribute_table_id = '0' + attribute_table_id
+
                 attribute_table_id = 'attribuut_' + attribute_table_id
+                attribute_dict['attribute_table_id'] = attribute_table_id
 
                 attribute_naam = attribute_record[1]
                 for char in reserved_chars_for_name:
                     attribute_naam = attribute_naam.replace(char, '_')
                 while '__' in attribute_naam:
                     attribute_naam = attribute_naam.replace('__', '_')
+                attribute_dict['attribute_name'] = attribute_naam
+
                 attribute_type = attribute_record[2]
-                attribute_columns += f'{attribute_table_id}.waarde'
-                if attribute_type in ['number', 'legacynumber']:
-                    attribute_columns += '::numeric'
-                elif attribute_type in ['boolean', 'legacyboolean']:
-                    attribute_columns += '::boolean'
-                elif attribute_type in ['date', 'legacydate']:
-                    attribute_columns += '::date'
+
+                attribute_dict['attribute_type'] = ''
+
+                if attribute_type in {'number', 'legacynumber'}:
+                    attribute_dict['attribute_type'] = '::numeric'
+                elif attribute_type in {'boolean', 'legacyboolean'}:
+                    attribute_dict['attribute_type'] = '::boolean'
+                elif attribute_type in {'date', 'legacydate'}:
+                    attribute_dict['attribute_type'] = '::date'
 
                 if attribute_naam[:1].isdigit():
-                    attribute_columns += f' AS "{attribute_naam}",'
+                    attribute_dict['wrap_quotes'] = True
                 else:
-                    attribute_columns += f' AS {attribute_naam},'
+                    attribute_dict['wrap_quotes'] = False
+
+                attribute_dict_list.append(attribute_dict)
+
                 attribute_joins += f"LEFT JOIN attribuutwaarden {attribute_table_id} ON assets.uuid = {attribute_table_id}.assetuuid AND {attribute_table_id}.attribuutuuid = '{attribute_record[0]}'\n"
 
+            attribute_columns = ''
+            c = Counter(map(lambda x: x['attribute_name'][:63], attribute_dict_list))
+            attributes_to_fix = list(filter(lambda x: x[1] > 1, c.items()))
+            for a in attributes_to_fix:
+                for attr_dict in attribute_dict_list:
+                    if attr_dict['attribute_name'][:63] == a[0]:
+                        attr_dict['attribute_name'] = attr_dict['attribute_name'][:60] + attr_dict[
+                            'attribute_table_id'][-3:]
+
+            for attribute_dict in attribute_dict_list:
+                attribute_columns += f"{attribute_dict['attribute_table_id']}.waarde{attribute_dict['attribute_type']}"
+                name = attribute_dict['attribute_name']
+                if attribute_dict['wrap_quotes']:
+                    name = f'"{name}"'
+                attribute_columns += f' AS {name},'
+
             if attribute_columns != '':
-                attribute_columns = ', ' + attribute_columns[:-1]
+                attribute_columns = f', {attribute_columns[:-1]}'
 
             geometry_part1 = ''
             geometry_part2 = ''
             if has_geometry:
                 geometry_part1 = ', geometrie.*, ST_GeomFromText(wkt_string, 31370) AS geometry'
-                geometry_part2 = 'LEFT JOIN public.geometrie ON geometrie.assetuuid = assets.uuid'
+                geometry_part2 = '\nLEFT JOIN public.geometrie ON geometrie.assetuuid = assets.uuid'
 
-            create_view_query = f"""
-            DROP VIEW IF EXISTS asset_views.{view_name} CASCADE;
-            CREATE VIEW asset_views.{view_name} AS
-                SELECT assets.uuid as uuid, assets.toestand as toestand_asset, assets.actief as actief_asset, 
-                    assets.naam as naam_asset{geometry_part1} {attribute_columns}
-                FROM assets
-                {geometry_part2}
-                {attribute_joins} WHERE assettype = '{type_uuid}' and assets.actief = TRUE;"""
+            create_view_query = f"""DROP VIEW IF EXISTS asset_views.{view_name} CASCADE;
+CREATE VIEW asset_views.{view_name} AS
+    SELECT assets.uuid as uuid, assets.toestand as toestand_asset, assets.actief as actief_asset, 
+        assets.naam as naam_asset{geometry_part1} {attribute_columns}
+    FROM assets{geometry_part2}
+    {attribute_joins} WHERE assettype = '{type_uuid}' and assets.actief = TRUE;"""
             try:
-                cursor.execute(create_view_query)
+                cls.create_view(connection=connection, create_view_query=create_view_query)
             except Exception as exc:
                 logging.error(exc)
                 logging.debug(create_view_query)
@@ -429,3 +466,8 @@ FROM to_insert;"""
                 VALUES ('{assettype_uuid}'::uuid, '{uuid}'::uuid, {koppeling_actief})
                 """
         cursor.execute(update_koppeling_query)
+
+    @classmethod
+    def create_view(cls, connection, create_view_query: str):
+        cursor = connection.cursor()
+        cursor.execute(create_view_query)
