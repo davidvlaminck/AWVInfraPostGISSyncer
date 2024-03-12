@@ -89,7 +89,7 @@ class BaseFiller(ABC):
                     continue
             except (AssetTypeMissingError, AttribuutMissingError) as exc:
                 connection.rollback()
-                print(type(exc))
+                logging.error(type(exc))
                 params = self.postgis_connector.get_params(connection)
                 if 'assettypes_fill' in params and params['assettypes_fill']:
                     logging.info(self.color + 'AssetType(s) or attribute(s) missing while filling. This is normal behaviour. Trying again in 60 seconds')

@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 from psycopg2 import Error
@@ -99,7 +100,7 @@ class PostGISConnector:
                 connection.rollback()
                 return None
             else:
-                print("Error while connecting to PostgreSQL", error)
+                logging.error("Error while connecting to PostgreSQL", error)
                 cursor.close()
                 connection.rollback()
                 raise error

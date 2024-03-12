@@ -1,4 +1,5 @@
 import concurrent
+import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -67,10 +68,12 @@ class SyncManager:
                 else:
                     self.perform_multiprocessing_syncing()
             except requests.exceptions.ConnectionError as exc:
-                print(exc)
-                time.sleep(10)
+                logging.error(exc)
+                logging.info("failed connection, retrying in 30 seconds")
+                self.connector.main_connection.rollback()
+                time.sleep(30)
             except Exception as exc:
-                print(exc)
+                logging.error(exc)
                 time.sleep(10)
 
     def start_sync_by_feed(self, feed):

@@ -18,10 +18,9 @@ class ToezichtgroepUpdater:
             toezichtgroep_naam = toezichtgroep_dict['naam'].replace("'", "''")
             record_array.append(f"'{toezichtgroep_naam}'")
             toezichtgroep_ref = toezichtgroep_dict['referentie'].replace("'", "''")
-            record_array.append(f"'{toezichtgroep_ref}'")
-
-            record_array.append(f"'{toezichtgroep_dict['_type']}'")
-
+            record_array.extend(
+                (f"'{toezichtgroep_ref}'", f"'{toezichtgroep_dict['_type']}'")
+            )
             toezichtgroep_actief = True
             if 'actiefInterval' not in toezichtgroep_dict:
                 toezichtgroep_actief = False
@@ -33,11 +32,10 @@ class ToezichtgroepUpdater:
                     van_date = datetime.strptime(actiefInterval['van'], '%Y-%m-%d')
                     if van_date > datetime.now():
                         toezichtgroep_actief = False
-                    else:
-                        if 'tot' in actiefInterval:
-                            tot_date = datetime.strptime(actiefInterval['tot'], '%Y-%m-%d')
-                            if tot_date < datetime.now():
-                                toezichtgroep_actief = False
+                    elif 'tot' in actiefInterval:
+                        tot_date = datetime.strptime(actiefInterval['tot'], '%Y-%m-%d')
+                        if tot_date < datetime.now():
+                            toezichtgroep_actief = False
 
             record_array.append(f"{toezichtgroep_actief}")
 

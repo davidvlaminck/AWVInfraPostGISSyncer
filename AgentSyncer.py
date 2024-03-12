@@ -28,7 +28,7 @@ class AgentSyncer:
             try:
                 sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
                 if not sync_allowed_by_time:
-                    logging.info(self.color + 'syncing is not allowed at this time. Trying again in 5 minutes')
+                    logging.info(f'{self.color}syncing is not allowed at this time. Trying again in 5 minutes')
                     time.sleep(300)
                     continue
 
@@ -37,7 +37,8 @@ class AgentSyncer:
                 completed_event_id = params['event_uuid_agents']
                 page_size = params['pagesize']
 
-                logging.info(self.color + f'starting a sync cycle for agents, page: {str(current_page)} event_uuid: {str(completed_event_id)}')
+                logging.info(f'{self.color}starting a sync cycle for agents, page: {str(current_page)} '
+                             f'event_uuid: {str(completed_event_id)}')
                 start = time.time()
 
                 try:
@@ -46,7 +47,7 @@ class AgentSyncer:
 
                     total_events = sum(len(lists) for lists in eventsparams_to_process.event_dict.values())
                     if total_events == 0:
-                        logging.info(self.color + f"The database is fully synced for agents. Continuing keep up to date in 30 seconds")
+                        logging.info(f"{self.color}The database is fully synced for agents. Continuing keep up to date in 30 seconds")
                         self.postgis_connector.update_params(params={'last_update_utc_agents': datetime.utcnow()},
                                                              connection=connection)
                         time.sleep(30)  # wait 30 seconds to prevent overloading API
@@ -54,7 +55,7 @@ class AgentSyncer:
                     end = time.time()
                     self.log_eventparams(eventsparams_to_process.event_dict, round(end - start, 2), color=self.color)
                 except ConnectionError:
-                    logging.info(self.color + "failed connection, retrying in 1 minute")
+                    logging.info(f"{self.color}failed connection, retrying in 1 minute")
                     connection.rollback()
                     time.sleep(60)
                     continue
@@ -73,7 +74,7 @@ class AgentSyncer:
 
                 sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
             except ConnectionError:
-                logging.info(self.color + "failed connection, retrying in 1 minute")
+                logging.info(f"{self.color}failed connection, retrying in 1 minute")
                 time.sleep(60)
             except Exception as exc:
                 logging.error(f'{self.color}{exc}')
@@ -82,7 +83,7 @@ class AgentSyncer:
     @staticmethod
     def log_eventparams(event_dict, timespan: float, color):
         total = sum(len(events) for events in event_dict.values())
-        logging.info(color + f'fetched {total} agents events to sync in {timespan} seconds')
+        logging.info(f'{color}fetched {total} agents events to sync in {timespan} seconds')
         for k, v in event_dict.items():
             if len(v) > 0:
-                logging.info(color + f'number of events of type {k}: {len(v)}')
+                logging.info(f'{color}number of events of type {k}: {len(v)}')

@@ -1,5 +1,6 @@
 import datetime
 import json
+import logging
 import sys
 from pathlib import Path
 
@@ -112,7 +113,7 @@ class JWTRequester(requests.Session):
 
         # Check for HTTP codes other than 200
         if response.status_code != 200:
-            print('Status:', response.status_code, 'Headers:', response.headers, 'Error Response:', response.content)
+            logging.error('Status:', response.status_code, 'Headers:', response.headers, 'Error Response:', response.content)
             raise RuntimeError(f'Could not get the acces token: {response.content}')
 
         response_json = response.json()
