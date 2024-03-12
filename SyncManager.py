@@ -53,7 +53,7 @@ class SyncManager:
             SyncTimer.sync_start = self.settings['time']['start']
             SyncTimer.sync_end = self.settings['time']['end']
 
-    def start(self):
+    def start(self, stop_when_fully_synced: bool = False):
         while True:
             try:
                 params = self.connector.get_params(self.connector.main_connection)
@@ -66,7 +66,9 @@ class SyncManager:
                                          eminfra_importer=self.eminfra_importer)
                     filler.fill(params)
                 else:
-                    self.perform_multiprocessing_syncing()
+                    self.perform_multiprocessing_syncing(stop_when_fully_synced=stop_when_fully_synced)
+                    if stop_when_fully_synced:
+                        break
             except requests.exceptions.ConnectionError as exc:
                 logging.error(exc)
                 logging.info("failed connection, retrying in 30 seconds")
@@ -76,15 +78,15 @@ class SyncManager:
                 logging.error(exc)
                 time.sleep(10)
 
-    def start_sync_by_feed(self, feed):
+    def start_sync_by_feed(self, feed, stop_when_fully_synced: bool = False):
         syncer = SyncerFactory.get_syncer_by_feed_name(feed, eminfra_importer=self.eminfra_importer,
                                                        postgis_connector=self.connector)
         connection = self.connector.get_connection()
-        syncer.sync(connection=connection)
+        syncer.sync(connection=connection, stop_when_fully_synced=stop_when_fully_synced)
 
-    def perform_multiprocessing_syncing(self):
+    def perform_multiprocessing_syncing(self, stop_when_fully_synced: bool):
         # use multithreading
-        executor = ThreadPoolExecutor(5)
-        futures = [executor.submit(self.start_sync_by_feed, feed=feed)
-                   for feed in self.feeds]
-        concurrent.futures.wait(futures)
+        with ThreadPoolExecutor(5) as executor:
+            futures = [executor.submit(self.start_sync_by_feed, feed=feed, stop_when_fully_synced=stop_when_fully_synced)
+                       for feed in self.feeds]
+            concurrent.futures.wait(futures, return_when=concurrent.futures.ALL_COMPLETED)

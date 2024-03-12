@@ -27,14 +27,12 @@ class ControleficheSyncer:
             postgis_connector=postgis_connector, eminfra_importer=eminfra_importer)
         self.color = colorama_table[ResourceEnum.controlefiches]
 
-    def sync(self, connection):
+    def sync(self, connection, stop_when_fully_synced: bool = False):
         while True:
             try:
                 sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
                 if not sync_allowed_by_time:
-                    logging.info(
-                        f'{self.color}syncing is not allowed at this time. Trying again in 5 minutes'
-                    )
+                    logging.info(f'{self.color}syncing is not allowed at this time. Trying again in 5 minutes')
                     time.sleep(300)
                     continue
                 params = self.postgis_connector.get_params(connection)
@@ -57,8 +55,10 @@ class ControleficheSyncer:
                         logging.info(
                             f"{self.color}The database is fully synced for controlefiches. Continuing keep up to date in 30 seconds"
                         )
-                        self.postgis_connector.update_params(params={'last_update_utc_controlefiches': datetime.utcnow()},
-                                                             connection=connection)
+                        self.postgis_connector.update_params(
+                            params={'last_update_utc_controlefiches': datetime.utcnow()}, connection=connection)
+                        if stop_when_fully_synced:
+                            break
                         time.sleep(30)  # wait 30 seconds to prevent overloading API
                         continue
                 except ConnectionError:

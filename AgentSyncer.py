@@ -23,7 +23,7 @@ class AgentSyncer:
                                                                                    eminfra_importer=eminfra_importer)
         self.color = colorama_table[ResourceEnum.agents]
 
-    def sync(self, connection):
+    def sync(self, connection, stop_when_fully_synced: bool=False):
         while True:
             try:
                 sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
@@ -50,6 +50,8 @@ class AgentSyncer:
                         logging.info(f"{self.color}The database is fully synced for agents. Continuing keep up to date in 30 seconds")
                         self.postgis_connector.update_params(params={'last_update_utc_agents': datetime.utcnow()},
                                                              connection=connection)
+                        if stop_when_fully_synced:
+                            break
                         time.sleep(30)  # wait 30 seconds to prevent overloading API
                         continue
                     end = time.time()

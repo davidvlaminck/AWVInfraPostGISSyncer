@@ -30,7 +30,7 @@ class AssetSyncer:
             postgis_connector=postgis_connector, eminfra_importer=eminfra_importer)
         self.color = colorama_table[ResourceEnum.assets]
 
-    def sync(self, connection):
+    def sync(self, connection, stop_when_fully_synced: bool = False):
         while True:
             try:
                 sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
@@ -63,6 +63,8 @@ class AssetSyncer:
                         )
                         self.postgis_connector.update_params(params={'last_update_utc_assets': datetime.utcnow()},
                                                              connection=connection)
+                        if stop_when_fully_synced:
+                            break
                         time.sleep(30)  # wait 30 seconds to prevent overloading API
                         continue
                 except ConnectionError:
