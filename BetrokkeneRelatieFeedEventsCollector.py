@@ -11,4 +11,4 @@ class BetrokkeneRelatieFeedEventsCollector(FeedEventsCollector):
     def create_empty_event_dict() -> {}:
         return {event_type: set() for event_type in
                 ['NIEUWE_RELATIE', 'RELATIE_VERWIJDERD', 'RELATIE_VERWIJDERD_ONGEDAAN', 'ROL_GEWIJZIGD',
-                 'CONTACT_INFO_GEWIJZIGD', 'GELDIGHEID_GEWIJZIGD']}
+                 'CONTACT_INFO_GEWIJZIGD', 'GELDIGHEID_GEWIJZIGD', 'REDEN_GEWIJZIGD']}

@@ -141,6 +141,8 @@ class EventProcessorFactory:
             return BetrokkenerelatieContactInfoGewijzigdProcessor(eminfra_importer=eminfra_importer)
         elif event_type == 'GELDIGHEID_GEWIJZIGD':
             return BetrokkenerelatieGeldigheidGewijzigdProcessor(eminfra_importer=eminfra_importer)
+        elif event_type == 'REDEN_GEWIJZIGD':
+            pass  # this event only adds info about why the relation was made
         else:
             raise NotImplementedError(f"can't create an betrokkenerelatie event processor with type: {event_type}")
 
