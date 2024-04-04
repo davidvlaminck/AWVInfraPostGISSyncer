@@ -58,7 +58,7 @@ class FillManager:
                     params = self.connector.get_params(self.connector.main_connection)
 
                 resources_to_fill_filtered = [table_to_fill for table_to_fill in resources_to_fill
-                                           if params[f'{table_to_fill}_fill']]
+                                           if params[f'{table_to_fill.value}_fill']]
 
                 if not resources_to_fill_filtered:
                     break
