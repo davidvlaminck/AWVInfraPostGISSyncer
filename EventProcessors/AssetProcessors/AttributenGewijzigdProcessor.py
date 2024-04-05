@@ -1,13 +1,15 @@
 import logging
 import time
-from typing import Dict
+from typing import Dict, re
 
 import psycopg2
 
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.AssetProcessors.SpecificEventProcessor import SpecificEventProcessor
+from Exceptions.AssetMissingError import AssetMissingError
 from Exceptions.AttribuutMissingError import AttribuutMissingError
 from Helpers import turn_list_of_lists_into_string
+from ResourceEnum import colorama_table, ResourceEnum
 
 
 class AttributenGewijzigdProcessor(SpecificEventProcessor):
@@ -98,5 +100,14 @@ FROM to_insert;"""
             if 'null value in column "attribuutuuid"' in msg and 'violates not-null constraint' in msg:
                 logging.error('raising AttribuutMissingError: ' + str(exc).split('\n')[1])
                 raise AttribuutMissingError()
+            elif 'violates foreign key constraint "assets_attribuutwaarden_fkey"' in msg:
+                exception_to_raise = AssetMissingError()
+                if '\n' in str(exc):
+                    detail_line = str(exc).split('\n')[1]
+                    exception_to_raise.asset_uuids = re.findall(r"assetuuid\)=\((.*?)\)", detail_line)
+                    logging.error(f'{colorama_table[ResourceEnum.assets]}{detail_line}')
+                connection.rollback()
+                logging.error(f'{colorama_table[ResourceEnum.assets]}raising AssetMissingError')
+                raise exception_to_raise
             else:
                 raise exc
