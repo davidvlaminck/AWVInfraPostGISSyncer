@@ -8,6 +8,8 @@ from AssetFeedEventsCollector import AssetFeedEventsCollector
 from AssetFeedEventsProcessor import AssetFeedEventsProcessor
 from AssetUpdater import AssetUpdater
 from EMInfraImporter import EMInfraImporter
+from EventProcessors.AssetProcessors.NieuwAssetProcessor import NieuwAssetProcessor
+from Exceptions.AssetMissingError import AssetMissingError
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
 from Exceptions.AttribuutMissingError import AttribuutMissingError
 from Exceptions.BeheerderMissingError import BeheerderMissingError
@@ -98,6 +100,12 @@ class AssetSyncer:
                 except BestekMissingError:
                     connection.rollback()
                     self.fill_resource(ResourceEnum.bestekken)
+                except AssetMissingError as exc:
+                    connection.rollback()
+                    processor = NieuwAssetProcessor(eminfra_importer=self.eminfra_importer)
+                    processor.process(uuids=exc.asset_uuids, connection=connection)
+                    connection.commit()
+                    continue
                 except ConnectionError:
                     logging.info(f"{self.color}failed connection, retrying in 1 minute")
                     time.sleep(60)
