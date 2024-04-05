@@ -1,6 +1,7 @@
 import logging
 import time
-from typing import Dict, re
+from typing import Dict
+import re
 
 import psycopg2
 
