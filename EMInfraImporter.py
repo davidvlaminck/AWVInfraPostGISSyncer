@@ -70,6 +70,7 @@ class EMInfraImporter:
                                                                   filter_string=filter_string)
 
     def import_resource_from_webservice_page_by_page(self, page_size: int, resource: ResourceEnum) -> Iterator[dict]:
+        resource = resource.value
         if resource == 'agents':
             expansions_string = '{"fields": ["contactInfo"]}'
             yield from self.get_objects_from_oslo_search_endpoint(url_part=resource, size=page_size, contact_info=True,
