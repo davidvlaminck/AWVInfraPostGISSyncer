@@ -51,9 +51,10 @@ class BestekGewijzigdProcessor(SpecificEventProcessor):
 
                     koppeling_status = bestek_koppeling_dict['bs:DtcBestekkoppeling.status'].split('/')[-1]
 
-                    values += f"('{asset_uuid}','{bestek_uuid}','{start_datum}',"
-                    values += 'NULL' if eind_datum == '' else f"'{eind_datum}'"
-                    values += f", '{koppeling_status}'),"
+                    values += f"('{asset_uuid}','{bestek_uuid}',"
+                    values += 'NULL,' if start_datum == '' else f"'{start_datum}',"
+                    values += 'NULL,' if eind_datum == '' else f"'{eind_datum}',"
+                    values += f"'{koppeling_status}'),"
 
                 if values == '':
                     continue

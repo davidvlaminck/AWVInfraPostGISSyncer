@@ -176,7 +176,7 @@ CREATE TABLE IF NOT EXISTS public.bestekkoppelingen
 (
     assetUuid uuid NOT NULL,
     bestekUuid uuid NOT NULL,
-    startDatum TIMESTAMP WITH TIME ZONE NOT NULL,
+    startDatum TIMESTAMP WITH TIME ZONE,
     eindDatum TIMESTAMP WITH TIME ZONE,
     koppelingStatus text COLLATE pg_catalog."default" NOT NULL
 );
