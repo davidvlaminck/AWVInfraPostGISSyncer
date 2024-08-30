@@ -10,7 +10,7 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
         super().__init__(eminfra_importer)
 
     def process(self, uuids: [str], connection):
-        logging.info(f'started updating geometrie and locatie')
+        logging.info('started updating geometrie and locatie')
         start = time.time()
 
         asset_dicts = self.eminfra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
@@ -46,8 +46,9 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
             for geometrie_dict in asset_dict['geo:Geometrie.log']:
                 niveau = geometrie_dict.get('geo:DtcLog.niveau')
                 niveau = niveau.replace('https://geo.data.wegenenverkeer.be/id/concept/KlLogNiveau/', '')
-                record_array = [f"'{asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]}'",
-                                f"'{niveau}'"]
+                record_array = [
+                    f"'{asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[:36]}'",
+                    f"'{niveau}'"]
 
                 bron = None
                 if 'geo:DtcLog.bron' in geometrie_dict:
@@ -78,6 +79,11 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
                         value = value.replace("'", "''")
                         record_array.append(f"'{value}'")
 
+                if geometrie is not None and geometrie != '':
+                    record_array.append(f"ST_GeomFromText('{geometrie}', 31370)")
+                else:
+                    record_array.append('NULL')
+
                 values_array.append(record_array)
 
         values_string = turn_list_of_lists_into_string(values_array)
@@ -87,14 +93,16 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
     def perform_geometrie_update_with_values(cursor, values):
         if values != '':
             insert_query = f"""
-            WITH s (assetUuid, geo_niveau, ga_versie, nauwkeurigheid, bron, wkt_string, overerving_ids) 
+            WITH s (assetUuid, geo_niveau, ga_versie, nauwkeurigheid, bron, wkt_string, overerving_ids, geometry) 
                 AS (VALUES {values}),
             to_insert AS (
-                SELECT assetUuid::uuid AS assetUuid, geo_niveau::integer, ga_versie, nauwkeurigheid, bron, wkt_string, overerving_ids
+                SELECT assetUuid::uuid AS assetUuid, geo_niveau::integer, ga_versie, nauwkeurigheid, bron, wkt_string, 
+                    overerving_ids, geometry
                 FROM s)        
-            INSERT INTO public.geometrie (assetUuid, geo_niveau, ga_versie, nauwkeurigheid, bron, wkt_string, overerving_ids) 
+            INSERT INTO public.geometrie (assetUuid, geo_niveau, ga_versie, nauwkeurigheid, bron, wkt_string, 
+                overerving_ids, geometry) 
             SELECT to_insert.assetUuid, to_insert.geo_niveau, to_insert.ga_versie, to_insert.nauwkeurigheid, 
-                to_insert.bron, to_insert.wkt_string, to_insert.overerving_ids
+                to_insert.bron, to_insert.wkt_string, to_insert.overerving_ids, to_insert.geometry
             FROM to_insert;"""
             cursor.execute(insert_query)
 
@@ -114,7 +122,7 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
         counter = 0
         for asset_dict in assets_dicts:
             counter += 1
-            uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]
+            uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[:36]
             record_array = [f"'{uuid}'"]
 
             omschrijving = asset_dict.get('loc:Locatie.omschrijving')
@@ -189,6 +197,10 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
                     else:
                         value = value.replace("'", "''")
                         record_array.append(f"'{value}'")
+                if geometrie is not None and geometrie != '':
+                    record_array.append(f"ST_GeomFromText('{geometrie}', 31370)")
+                else:
+                    record_array.append('NULL')
             else:
                 for value in [omschrijving, geometrie]:
                     if value is None or value == '':
@@ -196,8 +208,12 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
                     else:
                         value = value.replace("'", "''")
                         record_array.append(f"'{value}'")
-                for i in range(17):
+                for _ in range(17):
                     record_array.append("NULL")
+                if geometrie is not None and geometrie != '':
+                    record_array.append(f"ST_GeomFromText('{geometrie}', 31370)")
+                else:
+                    record_array.append('NULL')
 
             if uuid not in assets_to_update:
                 insert_values_array.append(record_array)
@@ -214,22 +230,22 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
             insert_query = f"""
                 WITH s (assetUuid, omschrijving, geometrie, bron, precisie, x, y, z, straat, nummer, bus, postcode, 
                     gemeente, provincie, ident8, ident2, referentiepaal_opschrift, referentiepaal_afstand, straatnaam, 
-                    weg_gemeente) 
+                    weg_gemeente, geometry) 
                     AS (VALUES {insert_values}),
                 to_insert AS (
                     SELECT assetUuid::uuid AS assetUuid, omschrijving, geometrie, bron, precisie, x::decimal as x, 
                         y::decimal as y, z::decimal as z, straat, nummer, bus, postcode, gemeente, provincie, ident8, 
                         ident2, referentiepaal_opschrift::decimal as referentiepaal_opschrift, 
-                        referentiepaal_afstand::integer as referentiepaal_afstand, straatnaam, weg_gemeente
+                        referentiepaal_afstand::integer as referentiepaal_afstand, straatnaam, weg_gemeente, geometry
                     FROM s)        
                 INSERT INTO public.locatie (assetUuid, omschrijving, geometrie, bron, precisie, x, y, z, adres_straat, 
                     adres_nummer, adres_bus, adres_postcode, adres_gemeente, adres_provincie, ident8, ident2, 
-                    referentiepaal_opschrift, referentiepaal_afstand, straatnaam, gemeente) 
+                    referentiepaal_opschrift, referentiepaal_afstand, straatnaam, gemeente, geometry) 
                 SELECT to_insert.assetUuid, to_insert.omschrijving, to_insert.geometrie, to_insert.bron, to_insert.precisie,
                     to_insert.x, to_insert.y, to_insert.z, to_insert.straat, to_insert.nummer, to_insert.bus, 
                     to_insert.postcode, to_insert.gemeente, to_insert.provincie, to_insert.ident8, to_insert.ident2, 
                     to_insert.referentiepaal_opschrift, to_insert.referentiepaal_afstand, to_insert.straatnaam, 
-                    to_insert.weg_gemeente
+                    to_insert.weg_gemeente, to_insert.geometry
                 FROM to_insert;"""
             cursor.execute(insert_query)
 
@@ -237,13 +253,13 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
             update_query = f"""
                 WITH s (assetUuid, omschrijving, geometrie, bron, precisie, x, y, z, straat, nummer, bus, postcode, 
                     gemeente, provincie, ident8, ident2, referentiepaal_opschrift, referentiepaal_afstand, straatnaam, 
-                    weg_gemeente) 
+                    weg_gemeente, geometry) 
                     AS (VALUES {update_values}),
                 to_update AS (
                     SELECT assetUuid::uuid AS assetUuid, omschrijving, geometrie, bron, precisie, x::decimal as x, 
                         y::decimal as y, z::decimal as z, straat, nummer, bus, postcode, gemeente, provincie, ident8, 
                         ident2, referentiepaal_opschrift::decimal as referentiepaal_opschrift, 
-                        referentiepaal_afstand::integer as referentiepaal_afstand, straatnaam, weg_gemeente
+                        referentiepaal_afstand::integer as referentiepaal_afstand, straatnaam, weg_gemeente, geometry
                     FROM s)       
                 UPDATE locatie 
                 SET omschrijving = to_update.omschrijving, geometrie = to_update.geometrie, bron = to_update.bron, 
@@ -253,7 +269,7 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
                     adres_provincie = to_update.provincie, ident8 = to_update.ident8, ident2 = to_update.ident2, 
                     referentiepaal_opschrift = to_update.referentiepaal_opschrift, 
                     referentiepaal_afstand = to_update.referentiepaal_afstand, 
-                    straatnaam = to_update.straatnaam, gemeente = to_update.weg_gemeente
+                    straatnaam = to_update.straatnaam, gemeente = to_update.weg_gemeente, geometry = to_update.geometry
                 FROM to_update
                 WHERE to_update.assetUuid = locatie.assetUuid;"""
             cursor.execute(update_query)

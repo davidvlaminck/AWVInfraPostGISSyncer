@@ -372,7 +372,7 @@ class AssetTypeUpdater:
             geometry_part1 = ''
             geometry_part2 = ''
             if has_geometry:
-                geometry_part1 = ', geometrie.*, ST_GeomFromText(wkt_string, 31370) AS geometry'
+                geometry_part1 = ', geometrie.*'
                 geometry_part2 = '\nLEFT JOIN public.geometrie ON geometrie.assetuuid = assets.uuid'
 
             create_view_query = f"""DROP VIEW IF EXISTS asset_views.{view_name} CASCADE;

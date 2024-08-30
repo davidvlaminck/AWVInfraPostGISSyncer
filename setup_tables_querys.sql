@@ -243,6 +243,8 @@ ALTER TABLE locatie
 ADD CONSTRAINT unique_locatie_assetUuid
 UNIQUE USING INDEX locatie_assetUuid;
 
+CREATE INDEX idx_locatie_geometrie ON public.locatie USING GIST (geometry);
+
 -- Table: public.geometrie
 
 DROP TABLE IF EXISTS public.geometrie CASCADE;
@@ -254,8 +256,10 @@ CREATE TABLE IF NOT EXISTS public.geometrie
     nauwkeurigheid text COLLATE pg_catalog."default",
     bron text COLLATE pg_catalog."default",
     wkt_string text COLLATE pg_catalog."default",
-    overerving_ids text COLLATE pg_catalog."default"
+    overerving_ids text COLLATE pg_catalog."default",
+    geometry geometry
 );
+COMMENT ON COLUMN public.geometrie.geometry IS 'geometry column';
 
 ALTER TABLE IF EXISTS public.geometrie
     ADD CONSTRAINT assets_geometrie_fkey
@@ -264,6 +268,8 @@ ALTER TABLE IF EXISTS public.geometrie
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
+
+CREATE INDEX idx_geometrie_geometrie ON public.geometrie USING GIST (geometry);
 
 -- Table: public.elek_aansluitingen
 
