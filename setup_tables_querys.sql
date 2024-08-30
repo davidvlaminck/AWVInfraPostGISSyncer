@@ -584,3 +584,11 @@ UNION ALL
 SELECT 'toezichtgroepen', count(*) FROM toezichtgroepen
 UNION ALL
 SELECT 'vplan_koppelingen', count(*) FROM vplan_koppelingen;
+
+CREATE VIEW assets_geometry AS
+SELECT assets.uuid
+	, CASE WHEN g.geometry IS NULL THEN l.geometry ELSE g.geometry END AS asset_geometry
+	, CASE WHEN g.wkt_string IS NULL THEN l.geometrie ELSE g.wkt_string END AS asset_wkt_string
+FROM assets
+LEFT JOIN locatie l ON l.assetuuid = assets.uuid
+LEFT JOIN geometrie g ON g.assetuuid = assets.uuid;
