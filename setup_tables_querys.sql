@@ -592,3 +592,23 @@ SELECT assets.uuid
 FROM assets
 LEFT JOIN locatie l ON l.assetuuid = assets.uuid
 LEFT JOIN geometrie g ON g.assetuuid = assets.uuid;
+
+CREATE VIEW bevestiging_relaties AS
+SELECT * FROM assetrelaties a
+WHERE a.relatietype = '3ff9bf1c-d852-442e-a044-6200fe064b20'; -- Bevestiging
+
+CREATE VIEW sturing_relaties AS
+SELECT * FROM assetrelaties a
+WHERE a.relatietype = '93c88f93-6e8c-4af3-a723-7e7a6d6956ac'; -- Sturing
+
+CREATE VIEW hoortbij_relaties AS
+SELECT * FROM assetrelaties a
+WHERE a.relatietype = '812dd4f3-c34e-43d1-88f1-3bcd0b1e89c2'; -- HoortBij
+
+CREATE VIEW voedt_relaties AS
+SELECT * FROM assetrelaties a
+WHERE a.relatietype = 'f2c5c4a1-0899-4053-b3b3-2d662c717b44'; -- Voedt
+
+CREATE VIEW ligtop_relaties AS
+SELECT * FROM assetrelaties a
+WHERE a.relatietype = '321c18b8-92ca-4188-a28a-f00cdfaa0e31'; -- LigtOp
