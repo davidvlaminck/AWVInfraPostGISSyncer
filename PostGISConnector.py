@@ -77,7 +77,6 @@ class PostGISConnector:
             self.main_connection.commit()
 
         cursor.execute('CREATE SCHEMA IF NOT EXISTS asset_views;')
-        cursor.close()
         cursor.execute('CREATE SCHEMA IF NOT EXISTS asset_daily_views;')
         cursor.close()
         self.main_connection.commit()

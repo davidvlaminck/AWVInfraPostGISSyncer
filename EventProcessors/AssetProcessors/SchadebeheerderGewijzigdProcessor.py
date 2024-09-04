@@ -16,7 +16,7 @@ class SchadebeheerderGewijzigdProcessor(SpecificEventProcessor):
         start = time.time()
 
         asset_dicts = self.eminfra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
-        amount = self.process_dicts(connection=connection, asset_dicts=asset_dicts)
+        amount = self.process_dicts(connection=connection, asset_dicts=list(asset_dicts))
 
         end = time.time()
         logging.info(f'updated schadebeheerder of {amount} asset(s) in {str(round(end - start, 2))} seconds.')

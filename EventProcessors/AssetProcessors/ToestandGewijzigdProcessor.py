@@ -13,7 +13,7 @@ class ToestandGewijzigdProcessor(SpecificEventProcessor):
         start = time.time()
 
         asset_dicts = self.eminfra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
-        values, amount = self.create_values_string_from_dicts(assets_dicts=asset_dicts)
+        values, amount = self.create_values_string_from_dicts(assets_dicts=list(asset_dicts))
         self.perform_update_with_values(connection=connection, values=values)
 
         end = time.time()

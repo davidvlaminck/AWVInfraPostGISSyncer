@@ -14,8 +14,7 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
         start = time.time()
 
         asset_dicts = self.eminfra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
-
-        amount, amount2 = self.process_dicts(connection=connection, asset_uuids=uuids, asset_dicts=asset_dicts)
+        amount, amount2 = self.process_dicts(connection=connection, asset_uuids=uuids, asset_dicts=list(asset_dicts))
 
         end = time.time()
         logging.info(f'updated geometrie of {amount} asset(s) and locatie of {amount2} asset(s) in {str(round(end - start, 2))} seconds.')
@@ -120,6 +119,7 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
         update_values_array = []
 
         counter = 0
+
         for asset_dict in assets_dicts:
             counter += 1
             uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[:36]

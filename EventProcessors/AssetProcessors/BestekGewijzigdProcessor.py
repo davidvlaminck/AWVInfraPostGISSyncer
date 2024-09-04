@@ -16,7 +16,7 @@ class BestekGewijzigdProcessor(SpecificEventProcessor):
         start = time.time()
 
         asset_dicts_dict = {}
-        for asset_dict in self.eminfra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids):
+        for asset_dict in list(self.eminfra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)):
             asset_uuid = asset_dict['@id'].split('/')[-1][:36]
             asset_dicts_dict[asset_uuid] = asset_dict
 

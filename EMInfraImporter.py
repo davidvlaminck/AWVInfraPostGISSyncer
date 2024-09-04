@@ -34,7 +34,7 @@ class EMInfraImporter:
     def import_assets_from_webservice_by_uuids(self, asset_uuids: [str]) -> [dict]:
         asset_list_string = '", "'.join(asset_uuids)
         filter_string = '{ "uuid": ' + f'["{asset_list_string}"]' + ' }'
-        return self.get_objects_from_oslo_search_endpoint(url_part='assets', filter_string=filter_string)
+        yield from self.get_objects_from_oslo_search_endpoint(url_part='assets', filter_string=filter_string)
 
     def import_all_agents_from_webservice(self) -> [dict]:
         expansions_string = '{"fields": ["contactInfo"]}'

@@ -19,7 +19,7 @@ class NieuwAssetProcessor(SpecificEventProcessor):
             generator = self.eminfra_importer.import_resource_from_webservice_by_uuids(uuids=uuids,
                                                                                        resource='assets')
 
-            asset_count += AssetUpdater.update_objects(object_generator=generator, connection=connection,
+            asset_count += AssetUpdater.update_objects(object_generator=list(generator), connection=connection,
                                                        insert_only=True, eminfra_importer=self.eminfra_importer)
 
         end = time.time()
