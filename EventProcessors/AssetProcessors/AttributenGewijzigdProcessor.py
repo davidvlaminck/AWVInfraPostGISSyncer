@@ -22,7 +22,7 @@ class AttributenGewijzigdProcessor(SpecificEventProcessor):
         start = time.time()
 
         asset_dicts = self.eminfra_importer.import_assets_from_webservice_by_uuids(asset_uuids=uuids)
-        amount = self.process_dicts(connection=connection, asset_uuids=uuids, asset_dicts=list(asset_dicts))
+        amount = self.process_dicts(connection=connection, asset_uuids=uuids, asset_dicts=asset_dicts)
 
         end = time.time()
         logging.info(f'updated attributes of {amount} asset(s) in {str(round(end - start, 2))} seconds.')
