@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 from psycopg2 import connect
 
 from EMInfraImporter import EMInfraImporter
-from EventProcessors.BetrokkeneRelatiesGewijzigdProcessor import BetrokkeneRelatiesGewijzigdProcessor
+from EventProcessors.AssetProcessors.BetrokkeneRelatiesGewijzigdProcessor import BetrokkeneRelatiesGewijzigdProcessor
 from Exceptions.AgentMissingError import AgentMissingError
 from PostGISConnector import PostGISConnector
 from SettingsManager import SettingsManager
@@ -12,20 +12,7 @@ from SettingsManager import SettingsManager
 
 class BetrokkeneRelatieProcessorTests(TestCase):
     def setup(self):
-        settings_manager = SettingsManager(
-            settings_path='/home/davidlinux/Documents/AWV/resources/settings_AwvinfraPostGISSyncer.json')
-        unittest_db_settings = settings_manager.settings['databases']['unittest']
 
-        conn = connect(host=unittest_db_settings['host'], port=unittest_db_settings['port'],
-                       user=unittest_db_settings['user'], password=unittest_db_settings['password'],
-                       database="postgres")
-        conn.autocommit = True
-
-        cursor = conn.cursor()
-        cursor.execute('DROP database unittests;')
-        cursor.execute('CREATE database unittests;')
-
-        conn.close()
 
         self.connector = PostGISConnector(host=unittest_db_settings['host'], port=unittest_db_settings['port'],
                                           user=unittest_db_settings['user'], password=unittest_db_settings['password'],
@@ -41,9 +28,9 @@ class BetrokkeneRelatieProcessorTests(TestCase):
         self.set_up_agents(cursor)
         self.set_up_assets(cursor)
 
-        processor = BetrokkeneRelatiesGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer,
+        processor = BetrokkeneRelatiesGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer,
                                                          connector=self.connector)
-        processor.em_infra_importer.import_betrokkenerelaties_from_webservice_by_assetuuids = self.return_betrokkenerelaties
+        processor.eminfra_importer.import_betrokkenerelaties_from_webservice_by_assetuuids = self.return_betrokkenerelaties
 
         create_betrokkenerelatie_query = """
         INSERT INTO betrokkeneRelaties (uuid, doelUuid, bronUuid, rol, actief) 
@@ -100,9 +87,9 @@ class BetrokkeneRelatieProcessorTests(TestCase):
 
         self.connector.commit_transaction()
 
-        processor = BetrokkeneRelatiesGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer,
+        processor = BetrokkeneRelatiesGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer,
                                                          connector=self.connector)
-        processor.em_infra_importer.import_betrokkenerelaties_from_webservice_by_assetuuids = self.return_betrokkenerelaties
+        processor.eminfra_importer.import_betrokkenerelaties_from_webservice_by_assetuuids = self.return_betrokkenerelaties
 
         with self.assertRaises(AgentMissingError) as exc:
             processor.process(['00000000-0000-1000-0000-000000000000', '00000000-0000-2000-0000-000000000000',

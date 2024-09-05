@@ -5,7 +5,7 @@ from psycopg2 import connect
 from AssetSyncer import AssetSyncer
 from AssetTypeSyncer import AssetTypeSyncer
 from EMInfraImporter import EMInfraImporter
-from EventProcessors.ElekAansluitingGewijzigdProcessor import ElekAansluitingGewijzigdProcessor
+from EventProcessors.AssetProcessors.ElekAansluitingGewijzigdProcessor import ElekAansluitingGewijzigdProcessor
 from PostGISConnector import PostGISConnector
 from RequestHandler import RequestHandler
 from RequesterFactory import RequesterFactory
@@ -14,20 +14,7 @@ from SettingsManager import SettingsManager
 
 class ElekAansluitingGewijzigdProcessorTests(TestCase):
     def setup(self):
-        settings_manager = SettingsManager(
-            settings_path='/home/davidlinux/Documents/AWV/resources/settings_AwvinfraPostGISSyncer.json')
-        unittest_db_settings = settings_manager.settings['databases']['unittest']
 
-        conn = connect(host=unittest_db_settings['host'], port=unittest_db_settings['port'],
-                       user=unittest_db_settings['user'], password=unittest_db_settings['password'],
-                       database="postgres")
-        conn.autocommit = True
-
-        cursor = conn.cursor()
-        cursor.execute('DROP DATABASE IF EXISTS unittests;')
-        cursor.execute('CREATE DATABASE unittests;')
-
-        conn.close()
 
         self.connector = PostGISConnector(host=unittest_db_settings['host'], port=unittest_db_settings['port'],
                                           user=unittest_db_settings['user'], password=unittest_db_settings['password'],
@@ -39,7 +26,7 @@ class ElekAansluitingGewijzigdProcessorTests(TestCase):
         self.eminfra_importer = EMInfraImporter(request_handler)
 
         self.processor = ElekAansluitingGewijzigdProcessor(cursor=self.connector.connection.cursor(),
-                                                           em_infra_importer=self.eminfra_importer)
+                                                           eminfra_importer=self.eminfra_importer)
         self.assettypes_syncer = AssetTypeSyncer(postGIS_connector=self.connector,
                                                  emInfraImporter=self.eminfra_importer)
         self.assets_syncer = AssetSyncer(postgis_connector=self.connector, em_infra_importer=self.eminfra_importer)
@@ -63,7 +50,7 @@ class ElekAansluitingGewijzigdProcessorTests(TestCase):
             result = cursor.fetchone()[0]
             self.assertEqual(1, result)
 
-        self.processor.em_infra_importer.get_all_elek_aansluitingen_from_webservice_by_asset_uuids = self.return_elek_aansluiting_dicts
+        self.processor.eminfra_importer.get_all_elek_aansluitingen_from_webservice_by_asset_uuids = self.return_elek_aansluiting_dicts
 
         self.processor.process(['00114756-9f8b-4c8c-b905-93da6c0b26cd', '89daf088-2900-11ed-a261-0242ac120002'])
 

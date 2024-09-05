@@ -5,7 +5,7 @@ from psycopg2 import connect
 from AssetSyncer import AssetSyncer
 from AssetTypeSyncer import AssetTypeSyncer
 from EMInfraImporter import EMInfraImporter
-from EventProcessors.GeometrieOrLocatieGewijzigdProcessor import GeometrieOrLocatieGewijzigdProcessor
+from EventProcessors.AssetProcessors.GeometrieOrLocatieGewijzigdProcessor import GeometrieOrLocatieGewijzigdProcessor
 from PostGISConnector import PostGISConnector
 from RequestHandler import RequestHandler
 from RequesterFactory import RequesterFactory
@@ -14,20 +14,6 @@ from SettingsManager import SettingsManager
 
 class GeometrieSyncerTests(TestCase):
     def setup(self):
-        settings_manager = SettingsManager(
-            settings_path='/home/davidlinux/Documents/AWV/resources/settings_AwvinfraPostGISSyncer.json')
-        unittest_db_settings = settings_manager.settings['databases']['unittest']
-
-        conn = connect(host=unittest_db_settings['host'], port=unittest_db_settings['port'],
-                       user=unittest_db_settings['user'], password=unittest_db_settings['password'],
-                       database="postgres")
-        conn.autocommit = True
-
-        cursor = conn.cursor()
-        cursor.execute('DROP database unittests;')
-        cursor.execute('CREATE database unittests;')
-
-        conn.close()
 
         self.connector = PostGISConnector(host=unittest_db_settings['host'], port=unittest_db_settings['port'],
                                           user=unittest_db_settings['user'], password=unittest_db_settings['password'],
@@ -42,7 +28,7 @@ class GeometrieSyncerTests(TestCase):
                                                  emInfraImporter=self.eminfra_importer)
         self.assets_syncer = AssetSyncer(postgis_connector=self.connector, em_infra_importer=self.eminfra_importer)
         self.processor = GeometrieOrLocatieGewijzigdProcessor(cursor=self.connector.connection.cursor(),
-                                                              em_infra_importer=self.eminfra_importer)
+                                                              eminfra_importer=self.eminfra_importer)
 
     def test_update_geometries(self):
         self.setup()
@@ -81,7 +67,7 @@ class GeometrieSyncerTests(TestCase):
             result = cursor.fetchone()[0]
             self.assertEqual(1, result)
 
-        self.processor.em_infra_importer.import_assets_from_webservice_by_uuids = self.return_new_asset_dicts
+        self.processor.eminfra_importer.import_assets_from_webservice_by_uuids = self.return_new_asset_dicts
 
         self.processor.process(['00000453-56ce-4f8b-af44-960df526cb30', '00088892-53a8-4dfc-a2c9-875cab2d7e11',
                                 '5dbca334-9ce8-4ebe-80c3-01c01dd1844f'])
@@ -182,7 +168,46 @@ class GeometrieSyncerTests(TestCase):
                 "AIMDBStatus.isActief": True,
                 "Netwerkpoort.type": "https://wegenenverkeer.data.vlaanderen.be/id/concept/KlNetwerkpoortType/ncni",
                 "Netwerkpoort.merk": "https://wegenenverkeer.data.vlaanderen.be/id/concept/KlNetwerkMerk/Cisco",
-                "Netwerkpoort.serienummer": "NULL"
+                "Netwerkpoort.serienummer": "NULL",
+                "wl:Weglocatie.wegaanduiding": [
+                    {
+                        "wl:DtcWegaanduiding.tot": {
+                            "wl:DtcRelatieveLocatie.weg": {
+                                "wl:DtcWeg.nummer": "N7530002"
+                            },
+                            "wl:DtcRelatieveLocatie.referentiepunt": {
+                                "wl:DtcReferentiepunt.weg": {
+                                    "wl:DtcWeg.nummer": "N7530001"
+                                },
+                                "wl:DtcReferentiepunt.opschrift": "1.9"
+                            },
+                            "wl:DtcRelatieveLocatie.afstand": 647
+                        },
+                        "wl:DtcWegaanduiding.van": {
+                            "wl:DtcRelatieveLocatie.weg": {
+                                "wl:DtcWeg.nummer": "N7530002"
+                            },
+                            "wl:DtcRelatieveLocatie.referentiepunt": {
+                                "wl:DtcReferentiepunt.weg": {
+                                    "wl:DtcWeg.nummer": "N7530001"
+                                },
+                                "wl:DtcReferentiepunt.opschrift": "1.9"
+                            },
+                            "wl:DtcRelatieveLocatie.afstand": 647
+                        },
+                        "wl:DtcWegaanduiding.weg": {
+                            "wl:DtcWeg.nummer": "N7530002"
+                        }
+                    }
+                ],
+                "wl:Weglocatie.geometrie": "POINT Z(153759.7 211533.4 0)",
+                "wl:Weglocatie.wegsegment": [
+                    {
+                        "wl:DtcWegsegment.oidn": 347253
+                    }
+                ],
+                "wl:Weglocatie.bron": "https://wl.data.wegenenverkeer.be/id/concept/KlWeglocatieBron/automatisch",
+                "wl:Weglocatie.score": "12.782011089369375",
             },
             {
                 "@type": "https://lgc.data.wegenenverkeer.be/ns/installatie#Kast",

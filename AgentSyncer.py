@@ -1,76 +1,91 @@
-import json
+import logging
+import time
+from datetime import datetime
 
+from requests.exceptions import ConnectionError
+
+from AgentFeedEventsCollector import AgentFeedEventsCollector
+from AgentFeedEventsProcessor import AgentFeedEventsProcessor
+from AgentUpdater import AgentUpdater
 from EMInfraImporter import EMInfraImporter
 from PostGISConnector import PostGISConnector
+from ResourceEnum import ResourceEnum, colorama_table
+from SyncTimer import SyncTimer
 
 
 class AgentSyncer:
-    def __init__(self, postGIS_connector: PostGISConnector, emInfraImporter: EMInfraImporter):
-        self.postGIS_connector = postGIS_connector
-        self.eminfra_importer = emInfraImporter
+    def __init__(self, postgis_connector: PostGISConnector, eminfra_importer: EMInfraImporter):
+        self.postgis_connector: PostGISConnector = postgis_connector
+        self.eminfra_importer: EMInfraImporter = eminfra_importer
+        self.updater: AgentUpdater = AgentUpdater()
+        self.events_collector: AgentFeedEventsCollector = AgentFeedEventsCollector(eminfra_importer)
+        self.events_processor: AgentFeedEventsProcessor = AgentFeedEventsProcessor(postgis_connector,
+                                                                                   eminfra_importer=eminfra_importer)
+        self.color = colorama_table[ResourceEnum.agents]
 
-    def sync_agents(self, pagingcursor: str = '', page_size: int = 100):
-        self.eminfra_importer.pagingcursor = pagingcursor
+    def sync(self, connection, stop_when_fully_synced: bool=False):
         while True:
-            agents = self.eminfra_importer.import_agents_from_webservice_page_by_page(page_size=page_size)
-            if len(agents) == 0:
-                break
+            try:
+                sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
+                if not sync_allowed_by_time:
+                    logging.info(f'{self.color}syncing is not allowed at this time. Trying again in 5 minutes')
+                    time.sleep(300)
+                    continue
 
-            self.update_agents(agent_dicts=agents)
-            self.postGIS_connector.save_props_to_params({'pagingcursor': self.eminfra_importer.pagingcursor})
+                params = self.postgis_connector.get_params(connection)
+                current_page = params['page_agents']
+                completed_event_id = params['event_uuid_agents']
+                page_size = params['pagesize']
 
-            if self.eminfra_importer.pagingcursor == '':
-                break
+                logging.info(f'{self.color}starting a sync cycle for agents, page: {str(current_page)} '
+                             f'event_uuid: {str(completed_event_id)}')
+                start = time.time()
 
-    def update_agents(self, agent_dicts: [dict]):
-        if len(agent_dicts) == 0:
-            return
+                try:
+                    eventsparams_to_process = self.events_collector.collect_starting_from_page(
+                        current_page, completed_event_id, page_size, resource='agents')
 
-        values = ''
-        for agent_dict in agent_dicts:
-            agent_uuid = agent_dict['@id'].split('/')[-1][0:36]
-            agent_name = agent_dict['purl:Agent.naam'].replace("'", "''")
-            contact_info_value = 'NULL'
-            if 'purl:Agent.contactinfo' in agent_dict:
-                contact_info = agent_dict['purl:Agent.contactinfo']
-                contact_info_value = "'" + json.dumps(contact_info).replace("'", "''") + "'"
+                    total_events = sum(len(lists) for lists in eventsparams_to_process.event_dict.values())
+                    if total_events == 0:
+                        logging.info(f"{self.color}The database is fully synced for agents. Continuing keep up to date in 30 seconds")
+                        self.postgis_connector.update_params(params={'last_update_utc_agents': datetime.utcnow()},
+                                                             connection=connection)
+                        if stop_when_fully_synced:
+                            break
+                        time.sleep(30)  # wait 30 seconds to prevent overloading API
+                        continue
+                    end = time.time()
+                    self.log_eventparams(eventsparams_to_process.event_dict, round(end - start, 2), color=self.color)
+                except ConnectionError:
+                    logging.info(f"{self.color}failed connection, retrying in 1 minute")
+                    connection.rollback()
+                    time.sleep(60)
+                    continue
+                except Exception as exc:
+                    logging.error(f'{self.color}{exc}')
+                    connection.rollback()
+                    time.sleep(30)
+                    continue
 
-            values += f"('{agent_uuid}','{agent_name}',{contact_info_value}),"
+                try:
+                    self.events_processor.process_events(eventsparams_to_process, connection)
+                except Exception as exc:
+                    logging.error(f'{self.color}{exc}')
+                    connection.rollback()
+                    time.sleep(30)
 
-        insert_query = f"""
-WITH s (uuid, naam, contact_info) 
-    AS (VALUES {values[:-1]}),
-t AS (
-    SELECT uuid::uuid AS uuid, naam, contact_info::json AS contact_info
-    FROM s),
-to_insert AS (
-    SELECT t.* 
-    FROM t
-        LEFT JOIN public.agents AS agents ON agents.uuid = t.uuid 
-    WHERE agents.uuid IS NULL)
-INSERT INTO public.agents (uuid, naam, contact_info, actief)
-SELECT to_insert.uuid, to_insert.naam, to_insert.contact_info, true 
-FROM to_insert;"""
+                sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
+            except ConnectionError:
+                logging.info(f"{self.color}failed connection, retrying in 1 minute")
+                time.sleep(60)
+            except Exception as exc:
+                logging.error(f'{self.color}{exc}')
+                time.sleep(30)
 
-        update_query = f"""
-WITH s (uuid, naam, contact_info) 
-    AS (VALUES {values[:-1]}),
-t AS (
-    SELECT uuid::uuid AS uuid, naam, contact_info::json AS contact_info
-    FROM s),
-to_update AS (
-    SELECT t.* 
-    FROM t
-        LEFT JOIN public.agents AS agents ON agents.uuid = t.uuid 
-    WHERE agents.uuid IS NOT NULL)
-UPDATE agents 
-SET naam = to_update.naam, contact_info = to_update.contact_info
-FROM to_update 
-WHERE to_update.uuid = agents.uuid;"""
-
-        cursor = self.postGIS_connector.connection.cursor()
-        cursor.execute(insert_query)
-
-        cursor = self.postGIS_connector.connection.cursor()
-        cursor.execute(update_query)
-        self.postGIS_connector.connection.commit()
+    @staticmethod
+    def log_eventparams(event_dict, timespan: float, color):
+        total = sum(len(events) for events in event_dict.values())
+        logging.info(f'{color}fetched {total} agents events to sync in {timespan} seconds')
+        for k, v in event_dict.items():
+            if len(v) > 0:
+                logging.info(f'{color}number of events of type {k}: {len(v)}')

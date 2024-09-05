@@ -8,6 +8,7 @@ CREATE TABLE public.agents
     void uuid,
     actief boolean NOT NULL,
     contact_info json,
+    ovo_code text,
     PRIMARY KEY (uuid)
 );
 
@@ -16,17 +17,18 @@ CREATE TABLE public.agents
 DROP TABLE IF EXISTS public.params CASCADE;
 CREATE TABLE IF NOT EXISTS public.params
 (
-    page integer,
-    event_uuid text,
-    pagesize integer,
-    fresh_start boolean,
-    sync_step integer,
-    pagingcursor text COLLATE pg_catalog."default",
-    last_update_utc TIMESTAMP WITH TIME ZONE
+    key_name VARCHAR(40),
+    value_int integer,
+    value_text text,
+    value_bool boolean,
+    value_timestamp TIMESTAMP WITH TIME ZONE,
+    CONSTRAINT params_pkey PRIMARY KEY (key_name)
 );
 
-INSERT INTO public.params(page, event_uuid, pagesize, fresh_start, sync_step, pagingcursor)
-VALUES (-1, '', 100, TRUE, -1, '');
+INSERT INTO public.params(key_name, value_bool)
+VALUES ('fresh_start', TRUE);
+INSERT INTO public.params(key_name, value_int)
+VALUES ('pagesize', 100);
 
 -- Table: public.assets
 
@@ -65,6 +67,7 @@ CREATE TABLE IF NOT EXISTS public.assettypes
     toezicht boolean,
     gevoedDoor boolean,
     elek_aansluiting boolean,
+    vplan boolean,
     attributen boolean,
     CONSTRAINT assettypes_pkey PRIMARY KEY (uuid)
 );
@@ -173,7 +176,7 @@ CREATE TABLE IF NOT EXISTS public.bestekkoppelingen
 (
     assetUuid uuid NOT NULL,
     bestekUuid uuid NOT NULL,
-    startDatum TIMESTAMP WITH TIME ZONE NOT NULL,
+    startDatum TIMESTAMP WITH TIME ZONE,
     eindDatum TIMESTAMP WITH TIME ZONE,
     koppelingStatus text COLLATE pg_catalog."default" NOT NULL
 );
@@ -221,7 +224,8 @@ CREATE TABLE IF NOT EXISTS public.locatie
     adres_bus text COLLATE pg_catalog."default",
     adres_postcode text COLLATE pg_catalog."default",
     adres_gemeente text COLLATE pg_catalog."default",
-    adres_provincie text COLLATE pg_catalog."default"
+    adres_provincie text COLLATE pg_catalog."default",
+    geometry geometry
 );
 
 ALTER TABLE IF EXISTS public.locatie
@@ -239,6 +243,8 @@ ALTER TABLE locatie
 ADD CONSTRAINT unique_locatie_assetUuid
 UNIQUE USING INDEX locatie_assetUuid;
 
+CREATE INDEX idx_locatie_geometrie ON public.locatie USING GIST (geometry);
+
 -- Table: public.geometrie
 
 DROP TABLE IF EXISTS public.geometrie CASCADE;
@@ -250,8 +256,10 @@ CREATE TABLE IF NOT EXISTS public.geometrie
     nauwkeurigheid text COLLATE pg_catalog."default",
     bron text COLLATE pg_catalog."default",
     wkt_string text COLLATE pg_catalog."default",
-    overerving_ids text COLLATE pg_catalog."default"
+    overerving_ids text COLLATE pg_catalog."default",
+    geometry geometry
 );
+COMMENT ON COLUMN public.geometrie.geometry IS 'geometry column';
 
 ALTER TABLE IF EXISTS public.geometrie
     ADD CONSTRAINT assets_geometrie_fkey
@@ -260,6 +268,8 @@ ALTER TABLE IF EXISTS public.geometrie
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
+
+CREATE INDEX idx_geometrie_geometrie ON public.geometrie USING GIST (geometry);
 
 -- Table: public.elek_aansluitingen
 
@@ -273,6 +283,30 @@ CREATE TABLE IF NOT EXISTS public.elek_aansluitingen
 
 ALTER TABLE IF EXISTS public.elek_aansluitingen
     ADD CONSTRAINT assets_elek_aansluitingen_fkey
+    FOREIGN KEY (assetUuid)
+    REFERENCES public.assets (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+
+-- Table: public.vplan_koppelingen
+
+DROP TABLE IF EXISTS public.vplan_koppelingen CASCADE;
+CREATE TABLE IF NOT EXISTS public.vplan_koppelingen
+(
+    uuid uuid NOT NULL,
+    assetUuid uuid NOT NULL,
+    vplannummer text COLLATE pg_catalog."default",
+    vplan uuid,
+    inDienstDatum TIMESTAMP WITH TIME ZONE,
+    uitDienstDatum TIMESTAMP WITH TIME ZONE,
+    commentaar text COLLATE pg_catalog."default",
+    PRIMARY KEY (uuid)
+);
+
+ALTER TABLE IF EXISTS public.vplan_koppelingen
+    ADD CONSTRAINT assets_vplan_koppelingen_fkey
     FOREIGN KEY (assetUuid)
     REFERENCES public.assets (uuid) MATCH SIMPLE
     ON UPDATE NO ACTION
@@ -349,6 +383,75 @@ ALTER TABLE IF EXISTS public.assets
     NOT VALID;
 
 
+-- Table: public.weglocaties
+
+DROP TABLE IF EXISTS public.weglocaties CASCADE;
+CREATE TABLE IF NOT EXISTS public.weglocaties
+(
+    assetUuid uuid NOT NULL,
+    geometrie text COLLATE pg_catalog."default",
+    score text COLLATE pg_catalog."default",
+    bron text COLLATE pg_catalog."default",
+    CONSTRAINT weglocaties_pkey PRIMARY KEY (assetUuid)
+);
+
+ALTER TABLE IF EXISTS public.weglocaties
+    ADD CONSTRAINT assets_weglocaties_fkey
+    FOREIGN KEY (assetUuid)
+    REFERENCES public.assets (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+
+ -- Table: public.weglocatie_wegsegmenten
+
+DROP TABLE IF EXISTS public.weglocatie_wegsegmenten CASCADE;
+CREATE TABLE IF NOT EXISTS public.weglocatie_wegsegmenten
+(
+    assetUuid uuid NOT NULL,
+    oidn integer NOT NULL
+);
+
+CREATE INDEX weglocatie_wegsegmenten_assetUuid_idx ON weglocatie_wegsegmenten (assetUuid);
+
+ALTER TABLE IF EXISTS public.weglocatie_wegsegmenten
+    ADD CONSTRAINT assets_weglocatie_wegsegmenten_fkey
+    FOREIGN KEY (assetUuid)
+    REFERENCES public.assets (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+
+  -- Table: public.weglocatie_aanduidingen
+
+DROP TABLE IF EXISTS public.weglocatie_aanduidingen CASCADE;
+CREATE TABLE IF NOT EXISTS public.weglocatie_aanduidingen
+(
+    assetUuid uuid NOT NULL,
+    wegnummer text COLLATE pg_catalog."default",
+    van_wegnummer text COLLATE pg_catalog."default",
+    van_ref_wegnummer text COLLATE pg_catalog."default",
+    van_ref_opschrift text COLLATE pg_catalog."default",
+    van_afstand integer,
+    tot_wegnummer text COLLATE pg_catalog."default",
+    tot_ref_wegnummer text COLLATE pg_catalog."default",
+    tot_ref_opschrift text COLLATE pg_catalog."default",
+    tot_afstand integer
+);
+
+CREATE INDEX weglocatie_aanduidingen_assetUuid_idx ON weglocatie_aanduidingen (assetUuid);
+
+ALTER TABLE IF EXISTS public.weglocatie_aanduidingen
+    ADD CONSTRAINT assets_weglocatie_aanduidingen_fkey
+    FOREIGN KEY (assetUuid)
+    REFERENCES public.assets (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+
 -- Table: public.betrokkeneRelaties
 
 DROP TABLE IF EXISTS public.betrokkeneRelaties CASCADE;
@@ -357,8 +460,13 @@ CREATE TABLE IF NOT EXISTS public.betrokkeneRelaties
     uuid uuid NOT NULL,
     doelUuid uuid NOT NULL,
     bronUuid uuid NOT NULL,
+    bronAgentUuid uuid,
+    bronAssetUuid uuid,
     rol text COLLATE pg_catalog."default",
     actief boolean NOT NULL,
+    contact_info json,
+    startDatum TIMESTAMP WITH TIME ZONE,
+    eindDatum TIMESTAMP WITH TIME ZONE,
     CONSTRAINT betrokkeneRelaties_pkey PRIMARY KEY (uuid)
 );
 
@@ -369,6 +477,22 @@ ALTER TABLE IF EXISTS public.betrokkeneRelaties
     ADD CONSTRAINT betrokkeneRelaties_agents_fkey
     FOREIGN KEY (doelUuid)
     REFERENCES public.agents (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+ALTER TABLE IF EXISTS public.betrokkeneRelaties
+    ADD CONSTRAINT betrokkeneRelaties_bron_agents_fkey
+    FOREIGN KEY (bronAgentUuid)
+    REFERENCES public.agents (uuid) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
+ALTER TABLE IF EXISTS public.betrokkeneRelaties
+    ADD CONSTRAINT betrokkeneRelaties_bron_assets_fkey
+    FOREIGN KEY (bronAssetUuid)
+    REFERENCES public.assets (uuid) MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
@@ -397,7 +521,7 @@ CREATE TABLE IF NOT EXISTS public.assetRelaties
     bronUuid uuid NOT NULL,
     doelUuid uuid NOT NULL,
     relatietype uuid NOT NULL,
-    attributen text COLLATE pg_catalog."default",
+    attributen json,
     actief boolean NOT NULL,
     CONSTRAINT assetRelaties_pkey PRIMARY KEY (uuid)
 );
@@ -457,4 +581,34 @@ SELECT 'identiteiten', count(*) FROM identiteiten
 UNION ALL
 SELECT 'relatietypes', count(*) FROM relatietypes
 UNION ALL
-SELECT 'toezichtgroepen', count(*) FROM toezichtgroepen;
+SELECT 'toezichtgroepen', count(*) FROM toezichtgroepen
+UNION ALL
+SELECT 'vplan_koppelingen', count(*) FROM vplan_koppelingen;
+
+CREATE VIEW assets_geometry AS
+SELECT assets.uuid
+	, CASE WHEN g.geometry IS NULL THEN l.geometry ELSE g.geometry END AS asset_geometry
+	, CASE WHEN g.wkt_string IS NULL THEN l.geometrie ELSE g.wkt_string END AS asset_wkt_string
+FROM assets
+LEFT JOIN locatie l ON l.assetuuid = assets.uuid
+LEFT JOIN geometrie g ON g.assetuuid = assets.uuid;
+
+CREATE VIEW bevestiging_relaties AS
+SELECT * FROM assetrelaties a
+WHERE a.relatietype = '3ff9bf1c-d852-442e-a044-6200fe064b20'; -- Bevestiging
+
+CREATE VIEW sturing_relaties AS
+SELECT * FROM assetrelaties a
+WHERE a.relatietype = '93c88f93-6e8c-4af3-a723-7e7a6d6956ac'; -- Sturing
+
+CREATE VIEW hoortbij_relaties AS
+SELECT * FROM assetrelaties a
+WHERE a.relatietype = '812dd4f3-c34e-43d1-88f1-3bcd0b1e89c2'; -- HoortBij
+
+CREATE VIEW voedt_relaties AS
+SELECT * FROM assetrelaties a
+WHERE a.relatietype = 'f2c5c4a1-0899-4053-b3b3-2d662c717b44'; -- Voedt
+
+CREATE VIEW ligtop_relaties AS
+SELECT * FROM assetrelaties a
+WHERE a.relatietype = '321c18b8-92ca-4188-a28a-f00cdfaa0e31'; -- LigtOp

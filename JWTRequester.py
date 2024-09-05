@@ -1,5 +1,6 @@
 import datetime
 import json
+import logging
 import sys
 from pathlib import Path
 
@@ -23,7 +24,7 @@ class JWTRequester(requests.Session):
         self.first_part_url: str = first_part_url
 
         self.oauth_token: str = ''
-        self.expires: datetime.datetime = datetime.datetime.now() - datetime.timedelta(seconds=1)
+        self.expires: datetime.datetime = datetime.datetime.utcnow() - datetime.timedelta(seconds=1)
         self.requested_at: datetime.datetime = self.expires
         super().__init__()
 
@@ -48,7 +49,7 @@ class JWTRequester(requests.Session):
         return super().delete(url=self.first_part_url + url, **kwargs)
 
     def get_oauth_token(self) -> str:
-        if self.expires > datetime.datetime.now():
+        if self.expires > datetime.datetime.utcnow():
             return self.oauth_token
 
         authentication_token = self.generate_authentication_token()
@@ -112,7 +113,7 @@ class JWTRequester(requests.Session):
 
         # Check for HTTP codes other than 200
         if response.status_code != 200:
-            print('Status:', response.status_code, 'Headers:', response.headers, 'Error Response:', response.content)
+            logging.error('Status:', response.status_code, 'Headers:', response.headers, 'Error Response:', response.content)
             raise RuntimeError(f'Could not get the acces token: {response.content}')
 
         response_json = response.json()
@@ -127,3 +128,4 @@ class SingletonJWTRequester(JWTRequester):
         if cls.instance is None:
             cls.instance = super(SingletonJWTRequester, cls).__new__(cls)
         return cls.instance
+

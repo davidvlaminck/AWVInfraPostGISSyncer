@@ -12,20 +12,7 @@ from SettingsManager import SettingsManager
 
 class AgentSyncerTests(TestCase):
     def setup(self):
-        settings_manager = SettingsManager(
-            settings_path='/home/davidlinux/Documents/AWV/resources/settings_AwvinfraPostGISSyncer.json')
-        unittest_db_settings = settings_manager.settings['databases']['unittest']
 
-        conn = connect(host=unittest_db_settings['host'], port=unittest_db_settings['port'],
-                       user=unittest_db_settings['user'], password=unittest_db_settings['password'],
-                       database="postgres")
-        conn.autocommit = True
-
-        cursor = conn.cursor()
-        cursor.execute('DROP DATABASE IF EXISTS unittests;')
-        cursor.execute('CREATE DATABASE unittests;')
-
-        conn.close()
 
         self.connector = PostGISConnector(host=unittest_db_settings['host'], port=unittest_db_settings['port'],
                                           user=unittest_db_settings['user'], password=unittest_db_settings['password'],
@@ -36,7 +23,7 @@ class AgentSyncerTests(TestCase):
         request_handler = RequestHandler(requester)
         self.eminfra_importer = EMInfraImporter(request_handler)
 
-        self.agents_syncer = AgentSyncer(postGIS_connector=self.connector, emInfraImporter=self.eminfra_importer)
+        self.agents_syncer = AgentSyncer(postgis_connector=self.connector, eminfra_importer=self.eminfra_importer)
 
     def test_update_agents(self):
         self.setup()
@@ -70,7 +57,7 @@ class AgentSyncerTests(TestCase):
                   {'@type': 'http://purl.org/dc/terms/Agent',
                    '@id': 'https://data.awvvlaanderen.be/id/asset/d2d0b44c-f8ba-4780-a3e7-664988a6db66',
                    'purl:Agent.naam': 'unit test changed'}]
-        self.agents_syncer.update_agents(agent_dicts=agents)
+        self.agents_syncer.update_objects(object_dicts=agents)
 
         with self.subTest('name check after the first agent updated'):
             cursor.execute(select_agent_query.replace('{uuid}', 'd2d0b44c-f8ba-4780-a3e7-664988a6db66'))

@@ -2,19 +2,30 @@ import logging
 from collections import namedtuple
 
 from EMInfraImporter import EMInfraImporter
+from ResourceEnum import colorama_table
 
 EventParams = namedtuple('EventParams', 'event_dict page_num event_uuid')
 
 
 class FeedEventsCollector:
-    def __init__(self, em_infra_importer: EMInfraImporter):
-        self.em_infra_importer = em_infra_importer
+    def __init__(self, eminfra_importer: EMInfraImporter):
+        self.eminfra_importer = eminfra_importer
+        self.resource: str = ''
 
-    def collect_starting_from_page(self, completed_page_number: int, completed_event_id: str, page_size: int) -> EventParams:
+    def collect_starting_from_page(self, completed_page_number: int, completed_event_id: str, page_size: int,
+                                   resource: str) -> EventParams:
         event_dict = self.create_empty_event_dict()
         searching_where_stopped = True
+
+        uuids_string = f'{resource[:-1]}-uuids'
+        if uuids_string in ['asset-uuids', 'assetrelatie-uuids']:
+            uuids_string = 'uuids'
+        if resource == 'betrokkenerelaties':
+            uuids_string = 'betrokkene-relatie-uuids'
+
         while True:
-            page = self.em_infra_importer.get_events_from_page(page_num=completed_page_number, page_size=page_size)
+            page = self.eminfra_importer.get_events_from_proxyfeed(
+                page_num=completed_page_number, page_size=page_size, resource=self.resource)
             stop_after_this_page = False
             last_event_id = ''
 
@@ -32,7 +43,8 @@ class FeedEventsCollector:
                     searching_where_stopped = False
                     continue
                 event_type = entry_value['event-type']
-                event_uuids = entry_value['uuids']
+
+                event_uuids = entry_value[uuids_string]
                 event_dict[event_type].update(event_uuids)
 
                 next_page = next((link for link in page['links'] if link['rel'] == 'previous'), None)
@@ -52,7 +64,7 @@ class FeedEventsCollector:
                 links = page['links']
                 if len(entries) > 0:
                     last_event = entries[-1]
-                    logging.info(f"processing event of {last_event['updated']}")
+                    logging.info(colorama_table[resource] + f"processing event of {last_event['updated']}")
 
                 page_num = next(link for link in links if link['rel'] == 'self')['href'].split('/')[1]
 
@@ -63,12 +75,4 @@ class FeedEventsCollector:
 
     @staticmethod
     def create_empty_event_dict() -> {}:
-        empty_dict = {}
-        for event_type in ["ACTIEF_GEWIJZIGD", "BESTEK_GEWIJZIGD", "BETROKKENE_RELATIES_GEWIJZIGD", "COMMENTAAR_GEWIJZIGD",
-                           "COMMUNICATIEAANSLUITING_GEWIJZIGD", "DOCUMENTEN_GEWIJZIGD", "EIGENSCHAPPEN_GEWIJZIGD",
-                           "ELEKTRICITEITSAANSLUITING_GEWIJZIGD", "GEOMETRIE_GEWIJZIGD", "LOCATIE_GEWIJZIGD", "NAAM_GEWIJZIGD",
-                           "NAAMPAD_GEWIJZIGD", "NIEUW_ONDERDEEL", "NIEUWE_INSTALLATIE", "PARENT_GEWIJZIGD", "POSTIT_GEWIJZIGD",
-                           "RELATIES_GEWIJZIGD", "SCHADEBEHEERDER_GEWIJZIGD", "TOEGANG_GEWIJZIGD", "TOESTAND_GEWIJZIGD",
-                           "TOEZICHT_GEWIJZIGD", "VPLAN_GEWIJZIGD"]:
-            empty_dict[event_type] = set()
-        return empty_dict
+        raise not NotImplementedError('implement this abstract method')

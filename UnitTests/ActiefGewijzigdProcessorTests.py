@@ -3,9 +3,8 @@ from unittest import TestCase
 from psycopg2 import connect
 
 from AssetSyncer import AssetSyncer
-from AssetTypeSyncer import AssetTypeSyncer
 from EMInfraImporter import EMInfraImporter
-from EventProcessors.ActiefGewijzigdProcessor import ActiefGewijzigdProcessor
+from EventProcessors.AssetProcessors.ActiefGewijzigdProcessor import ActiefGewijzigdProcessor
 from PostGISConnector import PostGISConnector
 from RequestHandler import RequestHandler
 from RequesterFactory import RequesterFactory
@@ -14,20 +13,7 @@ from SettingsManager import SettingsManager
 
 class ActiefGewijzigdProcessorTests(TestCase):
     def setup(self):
-        settings_manager = SettingsManager(
-            settings_path='/home/davidlinux/Documents/AWV/resources/settings_AwvinfraPostGISSyncer.json')
-        unittest_db_settings = settings_manager.settings['databases']['unittest']
 
-        conn = connect(host=unittest_db_settings['host'], port=unittest_db_settings['port'],
-                       user=unittest_db_settings['user'], password=unittest_db_settings['password'],
-                       database="postgres")
-        conn.autocommit = True
-
-        cursor = conn.cursor()
-        cursor.execute('DROP DATABASE IF EXISTS unittests;')
-        cursor.execute('CREATE DATABASE unittests;')
-
-        conn.close()
 
         self.connector = PostGISConnector(host=unittest_db_settings['host'], port=unittest_db_settings['port'],
                                           user=unittest_db_settings['user'], password=unittest_db_settings['password'],
@@ -39,7 +25,7 @@ class ActiefGewijzigdProcessorTests(TestCase):
         self.eminfra_importer = EMInfraImporter(request_handler)
 
         self.processor = ActiefGewijzigdProcessor(cursor=self.connector.connection.cursor(),
-                                                    em_infra_importer=self.eminfra_importer)
+                                                  eminfra_importer=self.eminfra_importer)
         self.assettypes_syncer = AssetTypeSyncer(postGIS_connector=self.connector,
                                                  emInfraImporter=self.eminfra_importer)
         self.assets_syncer = AssetSyncer(postgis_connector=self.connector, em_infra_importer=self.eminfra_importer)
@@ -59,7 +45,7 @@ class ActiefGewijzigdProcessorTests(TestCase):
             result = cursor.fetchone()[0]
             self.assertEqual(True, result)
 
-        self.processor.em_infra_importer.import_assets_from_webservice_by_uuids = self.return_new_asset_dicts
+        self.processor.eminfra_importer.import_assets_from_webservice_by_uuids = self.return_new_asset_dicts
 
         self.processor.process(['00000453-56ce-4f8b-af44-960df526cb30', '00088892-53a8-4dfc-a2c9-875cab2d7e11'])
 

@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 from psycopg2 import connect
 
 from EMInfraImporter import EMInfraImporter
-from EventProcessors.AssetRelatiesGewijzigdProcessor import AssetRelatiesGewijzigdProcessor
+from EventProcessors.AssetProcessors.AssetRelatiesGewijzigdProcessor import AssetRelatiesGewijzigdProcessor
 from Exceptions.AssetMissingError import AssetMissingError
 from PostGISConnector import PostGISConnector
 from SettingsManager import SettingsManager
@@ -12,20 +12,6 @@ from SettingsManager import SettingsManager
 
 class AssetRelatieProcessorTests(TestCase):
     def setup(self):
-        settings_manager = SettingsManager(
-            settings_path='/home/davidlinux/Documents/AWV/resources/settings_AwvinfraPostGISSyncer.json')
-        unittest_db_settings = settings_manager.settings['databases']['unittest']
-
-        conn = connect(host=unittest_db_settings['host'], port=unittest_db_settings['port'],
-                       user=unittest_db_settings['user'], password=unittest_db_settings['password'],
-                       database="postgres")
-        conn.autocommit = True
-
-        cursor = conn.cursor()
-        cursor.execute('DROP database unittests;')
-        cursor.execute('CREATE database unittests;')
-
-        conn.close()
 
         self.connector = PostGISConnector(host=unittest_db_settings['host'], port=unittest_db_settings['port'],
                                           user=unittest_db_settings['user'], password=unittest_db_settings['password'],
@@ -64,9 +50,9 @@ class AssetRelatieProcessorTests(TestCase):
             result = cursor.fetchone()[0]
             self.assertEqual(1, result)
 
-        processor = AssetRelatiesGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer,
+        processor = AssetRelatiesGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer,
                                                     connector=self.connector)
-        processor.em_infra_importer.import_assetrelaties_from_webservice_by_assetuuids = self.return_assetrelaties
+        processor.eminfra_importer.import_assetrelaties_from_webservice_by_assetuuids = self.return_assetrelaties
 
         processor.process(['10000000-0000-0000-0000-000000000000', '20000000-0000-0000-0000-000000000000',
                            '30000000-0000-0000-0000-000000000000', '40000000-0000-0000-0000-000000000000'])
@@ -100,9 +86,9 @@ class AssetRelatieProcessorTests(TestCase):
 
         self.connector.commit_transaction()
 
-        processor = AssetRelatiesGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer,
+        processor = AssetRelatiesGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer,
                                                     connector=self.connector)
-        processor.em_infra_importer.import_assetrelaties_from_webservice_by_assetuuids = self.return_assetrelaties
+        processor.eminfra_importer.import_assetrelaties_from_webservice_by_assetuuids = self.return_assetrelaties
 
         with self.assertRaises(AssetMissingError) as exc:
             processor.process(['10000000-0000-0000-0000-000000000000', '20000000-0000-0000-0000-000000000000',

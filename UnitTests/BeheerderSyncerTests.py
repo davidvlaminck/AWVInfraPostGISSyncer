@@ -11,20 +11,7 @@ from SettingsManager import SettingsManager
 
 class BeheerderSyncerTests(TestCase):
     def setup(self):
-        settings_manager = SettingsManager(
-            settings_path='/home/davidlinux/Documents/AWV/resources/settings_AwvinfraPostGISSyncer.json')
-        unittest_db_settings = settings_manager.settings['databases']['unittest']
 
-        conn = connect(host=unittest_db_settings['host'], port=unittest_db_settings['port'],
-                       user=unittest_db_settings['user'], password=unittest_db_settings['password'],
-                       database="postgres")
-        conn.autocommit = True
-
-        cursor = conn.cursor()
-        cursor.execute('DROP DATABASE IF EXISTS unittests;')
-        cursor.execute('CREATE DATABASE unittests;')
-
-        conn.close()
 
         self.connector = PostGISConnector(host=unittest_db_settings['host'], port=unittest_db_settings['port'],
                                           user=unittest_db_settings['user'], password=unittest_db_settings['password'],
@@ -56,8 +43,8 @@ class BeheerderSyncerTests(TestCase):
         self.beheerder_syncer = BeheerderSyncer(postgis_connector=self.connector,
                                                 em_infra_importer=self.eminfra_importer)
 
-        self.beheerder_syncer.em_infra_importer.import_beheerders_from_webservice_page_by_page = self.return_beheerders
-        self.beheerder_syncer.sync_beheerders()
+        self.beheerder_syncer.eminfra_importer.import_beheerders_from_webservice_page_by_page = self.return_beheerders
+        self.beheerder_syncer.fill_beheerders()
 
         with self.subTest('name check after the first beheerder updated'):
             cursor.execute(select_beheerder_query.replace('{uuid}', '10000000-0000-0000-0000-000000000000'))

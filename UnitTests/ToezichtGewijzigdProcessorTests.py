@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 from psycopg2 import connect
 
 from EMInfraImporter import EMInfraImporter
-from EventProcessors.ToezichtGewijzigdProcessor import ToezichtGewijzigdProcessor
+from EventProcessors.AssetProcessors.ToezichtGewijzigdProcessor import ToezichtGewijzigdProcessor
 from Exceptions.IdentiteitMissingError import IdentiteitMissingError
 from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 from PostGISConnector import PostGISConnector
@@ -13,20 +13,7 @@ from SettingsManager import SettingsManager
 
 class ToezichtGewijzigdProcessorTests(TestCase):
     def setup(self):
-        settings_manager = SettingsManager(
-            settings_path='/home/davidlinux/Documents/AWV/resources/settings_AwvinfraPostGISSyncer.json')
-        unittest_db_settings = settings_manager.settings['databases']['unittest']
 
-        conn = connect(host=unittest_db_settings['host'], port=unittest_db_settings['port'],
-                       user=unittest_db_settings['user'], password=unittest_db_settings['password'],
-                       database="postgres")
-        conn.autocommit = True
-
-        cursor = conn.cursor()
-        cursor.execute('DROP database unittests;')
-        cursor.execute('CREATE database unittests;')
-
-        conn.close()
 
         self.connector = PostGISConnector(host=unittest_db_settings['host'], port=unittest_db_settings['port'],
                                           user=unittest_db_settings['user'], password=unittest_db_settings['password'],
@@ -43,8 +30,8 @@ class ToezichtGewijzigdProcessorTests(TestCase):
         self.set_up_toezichtgroepen(cursor)
         self.set_up_assets(cursor)
 
-        processor = ToezichtGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer)
-        processor.em_infra_importer.import_assets_from_webservice_by_uuids = self.return_assets
+        processor = ToezichtGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer)
+        processor.eminfra_importer.import_assets_from_webservice_by_uuids = self.return_assets
 
         select_toezichter_query = "SELECT toezichter FROM assets WHERE uuid = '{uuid}'"
         select_toezichtgroep_query = "SELECT toezichtgroep FROM assets WHERE uuid = '{uuid}'"
@@ -107,8 +94,8 @@ class ToezichtGewijzigdProcessorTests(TestCase):
 
         self.connector.commit_transaction()
 
-        processor = ToezichtGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer)
-        processor.em_infra_importer.import_assets_from_webservice_by_uuids = self.return_assets
+        processor = ToezichtGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer)
+        processor.eminfra_importer.import_assets_from_webservice_by_uuids = self.return_assets
 
         with self.assertRaises(ToezichtgroepMissingError):
             processor.process(['00000000-0000-1000-0000-000000000000'])
@@ -122,8 +109,8 @@ class ToezichtGewijzigdProcessorTests(TestCase):
 
         self.connector.commit_transaction()
 
-        processor = ToezichtGewijzigdProcessor(cursor=cursor, em_infra_importer=self.eminfra_importer)
-        processor.em_infra_importer.import_assets_from_webservice_by_uuids = self.return_assets
+        processor = ToezichtGewijzigdProcessor(cursor=cursor, eminfra_importer=self.eminfra_importer)
+        processor.eminfra_importer.import_assets_from_webservice_by_uuids = self.return_assets
 
         with self.assertRaises(IdentiteitMissingError):
             processor.process(['00000000-0000-1000-0000-000000000000'])
