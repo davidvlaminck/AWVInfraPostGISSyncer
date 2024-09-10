@@ -62,7 +62,8 @@ class PostGISConnector:
             'last_update_utc_controlefiches': 'timestamp',
         }
 
-    def set_up_tables(self, file_path=Path(THIS_DIR / 'setup_tables_querys.sql')):
+    def set_up_tables(self, file_path=Path(THIS_DIR / 'setup_tables_querys.sql'),
+                      file_path_gemeentes=Path(THIS_DIR / 'setup_gemeentes.sql')):
         # create drop views query's with:
         drop_views_query = """
         SELECT 'DROP VIEW ' || table_name || ' CASCADE;'
@@ -75,6 +76,13 @@ class PostGISConnector:
             query = ' '.join(queries)
             cursor.execute(query)
             self.main_connection.commit()
+
+        if file_path_gemeentes is not None:
+            with open(file_path_gemeentes) as setup_queries:
+                queries = setup_queries.readlines()
+                query = ' '.join(queries)
+                cursor.execute(query)
+                self.main_connection.commit()
 
         cursor.execute('CREATE SCHEMA IF NOT EXISTS asset_views;')
         cursor.execute('CREATE SCHEMA IF NOT EXISTS asset_daily_views;')

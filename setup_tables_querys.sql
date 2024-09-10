@@ -612,3 +612,14 @@ WHERE a.relatietype = 'f2c5c4a1-0899-4053-b3b3-2d662c717b44'; -- Voedt
 CREATE VIEW ligtop_relaties AS
 SELECT * FROM assetrelaties a
 WHERE a.relatietype = '321c18b8-92ca-4188-a28a-f00cdfaa0e31'; -- LigtOp
+
+CREATE TABLE public.gemeente (
+	gemeente varchar(64) NULL,
+	niscode varchar(5) NULL,
+	provincie varchar NULL,
+	geom public.geometry(geometry, 31370) NULL,
+	CONSTRAINT gemeente_gemeente_key UNIQUE (gemeente),
+	CONSTRAINT gemeente_niscode_key UNIQUE (niscode)
+);
+CREATE INDEX gemeente_geom_sidx ON public.gemeente USING gist (geom);
+CREATE INDEX gemeente_provincie_key ON public.gemeente USING btree (provincie);
