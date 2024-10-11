@@ -613,6 +613,7 @@ CREATE VIEW ligtop_relaties AS
 SELECT * FROM assetrelaties a
 WHERE a.relatietype = '321c18b8-92ca-4188-a28a-f00cdfaa0e31'; -- LigtOp
 
+DROP TABLE IF EXISTS public.gemeente CASCADE;
 CREATE TABLE public.gemeente (
 	gemeente varchar(64) NULL,
 	niscode varchar(5) NULL,
