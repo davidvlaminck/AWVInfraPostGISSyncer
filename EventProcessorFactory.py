@@ -78,6 +78,8 @@ class EventProcessorFactory:
             return BestekGewijzigdProcessor(eminfra_importer)
         elif event_type == 'BETROKKENE_RELATIES_GEWIJZIGD':
             pass  # using different feed instead
+        elif event_type == 'BETROKKENE_RELATIES_EIGENSCHAPPEN_GEWIJZIGD':
+            pass  # using different feed instead
         elif event_type == 'COMMENTAAR_GEWIJZIGD':
             return CommentaarGewijzigdProcessor(eminfra_importer)
         elif event_type == 'COMMUNICATIEAANSLUITING_GEWIJZIGD':
@@ -95,6 +97,8 @@ class EventProcessorFactory:
         elif event_type == 'POSTIT_GEWIJZIGD':
             pass
         elif event_type == 'RELATIES_GEWIJZIGD':
+            pass  # using different feed instead
+        elif event_type == 'RELATIES_EIGENSCHAPPEN_GEWIJZIGD':
             pass  # using different feed instead
         elif event_type == 'SCHADEBEHEERDER_GEWIJZIGD':
             return SchadebeheerderGewijzigdProcessor(eminfra_importer)
@@ -127,6 +131,8 @@ class EventProcessorFactory:
             return AgentOvocodeGewijzigdProcessor(eminfra_importer=eminfra_importer)
         elif event_type == 'BETROKKENE_RELATIES_GEWIJZIGD':
             pass  # using different feed instead
+        elif event_type == 'BETROKKENE_RELATIES_EIGENSCHAPPEN_GEWIJZIGD':
+            pass  # using different feed instead
         else:
             raise NotImplementedError(f"can't create an agent event processor with type: {event_type}")
 
@@ -148,7 +154,7 @@ class EventProcessorFactory:
         elif event_type == 'REDEN_GEWIJZIGD':
             pass  # this event only adds info about why the relation was made
         else:
-            raise NotImplementedError(f"can't create an betrokkenerelatie event processor with type: {event_type}")
+            raise NotImplementedError(f"can't create a betrokkenerelatie event processor with type: {event_type}")
 
     @classmethod
     def create_assetrelatie_event_processor(cls, event_type: str, eminfra_importer: EMInfraImporter) -> \
