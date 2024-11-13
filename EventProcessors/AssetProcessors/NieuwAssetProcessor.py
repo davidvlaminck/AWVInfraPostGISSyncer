@@ -11,7 +11,7 @@ class NieuwAssetProcessor(SpecificEventProcessor):
         super().__init__(eminfra_importer)
 
     def process(self, uuids: [str], connection):
-        logging.info(f'started creating assets')
+        logging.info('started creating assets')
         start = time.time()
 
         asset_count = 0
