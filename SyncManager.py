@@ -47,7 +47,7 @@ class SyncManager:
         self.eminfra_importer = eminfra_importer
         self.events_collector = FeedEventsCollector(eminfra_importer)
         self.events_processor = FeedEventsProcessor(connector, eminfra_importer=eminfra_importer)
-        self.feeds = ['assets', 'agents', 'assetrelaties', 'betrokkenerelaties', 'controlefiches']
+        self.feeds = ['assets', 'agents', 'assetrelaties', 'betrokkenerelaties'] # removed controlefiches
         self.settings = settings
         if 'time' in self.settings:
             SyncTimer.sync_start = self.settings['time']['start']
