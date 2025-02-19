@@ -27,7 +27,7 @@ class ActiefGewijzigdProcessor(SpecificEventProcessor):
         for asset_dict in assets_dicts:
             counter += 1
             uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]
-            actief = asset_dict['AIMDBStatus.isActief']
+            actief = asset_dict.get('AIMDBStatus.isActief', True)
             values += f"('{uuid}',{actief}),"
 
         return values, counter
