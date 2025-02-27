@@ -34,9 +34,6 @@ class SyncerFactory:
         elif feed == 'betrokkenerelaties':
             time.sleep(4)
             return BetrokkeneRelatieSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
-        elif feed == 'controlefiches':
-            time.sleep(5)
-            return ControleficheSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
 
 
 class SyncManager:
@@ -86,7 +83,7 @@ class SyncManager:
 
     def perform_multiprocessing_syncing(self, stop_when_fully_synced: bool):
         # use multithreading
-        with ThreadPoolExecutor(5) as executor:
+        with ThreadPoolExecutor() as executor:
             futures = [executor.submit(self.start_sync_by_feed, feed=feed, stop_when_fully_synced=stop_when_fully_synced)
                        for feed in self.feeds]
             concurrent.futures.wait(futures, return_when=concurrent.futures.ALL_COMPLETED)
