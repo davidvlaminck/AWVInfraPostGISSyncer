@@ -26,7 +26,7 @@ class NaamGewijzigdProcessor(SpecificEventProcessor):
         counter = 0
         for asset_dict in assets_dicts:
             counter += 1
-            uuid = asset_dict['uuid'][0:36]
+            uuid = asset_dict['uuid'][:36]
 
             naam = None
             if 'naam' in asset_dict:
