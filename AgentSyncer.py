@@ -1,6 +1,6 @@
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from requests.exceptions import ConnectionError
 
@@ -48,7 +48,7 @@ class AgentSyncer:
                     total_events = sum(len(lists) for lists in eventsparams_to_process.event_dict.values())
                     if total_events == 0:
                         logging.info(f"{self.color}The database is fully synced for agents. Continuing keep up to date in 30 seconds")
-                        self.postgis_connector.update_params(params={'last_update_utc_agents': datetime.utcnow()},
+                        self.postgis_connector.update_params(params={'last_update_utc_agents': datetime.now(timezone.utc)},
                                                              connection=connection)
                         if stop_when_fully_synced:
                             break

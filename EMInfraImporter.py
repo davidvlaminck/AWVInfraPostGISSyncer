@@ -169,6 +169,7 @@ class EMInfraImporter:
                                               filter_string: str = '{}', size: int = 100, contact_info: bool = False,
                                               expansions_string: str = '{}') -> [dict]:
         url = f'core/api/otl/{url_part}/search'
+        local_cursor = ''
         # if contact_info:
         #     url += '?expand=contactInfo'
         body_fixed_part = '{"size": ' + f'{size}' + ''
@@ -179,23 +180,34 @@ class EMInfraImporter:
 
         json_list = []
 
-        body = body_fixed_part
-        if cursor_name is not None and self.paging_cursors[cursor_name] != '':
-            body += ', "fromCursor": ' + f'"{self.paging_cursors[cursor_name]}"'
-        body += '}'
-        json_data = json.loads(body)
+        while True:
+            body = body_fixed_part
+            if cursor_name is not None and self.paging_cursors[cursor_name] != '':
+                body += ', "fromCursor": ' + f'"{self.paging_cursors[cursor_name]}"'
+            elif local_cursor != '':
+                body += ', "fromCursor": ' + f'"{local_cursor}"'
+            body += '}'
+            json_data = json.loads(body)
 
-        response = self.request_handler.perform_post_request(url=url, json_data=json_data)
+            response = self.request_handler.perform_post_request(url=url, json_data=json_data)
 
-        decoded_string = response.content.decode("utf-8")
-        dict_obj = json.loads(decoded_string)
-        keys = response.headers.keys()
-        json_list.extend(dict_obj['@graph'])
-        if cursor_name is not None:
-            if 'em-paging-next-cursor' in keys:
-                self.paging_cursors[cursor_name] = response.headers['em-paging-next-cursor']
+            decoded_string = response.content.decode("utf-8")
+            dict_obj = json.loads(decoded_string)
+            keys = response.headers.keys()
+            json_list.extend(dict_obj['@graph'])
+            if cursor_name is not None:
+                if 'em-paging-next-cursor' in keys:
+                    self.paging_cursors[cursor_name] = response.headers['em-paging-next-cursor']
+                    break
+                else:
+                    self.paging_cursors[cursor_name] = ''
+                    break
             else:
-                self.paging_cursors[cursor_name] = ''
+                if 'em-paging-next-cursor' in keys:
+                    local_cursor = response.headers['em-paging-next-cursor']
+                else:
+                    local_cursor = ''
+                    break
 
         yield from json_list
 

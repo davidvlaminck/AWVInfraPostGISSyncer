@@ -1,7 +1,7 @@
-import datetime
 import json
 import logging
 import sys
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 import jwt  # pip install pyjwt and cryptography
@@ -24,8 +24,8 @@ class JWTRequester(requests.Session):
         self.first_part_url: str = first_part_url
 
         self.oauth_token: str = ''
-        self.expires: datetime.datetime = datetime.datetime.utcnow() - datetime.timedelta(seconds=1)
-        self.requested_at: datetime.datetime = self.expires
+        self.expires: datetime = datetime.now(timezone.utc)- timedelta(seconds=1)
+        self.requested_at: datetime = self.expires
         super().__init__()
 
     def get(self, url='', **kwargs) -> Response:
@@ -49,12 +49,12 @@ class JWTRequester(requests.Session):
         return super().delete(url=self.first_part_url + url, **kwargs)
 
     def get_oauth_token(self) -> str:
-        if self.expires > datetime.datetime.utcnow():
+        if self.expires > datetime.now(timezone.utc):
             return self.oauth_token
 
         authentication_token = self.generate_authentication_token()
         self.oauth_token, expires_in = self.get_access_token(authentication_token)
-        self.expires = self.requested_at + datetime.timedelta(seconds=expires_in) - datetime.timedelta(minutes=1)
+        self.expires = self.requested_at + timedelta(seconds=expires_in) - timedelta(minutes=1)
 
         return self.oauth_token
 
@@ -81,12 +81,12 @@ class JWTRequester(requests.Session):
         return kwargs
 
     def generate_authentication_token(self) -> str:
-        self.requested_at = datetime.datetime.utcnow()
+        self.requested_at = datetime.now(timezone.utc)
         # Authentication token generation
         payload = {'iss': self.client_id,
                    'sub': self.client_id,
                    'aud': 'https://authenticatie.vlaanderen.be/op',
-                   'exp': self.requested_at + datetime.timedelta(minutes=9),
+                   'exp': self.requested_at + timedelta(minutes=9),
                    'jti': ''.join(choice(string.ascii_lowercase) for _ in range(20))
                    }
 

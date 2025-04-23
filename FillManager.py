@@ -32,11 +32,11 @@ class FillManager:
     def fill(self, params: dict):
         logging.info('Filling the database with data')
         page_size = params['pagesize']
-        if 'page_assets' not in params or 'page_assetrelaties' not in params or 'page_controlefiches' not in params or \
-                        'page_agents' not in params or 'page_betrokkenerelaties' not in params:
+        if ('page_assets' not in params or 'page_assetrelaties' not in params or
+                'page_agents' not in params or 'page_betrokkenerelaties' not in params):
             logging.info('Getting the last pages for feeds')
             feeds = [ResourceEnum.assets.name, ResourceEnum.agents.name, ResourceEnum.assetrelaties.name,
-                     ResourceEnum.betrokkenerelaties.name, ResourceEnum.controlefiches.name]
+                     ResourceEnum.betrokkenerelaties.name]
 
             # use multithreading
             executor = ThreadPoolExecutor()

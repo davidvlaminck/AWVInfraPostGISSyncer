@@ -1,7 +1,7 @@
 import logging
 import time
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 
 from requests.exceptions import ConnectionError
 
@@ -55,7 +55,7 @@ class AssetRelatieSyncer:
                     if total_events == 0:
                         logging.info(f"{self.color}The database is fully synced for assetrelaties. "
                                      f"Continuing keep up to date in 30 seconds")
-                        self.postgis_connector.update_params(params={'last_update_utc_assetrelaties': datetime.utcnow()},
+                        self.postgis_connector.update_params(params={'last_update_utc_assetrelaties': datetime.now(timezone.utc)},
                                                              connection=connection)
                         if stop_when_fully_synced:
                             break
