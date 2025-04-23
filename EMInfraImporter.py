@@ -36,6 +36,13 @@ class EMInfraImporter:
         filter_string = '{ "uuid": ' + f'["{asset_list_string}"]' + ' }'
         yield from self.get_objects_from_oslo_search_endpoint(url_part='assets', filter_string=filter_string)
 
+    def import_assets_from_non_oslo_webservice_by_uuids(self, asset_uuids: [str]) -> [dict]:
+        zoek_params = ZoekParameterPayload()
+        zoek_params.expansions = {'fields': ['parent']}
+        zoek_params.add_term(property='id', value=list(asset_uuids), operator='IN')
+        yield from self.get_objects_from_non_oslo_endpoint(url_part='assets/search', zoek_payload=zoek_params,
+                                                           request_type='POST')
+
     def import_all_agents_from_webservice(self) -> [dict]:
         expansions_string = '{"fields": ["contactInfo"]}'
         return self.get_objects_from_oslo_search_endpoint(url_part='agents', expansions_string=expansions_string)
