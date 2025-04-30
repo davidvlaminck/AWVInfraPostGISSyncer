@@ -9,6 +9,7 @@ from Exceptions.AssetMissingError import AssetMissingError
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
 from Exceptions.AttribuutMissingError import AttribuutMissingError
 from Exceptions.BeheerderMissingError import BeheerderMissingError
+from Exceptions.BestekMissingError import BestekMissingError
 from Exceptions.FillResetError import FillResetError
 from Exceptions.IdentiteitMissingError import IdentiteitMissingError
 from Exceptions.RelatieTypeMissingError import RelatieTypeMissingError
@@ -87,6 +88,21 @@ class BaseFiller(ABC):
                     logging.info(self.color + 'Agent(s) missing while filling. This is normal behaviour. Trying again in 60 seconds')
                     self.intermittent_sleep(break_when=[self.fill_manager.reset_called])
                     continue
+            except BestekMissingError:
+                connection.rollback()
+                params = self.postgis_connector.get_params(connection)
+                if 'bestekken_fill' in params and params['bestekken_fill']:
+                    logging.info(self.color + 'Bestek(ken) missing while filling. This is normal behaviour. Trying '
+                                              'again in 60 seconds')
+                    self.intermittent_sleep(break_when=[self.fill_manager.reset_called])
+                    continue
+                else:
+                    logging.info(self.color + 'Refilling bestekken. Sending reset signal to all processes.')
+                    self.postgis_connector.update_params(
+                        params={'bestekken_fill': True},
+                        connection=connection)
+                    self.fill_manager.reset_called = True
+                    raise FillResetError()
             except (AssetTypeMissingError, AttribuutMissingError) as exc:
                 connection.rollback()
                 logging.error(type(exc))
