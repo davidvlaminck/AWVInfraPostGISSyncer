@@ -31,7 +31,8 @@ class AttributenGewijzigdProcessor(SpecificEventProcessor):
     def process_dicts(connection, asset_uuids, asset_dicts):
         AttributenGewijzigdProcessor.remove_existing_attributes(connection=connection, asset_uuids=asset_uuids)
         values_string, amount = AttributenGewijzigdProcessor.create_values_string_from_dicts(assets_dicts=asset_dicts)
-        AttributenGewijzigdProcessor.perform_update_with_values(connection=connection, values_string=values_string)
+        if values_string != '':
+            AttributenGewijzigdProcessor.perform_update_with_values(connection=connection, values_string=values_string)
         return amount
 
     @staticmethod
