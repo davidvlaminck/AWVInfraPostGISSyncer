@@ -27,6 +27,7 @@ class AssetFeedEventsCollector(FeedEventsCollector):
                 'NAAMPAD_GEWIJZIGD',
                 'NIEUW_ONDERDEEL',
                 'NIEUWE_INSTALLATIE',
+                'NIEUWE_AANLEIDING',
                 'NIEUWE_CONTROLEFICHE',
                 'NIEUWE_BEHEERACTIE',
                 'PARENT_GEWIJZIGD',

@@ -70,6 +70,8 @@ class EventProcessorFactory:
             return NieuwAssetProcessor(eminfra_importer)
         elif event_type == 'NIEUWE_CONTROLEFICHE':
             return NieuwAssetProcessor(eminfra_importer)
+        elif event_type == 'NIEUWE_AANLEIDING':
+            return NieuwAssetProcessor(eminfra_importer)
         elif event_type == 'NIEUWE_BEHEERACTIE':
             return NieuwAssetProcessor(eminfra_importer)
         elif event_type == 'ACTIEF_GEWIJZIGD':
