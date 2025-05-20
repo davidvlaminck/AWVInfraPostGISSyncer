@@ -24,8 +24,8 @@ class FeedEventsProcessor:
         event_dict = event_params.event_dict
 
         # process events of this type before moving on to the other events
-        process_first_list = ['NIEUW_ONDERDEEL', 'NIEUWE_INSTALLATIE', 'NIEUWE_AGENT', 'NIEUWE_RELATIE',
-                              'RELATIE_VERWIJDERD_ONGEDAAN', 'NIEUWE_CONTROLEFICHE', 'NIEUWE_BEHEERACTIE']
+        process_first_list = ['NIEUW_ONDERDEEL', 'NIEUWE_INSTALLATIE', 'NIEUWE_AANLEIDING', 'NIEUWE_AGENT',
+                              'NIEUWE_RELATIE', 'RELATIE_VERWIJDERD_ONGEDAAN', 'NIEUWE_CONTROLEFICHE', 'NIEUWE_BEHEERACTIE']
         for process_first_event in process_first_list:
             if process_first_event in event_dict.keys() and len(event_dict[process_first_event]) > 0:
                 event_processor = self.create_processor(process_first_event)
