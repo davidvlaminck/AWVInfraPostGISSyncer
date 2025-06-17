@@ -392,3 +392,12 @@ class EMInfraImporter:
     def get_eigenschappen_by_kenmerk_uuid(self, kenmerk_uuid: str):
         url_part = f'/kenmerktypes/{kenmerk_uuid}/eigenschappen'
         return list(self.get_objects_from_non_oslo_endpoint(url_part=url_part, request_type='GET'))
+
+    def get_eigenschap_by_naam(self, naam: str) -> [dict]:
+        zoek_params = ZoekParameterPayload()
+        zoek_params.add_term(property='naam', value=naam, operator='EQ')
+        result_list = []
+        for eig_object in self.get_objects_from_non_oslo_endpoint(url_part='eigenschappen/search',
+                                                                      request_type='POST', zoek_payload=zoek_params):
+            result_list.append(eig_object)
+        return result_list

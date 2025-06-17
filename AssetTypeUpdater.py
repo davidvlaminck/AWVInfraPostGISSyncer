@@ -17,18 +17,32 @@ class AssetTypeUpdater:
         if object_generator is None:
             return
 
+        logging.info('Adding assettypes')
         self.perform_upsert(connection, object_generator)
 
+        logging.info('Updating assettypes with bestek')
         self.update_assettypes_with_bestek(connection)
+        logging.info('Updating assettypes with geometrie')
         self.update_assettypes_with_geometrie(connection)
+        logging.info('Updating assettypes with locatie')
         self.update_assettypes_with_locatie(connection)
+        logging.info('Updating assettypes with beheerder')
         self.update_assettypes_with_beheerder(connection)
+        logging.info('Updating assettypes with toezicht')
         self.update_assettypes_with_toezicht(connection)
+        logging.info('Updating assettypes with gevoedDoor')
         self.update_assettypes_with_gevoed_door(connection)
+        logging.info('Updating assettypes with elek_aansluiting')
         self.update_assettypes_with_elek_aansluiting(connection)
+        logging.info('Updating assettypes with vplan')
         self.update_assettypes_with_vplan(connection)
+        logging.info('Updating assettypes with attributen')
         self.update_assettypes_with_attributen(connection, force_update=True)
+        logging.info('Creating views for assettypes with attributes')
         self.create_views_for_assettypes_with_attributes(connection)
+        logging.info('Assettypes updated')
+        connection.commit()
+
 
     @classmethod
     def perform_upsert(cls, connection, object_generator):
@@ -91,17 +105,38 @@ class AssetTypeUpdater:
         cursor.execute(select_query)
         assettypes_to_update = list(map(lambda x: (x[0], x[1]), cursor.fetchall()))
 
+        post_it_eig = self.eminfra_importer.get_eigenschap_by_naam('postIt')
+
+        counter = 0
         for assettype_uuid, uri in assettypes_to_update:
+            counter += 1
+            if counter % 100 == 0:
+                logging.info(f'Updating attributen for assettype number {counter}.')
             kenmerken = self.eminfra_importer.get_kenmerken_by_assettype_uuids(assettype_uuid=assettype_uuid)
+
+            remove_existing_koppelingen_query = f'DELETE FROM attribuutKoppelingen ' \
+                                                f"WHERE assettypeUuid = '{assettype_uuid}'::uuid;"
+            cursor.execute(remove_existing_koppelingen_query)
+
+            # post-it eigenschap
+            if post_it_eig is not None:
+                self.sync_attribuut_and_koppeling(assettype_uuid=assettype_uuid, cursor=cursor,
+                                                  attribuut={'eigenschap':post_it_eig[0], 'actief': True},
+                                                  force_update=force_update)
+
+            # standaard kenmerk
             eigenschappenkenmerk = list(filter(lambda x: x.get('standard', False), kenmerken))
             if eigenschappenkenmerk is not None and len(eigenschappenkenmerk) > 0:
                 attributen = self.eminfra_importer.get_eigenschappen_by_kenmerk_uuid(
                     kenmerk_uuid=eigenschappenkenmerk[0]['kenmerkType']['uuid'])
-
-                remove_existing_koppelingen_query = f'DELETE FROM attribuutKoppelingen ' \
-                                                    f"WHERE assettypeUuid = '{assettype_uuid}'::uuid;"
-                cursor.execute(remove_existing_koppelingen_query)
-
+                for attribuut in attributen:
+                    self.sync_attribuut_and_koppeling(assettype_uuid=assettype_uuid, attribuut=attribuut, cursor=cursor,
+                                                      force_update=force_update)
+            # vtc kenmerk
+            vtc_kenmerk = next((k for k in kenmerken if k['kenmerkType']['naam'] == 'VTC'), None)
+            if vtc_kenmerk is not None:
+                attributen = self.eminfra_importer.get_eigenschappen_by_kenmerk_uuid(
+                    kenmerk_uuid=vtc_kenmerk['kenmerkType']['uuid'])
                 for attribuut in attributen:
                     self.sync_attribuut_and_koppeling(assettype_uuid=assettype_uuid, attribuut=attribuut, cursor=cursor,
                                                       force_update=force_update)
