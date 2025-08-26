@@ -191,3 +191,4 @@ class BaseFiller(ABC):
     def add_missing_assets_after_fill(self, connection, asset_uuids):
         event_processor = NieuwAssetProcessor(eminfra_importer=self.eminfra_importer)
         event_processor.process(asset_uuids, connection=connection)
+        connection.commit()
