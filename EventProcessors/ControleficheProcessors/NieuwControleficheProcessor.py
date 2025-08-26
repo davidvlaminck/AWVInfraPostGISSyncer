@@ -15,8 +15,8 @@ class NieuwControleficheProcessor(SpecificEventProcessor):
         start = time.time()
 
         asset_count = 0
-        for uuids in chunked(uuids, 100):
-            generator = self.eminfra_importer.import_resource_from_webservice_by_uuids(uuids=uuids,
+        for uuids_chunk in chunked(uuids, 100):
+            generator = self.eminfra_importer.import_resource_from_webservice_by_uuids(uuids=uuids_chunk,
                                                                                        resource='controlefiches')
 
             asset_count += ControleficheUpdater.update_objects(object_generator=generator, connection=connection,

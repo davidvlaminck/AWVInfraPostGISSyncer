@@ -15,8 +15,8 @@ class NieuwAssetrelatieProcessor(SpecificEventProcessor):
         start = time.time()
 
         assetrelatie_count = 0
-        for uuids in chunked(uuids, 100):
-            generator = self.eminfra_importer.import_resource_from_webservice_by_uuids(uuids=uuids,
+        for uuids_chunk in chunked(uuids, 100):
+            generator = self.eminfra_importer.import_resource_from_webservice_by_uuids(uuids=uuids_chunk,
                                                                                        resource='assetrelaties')
 
             assetrelatie_count += AssetRelatiesUpdater.update_objects(

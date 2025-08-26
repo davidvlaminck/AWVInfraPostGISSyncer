@@ -16,8 +16,8 @@ class BetrokkenerelatieContactInfoGewijzigdProcessor(SpecificEventProcessor):
         start = time.time()
 
         betrokkenerelatie_count = 0
-        for uuids in chunked(uuids, 100):
-            generator = self.eminfra_importer.import_resource_from_webservice_by_uuids(uuids=uuids,
+        for uuids_chunk in chunked(uuids, 100):
+            generator = self.eminfra_importer.import_resource_from_webservice_by_uuids(uuids=uuids_chunk,
                                                                                        resource='betrokkenerelaties')
 
             betrokkenerelatie_count += self.update_contact_info(object_generator=generator, connection=connection)
@@ -34,6 +34,8 @@ class BetrokkenerelatieContactInfoGewijzigdProcessor(SpecificEventProcessor):
         values = ''
         counter = 0
         for betrokkenerelatie_dict in object_generator:
+            if betrokkenerelatie_dict is None:
+                continue
             counter += 1
             betrokkenerelatie_uuid = betrokkenerelatie_dict['@id'].split('/')[-1][0:36]
             contact_info_value = 'NULL'

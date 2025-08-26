@@ -16,8 +16,8 @@ class AssetrelatieEigenschappenGewijzigdProcessor(SpecificEventProcessor):
         start = time.time()
 
         assetrelatie_count = 0
-        for uuids in chunked(uuids, 100):
-            generator = self.eminfra_importer.import_resource_from_webservice_by_uuids(uuids=uuids,
+        for uuids_chunk in chunked(uuids, 100):
+            generator = self.eminfra_importer.import_resource_from_webservice_by_uuids(uuids=uuids_chunk,
                                                                                        resource='assetrelaties')
 
             assetrelatie_count += self.update_eigenschappen(object_generator=generator, connection=connection)
@@ -34,6 +34,8 @@ class AssetrelatieEigenschappenGewijzigdProcessor(SpecificEventProcessor):
         values = ''
         counter = 0
         for assetrelatie_dict in object_generator:
+            if assetrelatie_dict is None:
+                continue
             counter += 1
             assetrelatie_uuid = assetrelatie_dict['@id'].split('/')[-1][0:36]
 

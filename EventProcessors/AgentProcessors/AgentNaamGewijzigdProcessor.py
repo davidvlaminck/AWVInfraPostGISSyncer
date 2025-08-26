@@ -15,8 +15,8 @@ class AgentNaamGewijzigdProcessor(SpecificEventProcessor):
         start = time.time()
 
         agent_count = 0
-        for uuids in chunked(uuids, 100):
-            generator = self.eminfra_importer.import_resource_from_webservice_by_uuids(uuids=uuids, resource='agents')
+        for uuids_chunk in chunked(uuids, 100):
+            generator = self.eminfra_importer.import_resource_from_webservice_by_uuids(uuids=uuids_chunk, resource='agents')
 
             agent_count += self.update_name(object_generator=generator, connection=connection)
 
@@ -32,6 +32,8 @@ class AgentNaamGewijzigdProcessor(SpecificEventProcessor):
         values = ''
         counter = 0
         for agent_dict in object_generator:
+            if agent_dict is None:
+                continue
             counter += 1
             agent_uuid = agent_dict['@id'].split('/')[-1][0:36]
             agent_name = agent_dict['purl:Agent.naam'].replace("'", "''")

@@ -50,7 +50,7 @@ class BaseFiller(ABC):
 
                 object_generator = self.eminfra_importer.import_resource_from_webservice_page_by_page(
                     resource=self.resource, page_size=page_size)
-                if self.resource == 'assets':
+                if self.resource == ResourceEnum.assets:
                     self.updater.update_objects(object_generator=object_generator, connection=connection,
                                                 eminfra_importer=self.eminfra_importer)
                 else:

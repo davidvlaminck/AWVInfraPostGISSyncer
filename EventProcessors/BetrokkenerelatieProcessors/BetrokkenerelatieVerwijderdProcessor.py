@@ -15,8 +15,8 @@ class BetrokkenerelatieVerwijderdProcessor(SpecificEventProcessor):
         start = time.time()
 
         betrokkenerelatie_count = 0
-        for uuids in chunked(uuids, 100):
-            betrokkenerelatie_count += self.update_actief(object_generator=iter(uuids), connection=connection)
+        for uuids_chunk in chunked(uuids, 100):
+            betrokkenerelatie_count += self.update_actief(object_generator=iter(uuids_chunk), connection=connection)
 
         end = time.time()
         logging.info(f'removed {betrokkenerelatie_count} betrokkenerelaties in {str(round(end - start, 2))} seconds.')
@@ -30,6 +30,8 @@ class BetrokkenerelatieVerwijderdProcessor(SpecificEventProcessor):
         values = ''
         counter = 0
         for betrokkenerelatie_uuid in object_generator:
+            if betrokkenerelatie_uuid is None:
+                continue
             counter += 1
             betrokkenerelatie_actief = False
 

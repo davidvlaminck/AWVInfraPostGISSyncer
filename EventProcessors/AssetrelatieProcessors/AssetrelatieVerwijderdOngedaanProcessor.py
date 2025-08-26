@@ -15,8 +15,8 @@ class AssetrelatieVerwijderdOngedaanProcessor(SpecificEventProcessor):
         start = time.time()
 
         assetrelatie_count = 0
-        for uuids in chunked(uuids, 100):
-            assetrelatie_count += self.update_actief(object_generator=iter(uuids), connection=connection)
+        for uuids_chunk in chunked(uuids, 100):
+            assetrelatie_count += self.update_actief(object_generator=iter(uuids_chunk), connection=connection)
 
         end = time.time()
         logging.info(f'completed undo removal of {assetrelatie_count} assetrelaties in {str(round(end - start, 2))} seconds.')
@@ -30,6 +30,8 @@ class AssetrelatieVerwijderdOngedaanProcessor(SpecificEventProcessor):
         values = ''
         counter = 0
         for assetrelatie_uuid in object_generator:
+            if assetrelatie_uuid is None:
+                continue
             counter += 1
             assetrelatie_actief = True
 
