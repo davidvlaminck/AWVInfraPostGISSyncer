@@ -40,6 +40,9 @@ class AgentNaamGewijzigdProcessor(SpecificEventProcessor):
 
             values += f"('{agent_uuid}','{agent_name}'),"
 
+        if counter == 0:
+            return 0
+
         update_query = f"""
         WITH s (uuid, naam) 
             AS (VALUES {values[:-1]}),

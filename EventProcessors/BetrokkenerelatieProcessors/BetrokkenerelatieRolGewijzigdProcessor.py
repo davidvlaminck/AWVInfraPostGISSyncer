@@ -44,6 +44,9 @@ class BetrokkenerelatieRolGewijzigdProcessor(SpecificEventProcessor):
 
             values += f"('{betrokkenerelatie_uuid}',{betrokkenerelatie_rol}),"
 
+        if counter == 0:
+            return 0
+
         update_query = f"""
         WITH s (uuid, rol) 
             AS (VALUES {values[:-1]}),

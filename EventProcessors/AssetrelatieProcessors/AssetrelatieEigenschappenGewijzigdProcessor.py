@@ -53,6 +53,9 @@ class AssetrelatieEigenschappenGewijzigdProcessor(SpecificEventProcessor):
             else:
                 values += f"('{assetrelatie_uuid}','{attributen}'),"
 
+        if counter == 0:
+            return 0
+
         if values == '':
             return counter
 

@@ -45,6 +45,9 @@ class BetrokkenerelatieContactInfoGewijzigdProcessor(SpecificEventProcessor):
 
             values += f"('{betrokkenerelatie_uuid}',{contact_info_value}),"
 
+        if counter == 0:
+            return 0
+
         update_query = f"""
         WITH s (uuid, contact_info) 
             AS (VALUES {values[:-1]}),

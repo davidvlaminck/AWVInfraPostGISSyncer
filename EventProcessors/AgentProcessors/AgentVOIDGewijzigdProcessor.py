@@ -41,6 +41,9 @@ class AgentVOIDGewijzigdProcessor(SpecificEventProcessor):
 
             values += f"('{agent_uuid}','{agent_vo_id}'),"
 
+        if counter == 0:
+            return 0
+
         update_query = f"""
         WITH s (uuid, void) 
             AS (VALUES {values[:-1]}),

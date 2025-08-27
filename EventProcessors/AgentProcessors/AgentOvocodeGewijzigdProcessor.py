@@ -43,6 +43,9 @@ class AgentOvocodeGewijzigdProcessor(SpecificEventProcessor):
 
             values += f"('{agent_uuid}',{agent_ovo_code}),"
 
+        if counter == 0:
+            return 0
+
         update_query = f"""
         WITH s (uuid, ovo_code) 
             AS (VALUES {values[:-1]}),

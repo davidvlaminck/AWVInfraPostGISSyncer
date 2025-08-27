@@ -37,6 +37,9 @@ class AssetrelatieVerwijderdProcessor(SpecificEventProcessor):
 
             values += f"('{assetrelatie_uuid}',{assetrelatie_actief}),"
 
+        if counter == 0:
+            return 0
+
         update_query = f"""
         WITH s (uuid, actief) 
             AS (VALUES {values[:-1]}),

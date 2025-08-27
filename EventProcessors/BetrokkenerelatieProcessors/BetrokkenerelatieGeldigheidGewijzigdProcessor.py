@@ -51,6 +51,9 @@ class BetrokkenerelatieGeldigheidGewijzigdProcessor(SpecificEventProcessor):
             else:
                 values += f"'{eind_datum}'"
 
+        if counter == 0:
+            return 0
+
         update_query = f"""
         WITH s (uuid, startDatum, eindDatum) 
             AS (VALUES {values[:-1]}),
