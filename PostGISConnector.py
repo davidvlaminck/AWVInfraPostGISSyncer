@@ -63,7 +63,8 @@ class PostGISConnector:
         }
 
     def set_up_tables(self, file_path=Path(THIS_DIR / 'setup_tables_querys.sql'),
-                      file_path_gemeentes=Path(THIS_DIR / 'setup_gemeentes.sql')):
+                      file_path_gemeentes=Path(THIS_DIR / 'setup_gemeentes.sql'),
+                      file_path_regex=Path(THIS_DIR / 'setup_regex.sql')):
         # create drop views query's with:
         drop_views_query = """
         SELECT 'DROP VIEW ' || table_name || ' CASCADE;'
@@ -79,6 +80,13 @@ class PostGISConnector:
 
         if file_path_gemeentes is not None:
             with open(file_path_gemeentes) as setup_queries:
+                queries = setup_queries.readlines()
+                query = ' '.join(queries)
+                cursor.execute(query)
+                self.main_connection.commit()
+
+        if file_path_regex is not None:
+            with open(file_path_regex) as setup_queries:
                 queries = setup_queries.readlines()
                 query = ' '.join(queries)
                 cursor.execute(query)
