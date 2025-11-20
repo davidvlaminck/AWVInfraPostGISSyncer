@@ -79,7 +79,12 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
                         record_array.append(f"'{value}'")
 
                 if geometrie is not None and geometrie != '':
-                    record_array.append(f"ST_GeomFromText('{geometrie}', 31370)")
+                    # support for ewkt
+                    srsid = '31370'
+                    if ';' in geometrie:
+                        srsid, geometrie = geometrie.split(';', 1)
+                        srsid = srsid.replace('SRID=', '')
+                    record_array.append(f"ST_GeomFromText('{geometrie}', {srsid})")
                 else:
                     record_array.append('NULL')
 
@@ -143,9 +148,14 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
 
                 punt_dict = locatie_dict.get('loc:3Dpunt.puntgeometrie')
                 if punt_dict is not None and punt_dict != '':
-                    x = punt_dict['loc:DtcCoord.lambert72']['loc:DtcCoordLambert72.xcoordinaat']
-                    y = punt_dict['loc:DtcCoord.lambert72']['loc:DtcCoordLambert72.ycoordinaat']
-                    z = punt_dict['loc:DtcCoord.lambert72']['loc:DtcCoordLambert72.zcoordinaat']
+                    if 'loc:DtcCoord.lambert72' not in punt_dict:
+                        x = punt_dict['loc:DtcCoord.lambert2008']['loc:DtcCoordLambert2008.xcoordinaat']
+                        y = punt_dict['loc:DtcCoord.lambert2008']['loc:DtcCoordLambert2008.ycoordinaat']
+                        z = punt_dict['loc:DtcCoord.lambert2008']['loc:DtcCoordLambert2008.zcoordinaat']
+                    else:
+                        x = punt_dict['loc:DtcCoord.lambert72']['loc:DtcCoordLambert72.xcoordinaat']
+                        y = punt_dict['loc:DtcCoord.lambert72']['loc:DtcCoordLambert72.ycoordinaat']
+                        z = punt_dict['loc:DtcCoord.lambert72']['loc:DtcCoordLambert72.zcoordinaat']
                 else:
                     x = y = z = None
 
@@ -198,7 +208,12 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
                         value = value.replace("'", "''")
                         record_array.append(f"'{value}'")
                 if geometrie is not None and geometrie != '':
-                    record_array.append(f"ST_GeomFromText('{geometrie}', 31370)")
+                    # support for ewkt
+                    srsid = '31370'
+                    if ';' in geometrie:
+                        srsid, geometrie = geometrie.split(';', 1)
+                        srsid = srsid.replace('SRID=', '')
+                    record_array.append(f"ST_GeomFromText('{geometrie}', {srsid})")
                 else:
                     record_array.append('NULL')
             else:
