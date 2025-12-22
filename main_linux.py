@@ -16,7 +16,7 @@ if __name__ == '__main__':
     environment = 'prd'
 
     settings_manager = SettingsManager(
-        settings_path='/home/davidlinux/Documents/AWV/resources/settings_AwvinfraPostGISSyncer.json')
+        settings_path='/home/davidlinux/Documenten/AWV/resources/settings_AwvinfraPostGISSyncer.json')
     db_settings = settings_manager.settings['databases'][environment]
 
     connector = PostGISConnector(**db_settings)

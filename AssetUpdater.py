@@ -6,7 +6,6 @@ import psycopg2
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.AssetProcessors.AttributenGewijzigdProcessor import AttributenGewijzigdProcessor
 from EventProcessors.AssetProcessors.BestekGewijzigdProcessor import BestekGewijzigdProcessor
-from EventProcessors.AssetProcessors.ElekAansluitingGewijzigdProcessor import ElekAansluitingGewijzigdProcessor
 from EventProcessors.AssetProcessors.GeometrieOrLocatieGewijzigdProcessor import GeometrieOrLocatieGewijzigdProcessor
 from EventProcessors.AssetProcessors.SchadebeheerderGewijzigdProcessor import SchadebeheerderGewijzigdProcessor
 from EventProcessors.AssetProcessors.ToezichtGewijzigdProcessor import ToezichtGewijzigdProcessor
@@ -51,8 +50,6 @@ class AssetUpdater:
                                                            asset_dicts=asset_dict_list)
         WeglocatieGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=asset_uuids,
                                                    asset_dicts=asset_dict_list)
-        AssetUpdater.update_elek_aansluiting_of_synced_assets(connection=connection, asset_uuids=asset_uuids,
-                                                              eminfra_importer=eminfra_importer)
         AssetUpdater.update_vplan_of_synced_assets(connection=connection, asset_uuids=asset_uuids,
                                                    eminfra_importer=eminfra_importer)
         BestekGewijzigdProcessor.update_bestekkoppelingen(connection=connection, asset_dicts_dict=asset_dicts_dict)
@@ -93,20 +90,6 @@ class AssetUpdater:
             assets_for_vplan = list(map(lambda x: x[0], cursor.fetchall()))
             vplan_processor = VplanGewijzigdProcessor(eminfra_importer=eminfra_importer)
             vplan_processor.process(uuids=assets_for_vplan, connection=connection)
-
-    @staticmethod
-    def update_elek_aansluiting_of_synced_assets(connection, asset_uuids, eminfra_importer):
-        joined_uuids = "','".join(asset_uuids)
-        select_assets_for_elek_aansluiting_query = f"""SELECT assets.uuid 
-            FROM assets 
-                LEFT JOIN assettypes ON assets.assettype = assettypes.uuid
-            WHERE assets.uuid IN ('{joined_uuids}')
-            AND elek_aansluiting = TRUE;"""
-        with connection.cursor() as cursor:
-            cursor.execute(select_assets_for_elek_aansluiting_query)
-            assets_for_elek_aansluiting = list(map(lambda x: x[0], cursor.fetchall()))
-            elek_aansluiting_processor = ElekAansluitingGewijzigdProcessor(eminfra_importer=eminfra_importer)
-            elek_aansluiting_processor.process(uuids=assets_for_elek_aansluiting, connection=connection)
 
     @staticmethod
     def perform_insert_update_from_values(connection, insert_only, values):

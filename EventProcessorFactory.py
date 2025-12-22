@@ -28,7 +28,6 @@ from EventProcessors.BetrokkenerelatieProcessors.BetrokkenerelatieVerwijderdProc
     BetrokkenerelatieVerwijderdProcessor
 from EventProcessors.BetrokkenerelatieProcessors.NieuwBetrokkenerelatieProcessor import NieuwBetrokkenerelatieProcessor
 from EventProcessors.AssetProcessors.CommentaarGewijzigdProcessor import CommentaarGewijzigdProcessor
-from EventProcessors.AssetProcessors.ElekAansluitingGewijzigdProcessor import ElekAansluitingGewijzigdProcessor
 from EventProcessors.AssetProcessors.GeometrieOrLocatieGewijzigdProcessor import GeometrieOrLocatieGewijzigdProcessor
 from EventProcessors.AssetProcessors.NaamGewijzigdProcessor import NaamGewijzigdProcessor
 from EventProcessors.AssetProcessors.NieuwAssetProcessor import NieuwAssetProcessor
@@ -91,7 +90,7 @@ class EventProcessorFactory:
         elif event_type == 'EIGENSCHAPPEN_GEWIJZIGD':
             return AttributenGewijzigdProcessor(eminfra_importer)
         elif event_type == 'ELEKTRICITEITSAANSLUITING_GEWIJZIGD':
-            return ElekAansluitingGewijzigdProcessor(eminfra_importer)
+            pass # no longer needed
         elif event_type == 'GEOMETRIE_GEWIJZIGD' or event_type == 'LOCATIE_GEWIJZIGD':
             return GeometrieOrLocatieGewijzigdProcessor(eminfra_importer)
         elif event_type == 'NAAM_GEWIJZIGD' or event_type == 'NAAMPAD_GEWIJZIGD' or event_type == 'PARENT_GEWIJZIGD':
