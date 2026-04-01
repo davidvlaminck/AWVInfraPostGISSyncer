@@ -1,4 +1,9 @@
+from datetime import datetime
+from types import SimpleNamespace
 from unittest import TestCase
+from unittest.mock import MagicMock, patch
+
+from zoneinfo import ZoneInfo
 
 from psycopg2 import connect
 
@@ -8,6 +13,7 @@ from PostGISConnector import PostGISConnector
 from RequestHandler import RequestHandler
 from RequesterFactory import RequesterFactory
 from SettingsManager import SettingsManager
+from SyncTimer import SyncTimer
 
 
 class AgentSyncerTests(TestCase):
@@ -71,3 +77,26 @@ class AgentSyncerTests(TestCase):
             cursor.execute(count_agent_query)
             result = cursor.fetchone()[0]
             self.assertEqual(3, result)
+
+    def test_sync_when_fully_synced_uses_brussels_timezone_for_last_update(self):
+        connector = MagicMock()
+        connector.get_params.return_value = {
+            'page_agents': 1,
+            'event_uuid_agents': 'event-uuid',
+            'pagesize': 100,
+        }
+
+        eminfra_importer = MagicMock()
+        syncer = AgentSyncer(postgis_connector=connector, eminfra_importer=eminfra_importer)
+        syncer.events_collector.collect_starting_from_page = MagicMock(
+            return_value=SimpleNamespace(event_dict={'agents': []})
+        )
+        syncer.events_processor.process_events = MagicMock()
+
+        with patch.object(SyncTimer, 'calculate_sync_allowed_by_time', return_value=True):
+            syncer.sync(connection=MagicMock(), stop_when_fully_synced=True)
+
+        timestamp = connector.update_params.call_args.kwargs['params']['last_update_utc_agents']
+        self.assertEqual(ZoneInfo('Europe/Brussels'), timestamp.tzinfo)
+        self.assertEqual('Europe/Brussels', timestamp.tzinfo.key)
+

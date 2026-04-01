@@ -1,6 +1,7 @@
 import concurrent
 import logging
 import time
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
 import urllib3
@@ -11,6 +12,7 @@ from Exceptions.FillResetError import FillResetError
 from FeedEventsCollector import FeedEventsCollector
 from FeedEventsProcessor import FeedEventsProcessor
 from FillerFactory import FillerFactory
+from Helpers import BRUSSELS_TZ
 from PostGISConnector import PostGISConnector
 from ResourceEnum import ResourceEnum, colorama_table
 
@@ -45,7 +47,7 @@ class FillManager:
             concurrent.futures.wait(futures)
 
         if 'last_update_utc_views' not in params:
-            self.connector.create_params(params={'last_update_utc_views': '2023-01-01 00:00:00.000+01'},
+            self.connector.create_params(params={'last_update_utc_views': datetime(2023, 1, 1, tzinfo=BRUSSELS_TZ)},
                                          connection=self.connector.main_connection)
 
         while True:

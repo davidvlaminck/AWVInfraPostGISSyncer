@@ -202,3 +202,4 @@ class AssetSyncerTests(TestCase):
         }]
         with self.assertRaises(AssetTypeMissingError):
             self.assets_syncer.update_assets(assets_dicts=assets, cursor=self.connector.connection.cursor())
+

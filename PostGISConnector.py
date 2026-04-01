@@ -4,6 +4,8 @@ from pathlib import Path
 from psycopg2 import Error
 from psycopg2.pool import ThreadedConnectionPool
 
+from Helpers import BRUSSELS_TZ
+
 THIS_DIR = Path(__file__).parent
 
 
@@ -186,7 +188,13 @@ class PostGISConnector:
         elif param_type == 'bool':
             params_dict[raw_param_record[0]] = raw_param_record[3]
         elif param_type == 'timestamp':
-            params_dict[raw_param_record[0]] = raw_param_record[4]
+            timestamp_value = raw_param_record[4]
+            if timestamp_value is None:
+                params_dict[raw_param_record[0]] = None
+            elif timestamp_value.tzinfo is None:
+                params_dict[raw_param_record[0]] = timestamp_value.replace(tzinfo=BRUSSELS_TZ)
+            else:
+                params_dict[raw_param_record[0]] = timestamp_value.astimezone(BRUSSELS_TZ)
         else:
             raise NotImplementedError
 

@@ -1,5 +1,14 @@
 import itertools
+from datetime import datetime
 from itertools import chain, islice
+from zoneinfo import ZoneInfo
+
+
+BRUSSELS_TZ = ZoneInfo('Europe/Brussels')
+
+
+def now_in_brussels() -> datetime:
+    return datetime.now(BRUSSELS_TZ)
 
 
 def turn_list_of_lists_into_string(arr: [[]]) -> str:

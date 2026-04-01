@@ -1,7 +1,6 @@
 import logging
 import time
 import traceback
-from datetime import datetime, timezone
 
 from requests.exceptions import ConnectionError
 
@@ -11,6 +10,7 @@ from BetrokkeneRelatiesUpdater import BetrokkeneRelatiesUpdater
 from EMInfraImporter import EMInfraImporter
 from Exceptions.AgentMissingError import AgentMissingError
 from Exceptions.AssetMissingError import AssetMissingError
+from Helpers import now_in_brussels
 from PostGISConnector import PostGISConnector
 from ResourceEnum import colorama_table, ResourceEnum
 from SyncTimer import SyncTimer
@@ -52,7 +52,7 @@ class BetrokkeneRelatieSyncer:
                     total_events = sum(len(lists) for lists in eventsparams_to_process.event_dict.values())
                     if total_events == 0:
                         logging.info(self.color + 'The database is fully synced for betrokkenerelaties. Continuing keep up to date in 30 seconds')
-                        self.postgis_connector.update_params(params={'last_update_utc_betrokkenerelaties': datetime.now(timezone.utc)},
+                        self.postgis_connector.update_params(params={'last_update_utc_betrokkenerelaties': now_in_brussels()},
                                                              connection=connection)
                         if stop_when_fully_synced:
                             break

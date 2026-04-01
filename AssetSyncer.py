@@ -1,6 +1,5 @@
 import logging
 import time
-from datetime import datetime, timezone
 
 from requests.exceptions import ConnectionError
 
@@ -17,6 +16,7 @@ from Exceptions.BestekMissingError import BestekMissingError
 from Exceptions.IdentiteitMissingError import IdentiteitMissingError
 from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 from FillManager import FillManager
+from Helpers import now_in_brussels
 from PostGISConnector import PostGISConnector
 from ResourceEnum import ResourceEnum, colorama_table
 from SyncTimer import SyncTimer
@@ -63,7 +63,7 @@ class AssetSyncer:
                         logging.info(
                             f"{self.color}The database is fully synced for assets. Continuing keep up to date in 30 seconds"
                         )
-                        self.postgis_connector.update_params(params={'last_update_utc_assets': datetime.now(timezone.utc)},
+                        self.postgis_connector.update_params(params={'last_update_utc_assets': now_in_brussels()},
                                                              connection=connection)
                         if stop_when_fully_synced:
                             break
@@ -143,7 +143,7 @@ class AssetSyncer:
         try:
             params = self.postgis_connector.get_params(connection)
             last_update_views_date = params['last_update_utc_views'].date()
-            today_date = (datetime.now(timezone.utc)).date()
+            today_date = now_in_brussels().date()
 
             if today_date <= last_update_views_date:
                 return
@@ -160,7 +160,7 @@ class AssetSyncer:
                     cursor.execute(view_query)
                     connection.commit()
 
-            self.postgis_connector.update_params(params={'last_update_utc_views': datetime.now(timezone.utc)},
+            self.postgis_connector.update_params(params={'last_update_utc_views': now_in_brussels()},
                                                  connection=connection)
         except Exception as exc:
             logging.error(f"{self.color}Could not create view tables")

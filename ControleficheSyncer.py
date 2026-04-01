@@ -1,7 +1,6 @@
 import logging
 import time
 import traceback
-from datetime import datetime, timezone
 
 from requests.exceptions import ConnectionError
 
@@ -12,6 +11,7 @@ from EMInfraImporter import EMInfraImporter
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
 from Exceptions.AttribuutMissingError import AttribuutMissingError
 from FillManager import FillManager
+from Helpers import now_in_brussels
 from PostGISConnector import PostGISConnector
 from ResourceEnum import ResourceEnum, colorama_table
 from SyncTimer import SyncTimer
@@ -56,7 +56,7 @@ class ControleficheSyncer:
                             f"{self.color}The database is fully synced for controlefiches. Continuing keep up to date in 30 seconds"
                         )
                         self.postgis_connector.update_params(
-                            params={'last_update_utc_controlefiches': datetime.now(timezone.utc)}, connection=connection)
+                            params={'last_update_utc_controlefiches': now_in_brussels()}, connection=connection)
                         if stop_when_fully_synced:
                             break
                         time.sleep(30)  # wait 30 seconds to prevent overloading API

@@ -1,7 +1,6 @@
 import logging
 import time
 import traceback
-from datetime import datetime, timezone
 
 from requests.exceptions import ConnectionError
 
@@ -12,6 +11,7 @@ from EMInfraImporter import EMInfraImporter
 from Exceptions.AssetMissingError import AssetMissingError
 from Exceptions.RelatieTypeMissingError import RelatieTypeMissingError
 from FillManager import FillManager
+from Helpers import now_in_brussels
 from PostGISConnector import PostGISConnector
 from ResourceEnum import colorama_table, ResourceEnum
 from SyncTimer import SyncTimer
@@ -55,7 +55,7 @@ class AssetRelatieSyncer:
                     if total_events == 0:
                         logging.info(f"{self.color}The database is fully synced for assetrelaties. "
                                      f"Continuing keep up to date in 30 seconds")
-                        self.postgis_connector.update_params(params={'last_update_utc_assetrelaties': datetime.now(timezone.utc)},
+                        self.postgis_connector.update_params(params={'last_update_utc_assetrelaties': now_in_brussels()},
                                                              connection=connection)
                         if stop_when_fully_synced:
                             break
