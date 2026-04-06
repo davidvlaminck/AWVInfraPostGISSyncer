@@ -47,7 +47,7 @@ class BetrokkenerelatieGeldigheidGewijzigdProcessor(SpecificEventProcessor):
                 values += f"'{start_datum}',"
 
             if eind_datum is None or eind_datum == '':
-                values += 'NULL)'
+                values += 'NULL),'
             else:
                 values += f"'{eind_datum}'),"
 
