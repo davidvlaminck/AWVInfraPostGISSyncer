@@ -27,6 +27,8 @@ def ichunked(seq, chunksize):
     """Yields items from an iterator in iterable chunks."""
     it = iter(seq)
     while True:
+
+
         try:
             yield chain([next(it)], islice(it, chunksize - 1))
         except StopIteration:

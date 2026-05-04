@@ -16,6 +16,12 @@ from SettingsManager import SettingsManager
 from SyncTimer import SyncTimer
 
 
+settings_manager = SettingsManager(
+    settings_path='/home/davidlinux/PycharmProjects/AWVInfraPostGISSyncer/settings_sample.json')
+unittest_db_settings = settings_manager.settings['databases']['unittest']
+unittest_db_settings['database'] = 'unittests'
+
+
 class AgentSyncerTests(TestCase):
     def setup(self):
 
@@ -93,10 +99,34 @@ class AgentSyncerTests(TestCase):
         )
         syncer.events_processor.process_events = MagicMock()
 
-        with patch.object(SyncTimer, 'calculate_sync_allowed_by_time', return_value=True):
+        with patch.object(SyncTimer, 'calculate_sync_paused_by_time', return_value=False):
             syncer.sync(connection=MagicMock(), stop_when_fully_synced=True)
 
         timestamp = connector.update_params.call_args.kwargs['params']['last_update_utc_agents']
         self.assertEqual(ZoneInfo('Europe/Brussels'), timestamp.tzinfo)
         self.assertEqual('Europe/Brussels', timestamp.tzinfo.key)
+
+    def test_sync_skips_work_while_paused(self):
+        connector = MagicMock()
+        connector.get_params.return_value = {
+            'page_agents': 1,
+            'event_uuid_agents': 'event-uuid',
+            'pagesize': 100,
+        }
+        connector.update_params = MagicMock()
+
+        eminfra_importer = MagicMock()
+        syncer = AgentSyncer(postgis_connector=connector, eminfra_importer=eminfra_importer)
+        syncer.events_collector.collect_starting_from_page = MagicMock(
+            return_value=SimpleNamespace(event_dict={'agents': []})
+        )
+        syncer.events_processor.process_events = MagicMock()
+
+        with patch.object(SyncTimer, 'calculate_sync_paused_by_time', side_effect=[True, False]):
+            with patch('AgentSyncer.time.sleep') as mocked_sleep:
+                syncer.sync(connection=MagicMock(), stop_when_fully_synced=True)
+
+        mocked_sleep.assert_any_call(300)
+        syncer.events_collector.collect_starting_from_page.assert_called_once()
+        syncer.events_processor.process_events.assert_not_called()
 

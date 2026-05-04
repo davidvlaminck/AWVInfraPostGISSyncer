@@ -30,9 +30,9 @@ class BetrokkeneRelatieSyncer:
     def sync(self, connection, stop_when_fully_synced: bool = False):
         while True:
             try:
-                sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
-                if not sync_allowed_by_time:
-                    logging.info(self.color + 'syncing is not allowed at this time. Trying again in 5 minutes')
+                sync_paused_by_time = SyncTimer.calculate_sync_paused_by_time()
+                if sync_paused_by_time:
+                    logging.info(self.color + 'syncing is paused at this time. Trying again in 5 minutes')
                     time.sleep(300)
                     continue
 

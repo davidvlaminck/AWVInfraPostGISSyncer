@@ -26,9 +26,9 @@ class AgentSyncer:
     def sync(self, connection, stop_when_fully_synced: bool=False):
         while True:
             try:
-                sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
-                if not sync_allowed_by_time:
-                    logging.info(f'{self.color}syncing is not allowed at this time. Trying again in 5 minutes')
+                sync_paused_by_time = SyncTimer.calculate_sync_paused_by_time()
+                if sync_paused_by_time:
+                    logging.info(f'{self.color}syncing is paused at this time. Trying again in 5 minutes')
                     time.sleep(300)
                     continue
 
@@ -73,8 +73,6 @@ class AgentSyncer:
                     logging.error(f'{self.color}{exc}')
                     connection.rollback()
                     time.sleep(30)
-
-                sync_allowed_by_time = SyncTimer.calculate_sync_allowed_by_time()
             except ConnectionError:
                 logging.info(f"{self.color}failed connection, retrying in 1 minute")
                 time.sleep(60)

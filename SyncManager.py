@@ -47,6 +47,7 @@ class SyncManager:
         self.feeds = ['assets', 'agents', 'assetrelaties', 'betrokkenerelaties'] # removed controlefiches
         self.settings = settings
         if 'time' in self.settings:
+            # The configured time window now represents when syncing is paused.
             SyncTimer.sync_start = self.settings['time']['start']
             SyncTimer.sync_end = self.settings['time']['end']
 
