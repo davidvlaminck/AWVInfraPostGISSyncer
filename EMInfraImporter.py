@@ -386,11 +386,11 @@ class EMInfraImporter:
                                                            identiteit=True)
 
     def get_kenmerken_by_assettype_uuids(self, assettype_uuid: str):
-        url_part = f'/assettypes/{assettype_uuid}/kenmerktypes'
+        url_part = f'assettypes/{assettype_uuid}/kenmerktypes'
         return list(self.get_objects_from_non_oslo_endpoint(url_part=url_part, request_type='GET'))
 
     def get_eigenschappen_by_kenmerk_uuid(self, kenmerk_uuid: str):
-        url_part = f'/kenmerktypes/{kenmerk_uuid}/eigenschappen'
+        url_part = f'kenmerktypes/{kenmerk_uuid}/eigenschappen'
         return list(self.get_objects_from_non_oslo_endpoint(url_part=url_part, request_type='GET'))
 
     def get_eigenschap_by_naam(self, naam: str) -> [dict]:
