@@ -219,8 +219,8 @@ class EMInfraImporter:
         yield from json_list
 
     def get_objects_from_non_oslo_endpoint(self, url_part: str, zoek_payload: ZoekParameterPayload = None,
-                                           request_type: str = None, identiteit: bool = False,  cursor_name: str = None
-                                           ) -> Generator[list]:
+                                            request_type: str = None, identiteit: bool = False,  cursor_name: str = None
+                                            ) -> Generator[list]:
         if identiteit:
             url = f"identiteit/api/{url_part}"
         else:
@@ -264,13 +264,28 @@ class EMInfraImporter:
                 if self.paging_cursors[cursor_name] == '':
                     return
             elif zoek_payload.pagingMode == 'OFFSET':
-                amount_fetched = len(dict_obj['data'])
-                zoek_payload.from_ += amount_fetched
-                self.paging_cursors[cursor_name] = str(zoek_payload.from_)
+                while True:
+                    amount_fetched = len(dict_obj['data'])
+                    zoek_payload.from_ += amount_fetched
+                    self.paging_cursors[cursor_name] = str(zoek_payload.from_)
 
-                if zoek_payload.from_ == dict_obj['totalCount']:
-                    self.paging_cursors[cursor_name] = ''
-                    return
+                    if zoek_payload.from_ >= dict_obj.get('totalCount', 0):
+                        break
+
+                    if amount_fetched == 0:
+                        break
+
+                    json_data = zoek_payload.fill_dict()
+                    response = self.request_handler.perform_post_request(url=url, json_data=json_data)
+
+                    decoded_string = response.content.decode("utf-8")
+                    dict_obj = json.loads(decoded_string)
+                    keys = response.headers.keys()
+
+                    yield from dict_obj['data']
+
+                self.paging_cursors[cursor_name] = ''
+                return
 
     def import_all_assettypes_from_webservice(self):
         zoek_params = ZoekParameterPayload()
