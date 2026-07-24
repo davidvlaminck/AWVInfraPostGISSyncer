@@ -110,7 +110,7 @@ class AssetTypeUpdater:
         counter = 0
         for assettype_uuid, uri in assettypes_to_update:
             counter += 1
-            if counter % 100 == 0:
+            if counter % 10 == 0:
                 logging.info(f'Updating attributen for assettype number {counter}.')
             kenmerken = self.eminfra_importer.get_kenmerken_by_assettype_uuids(assettype_uuid=assettype_uuid)
 
