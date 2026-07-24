@@ -331,13 +331,20 @@ class AssetTypeUpdater:
         assettypes_with_geometrie = cls.get_assettypes_with_geometries(connection=connection)
 
         reserved_chars_for_name = {' ', '>', '.', ',', '/', '-', '+', "'", '?', '(', ')', '&'}
+        total = len(assettypes_with_geometrie)
+        counter = 0
+        success_count = 0
+        fail_count = 0
         for assettype_record in assettypes_with_geometrie:
+            counter += 1
             type_uuid = assettype_record[0]
             if type_uuid == 'b0fa91d4-d061-479c-a23d-f9244a86c4c2':  # DUMMY
                 continue
             type_uri = assettype_record[1]
             has_geometry = assettype_record[2]
             view_name = type_uri.split('/ns/')[1].replace('#', '_').replace('.', '_').replace('-', '_')
+
+            logging.info(f'Creating view {counter}/{total} for assettype {view_name}')
 
             attributes_of_type = cls.get_attributes_by_type_uri(type_uri=type_uri, connection=connection)
             attribute_joins = ''
@@ -418,10 +425,13 @@ CREATE VIEW asset_views.{view_name} AS
     {attribute_joins} WHERE assettype = '{type_uuid}' and assets.actief = TRUE;"""
             try:
                 cls.create_view(connection=connection, create_view_query=create_view_query)
+                connection.commit()
+                success_count += 1
             except Exception as exc:
-                logging.error(exc)
+                logging.error(f'Failed to create view {view_name} for assettype {type_uuid}: {exc}')
                 logging.debug(create_view_query)
-                raise exc
+                fail_count += 1
+        logging.info(f'View creation done: {success_count} succeeded, {fail_count} failed out of {total} assettypes processed.')
 
     def sync_attribuut_and_koppeling(self, assettype_uuid, attribuut, cursor, force_update: bool):
         attribuut_uuid = attribuut['eigenschap']['uuid']
