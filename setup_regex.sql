@@ -54,15 +54,17 @@ $function$
 
 
 -- Table Triggers
+DROP TRIGGER IF EXISTS set_count ON regex;
 create trigger set_count before
-insert
+    insert
     or
-update
+    update
     on
     regex for each row execute function update_count_column();
+DROP TRIGGER IF EXISTS set_updated_at ON regex;
 create trigger set_updated_at before
-insert
+    insert
     or
-update
+    update
     on
     regex for each row execute function update_updated_at_column();
