@@ -248,26 +248,36 @@ class EMInfraImporter:
 
             decoded_string = response.content.decode("utf-8")
             dict_obj = json.loads(decoded_string)
-            keys = response.headers.keys()
 
             yield from dict_obj['data']
 
-            if cursor_name is None:
-                return
-
             if zoek_payload.pagingMode == 'CURSOR':
-                if 'em-paging-next-cursor' in keys:
-                    self.paging_cursors[cursor_name] = response.headers['em-paging-next-cursor']
-                else:
-                    self.paging_cursors[cursor_name] = ''
+                next_cursor = response.headers.get('em-paging-next-cursor', '')
+                if cursor_name is not None:
+                    self.paging_cursors[cursor_name] = next_cursor
 
-                if self.paging_cursors[cursor_name] == '':
+                    if next_cursor == '':
+                        return
+                else:
+                    local_cursor = next_cursor
+                    while local_cursor != '':
+                        zoek_payload.fromCursor = local_cursor
+                        json_data = zoek_payload.fill_dict()
+                        response = self.request_handler.perform_post_request(url=url, json_data=json_data)
+
+                        decoded_string = response.content.decode("utf-8")
+                        dict_obj = json.loads(decoded_string)
+
+                        yield from dict_obj['data']
+
+                        local_cursor = response.headers.get('em-paging-next-cursor', '')
                     return
             elif zoek_payload.pagingMode == 'OFFSET':
                 while True:
                     amount_fetched = len(dict_obj['data'])
                     zoek_payload.from_ += amount_fetched
-                    self.paging_cursors[cursor_name] = str(zoek_payload.from_)
+                    if cursor_name is not None:
+                        self.paging_cursors[cursor_name] = str(zoek_payload.from_)
 
                     if zoek_payload.from_ >= dict_obj.get('totalCount', 0):
                         break
@@ -280,11 +290,11 @@ class EMInfraImporter:
 
                     decoded_string = response.content.decode("utf-8")
                     dict_obj = json.loads(decoded_string)
-                    keys = response.headers.keys()
 
                     yield from dict_obj['data']
 
-                self.paging_cursors[cursor_name] = ''
+                if cursor_name is not None:
+                    self.paging_cursors[cursor_name] = ''
                 return
 
     def import_all_assettypes_from_webservice(self):
@@ -354,12 +364,8 @@ class EMInfraImporter:
         zoek_params = ZoekParameterPayload()
         zoek_params.add_term(property='kenmerkTypes', value=kenmerk, operator='EQ')
         zoek_params.add_term(property='id', value=assettype_uuids, operator='IN')
-        yield from self.get_objects_from_non_oslo_endpoint(url_part='onderdeeltypes/search',
-                                                           zoek_payload=zoek_params)
-        zoek_params = ZoekParameterPayload()
-        zoek_params.add_term(property='kenmerkTypes', value=kenmerk, operator='EQ')
-        zoek_params.add_term(property='id', value=assettype_uuids, operator='IN')
-        yield from self.get_objects_from_non_oslo_endpoint(url_part='installatietypes/search',
+        # zoek_params.add_term(property='naam', value='Wegkantkast', operator=1)
+        yield from self.get_objects_from_non_oslo_endpoint(url_part='assettypes/search',
                                                            zoek_payload=zoek_params)
 
     def get_assettypes_with_kenmerk_gevoed_door_by_uuids(self, assettype_uuids: [str]):
