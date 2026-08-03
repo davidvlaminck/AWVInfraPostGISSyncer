@@ -402,7 +402,24 @@ class AssetTypeUpdater:
                             'attribute_table_id'][-3:]
 
             for attribute_dict in attribute_dict_list:
-                attribute_columns += f"{attribute_dict['attribute_table_id']}.waarde{attribute_dict['attribute_type']}"
+                table_id = attribute_dict['attribute_table_id']
+                attr_type = attribute_dict['attribute_type']
+                if attr_type == '::numeric':
+                    column_expr = (
+                        f"CASE WHEN {table_id}.waarde ~ '^[+-]?[0-9]+$' OR {table_id}.waarde ~ '^[+-]?[0-9]*[.][0-9]+$' "
+                        f"THEN {table_id}.waarde::numeric END"
+                    )
+                elif attr_type == '::boolean':
+                    column_expr = (
+                        f"CASE WHEN {table_id}.waarde ~* '^(true|false)$' THEN {table_id}.waarde::boolean END"
+                    )
+                elif attr_type == '::date':
+                    column_expr = (
+                        f"CASE WHEN {table_id}.waarde ~ '^[0-9]{{4}}-[0-9]{{2}}-[0-9]{{2}}$' THEN {table_id}.waarde::date END"
+                    )
+                else:
+                    column_expr = f"{table_id}.waarde{attr_type}"
+                attribute_columns += column_expr
                 name = attribute_dict['attribute_name']
                 if attribute_dict['wrap_quotes']:
                     name = f'"{name}"'
