@@ -12,13 +12,15 @@ from Exceptions.AssetMissingError import AssetMissingError
 from Exceptions.RelatieTypeMissingError import RelatieTypeMissingError
 from FillManager import FillManager
 from Helpers import now_in_brussels
+from PipelineStateClient import PipelineStateClient
 from PostGISConnector import PostGISConnector
 from ResourceEnum import colorama_table, ResourceEnum
 from SyncTimer import SyncTimer
 
 
 class AssetRelatieSyncer:
-    def __init__(self, postgis_connector: PostGISConnector, eminfra_importer: EMInfraImporter):
+    def __init__(self, postgis_connector: PostGISConnector, eminfra_importer: EMInfraImporter,
+                 pipeline_state_client: PipelineStateClient = None):
         self.postgis_connector: PostGISConnector = postgis_connector
         self.eminfra_importer: EMInfraImporter = eminfra_importer
         self.updater: AssetRelatiesUpdater = AssetRelatiesUpdater()
@@ -27,10 +29,14 @@ class AssetRelatieSyncer:
         self.events_processor: AssetRelatieFeedEventsProcessor = AssetRelatieFeedEventsProcessor(
             postgis_connector, eminfra_importer=eminfra_importer)
         self.color = colorama_table[ResourceEnum.assetrelaties]
+        self.pipeline_state_client: PipelineStateClient = pipeline_state_client
 
     def sync(self, connection, stop_when_fully_synced: bool = False):
         while True:
             try:
+                if self.pipeline_state_client and self.pipeline_state_client.handle_pause_and_resume(color=self.color):
+                    continue
+
                 sync_paused_by_time = SyncTimer.calculate_sync_paused_by_time()
                 if sync_paused_by_time:
                     logging.info(f'{self.color}syncing is paused at this time. Trying again in 5 minutes')

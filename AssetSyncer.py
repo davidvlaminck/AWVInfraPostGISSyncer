@@ -17,13 +17,15 @@ from Exceptions.IdentiteitMissingError import IdentiteitMissingError
 from Exceptions.ToezichtgroepMissingError import ToezichtgroepMissingError
 from FillManager import FillManager
 from Helpers import now_in_brussels
+from PipelineStateClient import PipelineStateClient
 from PostGISConnector import PostGISConnector
 from ResourceEnum import ResourceEnum, colorama_table
 from SyncTimer import SyncTimer
 
 
 class AssetSyncer:
-    def __init__(self, postgis_connector: PostGISConnector, eminfra_importer: EMInfraImporter):
+    def __init__(self, postgis_connector: PostGISConnector, eminfra_importer: EMInfraImporter,
+                 pipeline_state_client: PipelineStateClient = None):
         self.postgis_connector: PostGISConnector = postgis_connector
         self.eminfra_importer: EMInfraImporter = eminfra_importer
         self.updater: AssetUpdater = AssetUpdater()
@@ -31,10 +33,16 @@ class AssetSyncer:
         self.events_processor: AssetFeedEventsProcessor = AssetFeedEventsProcessor(
             postgis_connector=postgis_connector, eminfra_importer=eminfra_importer)
         self.color = colorama_table[ResourceEnum.assets]
+        self.pipeline_state_client: PipelineStateClient = pipeline_state_client
 
     def sync(self, connection, stop_when_fully_synced: bool = False):
         while True:
             try:
+                if self.pipeline_state_client and self.pipeline_state_client.handle_pause_and_resume(
+                        post_pause_callback=lambda: self.update_view_tables(connection, color=self.color),
+                        color=self.color):
+                    continue
+
                 sync_paused_by_time = SyncTimer.calculate_sync_paused_by_time()
                 if sync_paused_by_time:
                     self.update_view_tables(connection, color=self.color)

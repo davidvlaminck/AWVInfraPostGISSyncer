@@ -14,6 +14,7 @@ from EMInfraImporter import EMInfraImporter
 from FeedEventsCollector import FeedEventsCollector
 from FeedEventsProcessor import FeedEventsProcessor
 from FillManager import FillManager
+from PipelineStateClient import PipelineStateClient
 from PostGISConnector import PostGISConnector
 from RequestHandler import RequestHandler
 from SyncTimer import SyncTimer
@@ -21,19 +22,24 @@ from SyncTimer import SyncTimer
 
 class SyncerFactory:
     @classmethod
-    def get_syncer_by_feed_name(cls, feed, eminfra_importer: EMInfraImporter, postgis_connector: PostGISConnector):
+    def get_syncer_by_feed_name(cls, feed, eminfra_importer: EMInfraImporter, postgis_connector: PostGISConnector,
+                                pipeline_state_client: PipelineStateClient = None):
         if feed == 'agents':
             time.sleep(1)
-            return AgentSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
+            return AgentSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector,
+                               pipeline_state_client=pipeline_state_client)
         elif feed == 'assets':
             time.sleep(2)
-            return AssetSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
+            return AssetSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector,
+                               pipeline_state_client=pipeline_state_client)
         elif feed == 'assetrelaties':
             time.sleep(3)
-            return AssetRelatieSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
+            return AssetRelatieSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector,
+                                     pipeline_state_client=pipeline_state_client)
         elif feed == 'betrokkenerelaties':
             time.sleep(4)
-            return BetrokkeneRelatieSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector)
+            return BetrokkeneRelatieSyncer(eminfra_importer=eminfra_importer, postgis_connector=postgis_connector,
+                                           pipeline_state_client=pipeline_state_client)
 
 
 class SyncManager:
@@ -50,6 +56,13 @@ class SyncManager:
             # The configured time window now represents when syncing is paused.
             SyncTimer.sync_start = self.settings['time']['start']
             SyncTimer.sync_end = self.settings['time']['end']
+
+        self.pipeline_state_client = None
+        if 'pipeline_state' in self.settings and self.settings['pipeline_state'].get('enabled'):
+            self.pipeline_state_client = PipelineStateClient(
+                db_path=self.settings['pipeline_state'].get('db_path'),
+                enabled=True
+            )
 
     def start(self, stop_when_fully_synced: bool = False):
         while True:
@@ -78,7 +91,8 @@ class SyncManager:
 
     def start_sync_by_feed(self, feed, stop_when_fully_synced: bool = False):
         syncer = SyncerFactory.get_syncer_by_feed_name(feed, eminfra_importer=self.eminfra_importer,
-                                                       postgis_connector=self.connector)
+                                                       postgis_connector=self.connector,
+                                                       pipeline_state_client=self.pipeline_state_client)
         connection = self.connector.get_connection()
         syncer.sync(connection=connection, stop_when_fully_synced=stop_when_fully_synced)
 

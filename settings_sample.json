@@ -40,9 +40,13 @@
              "user": "unittest",
              "password": "unittest"
          }
-    },
+     },
      "time" : {
          "start" : "03:00:00",
          "end" : "07:30:00"
+     },
+     "pipeline_state": {
+         "enabled": true,
+         "db_path": "/home/davidlinux/PycharmProjects/RSA_Health/health.db"
      }
 }
