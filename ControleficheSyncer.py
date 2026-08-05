@@ -12,13 +12,15 @@ from Exceptions.AssetTypeMissingError import AssetTypeMissingError
 from Exceptions.AttribuutMissingError import AttribuutMissingError
 from FillManager import FillManager
 from Helpers import now_in_brussels
+from PipelineStateClient import PipelineStateClient
 from PostGISConnector import PostGISConnector
 from ResourceEnum import ResourceEnum, colorama_table
 from SyncTimer import SyncTimer
 
 
 class ControleficheSyncer:
-    def __init__(self, postgis_connector: PostGISConnector, eminfra_importer: EMInfraImporter):
+    def __init__(self, postgis_connector: PostGISConnector, eminfra_importer: EMInfraImporter,
+                 pipeline_state_client: PipelineStateClient = None):
         self.postgis_connector: PostGISConnector = postgis_connector
         self.eminfra_importer: EMInfraImporter = eminfra_importer
         self.updater: ControleficheUpdater = ControleficheUpdater()
@@ -26,10 +28,14 @@ class ControleficheSyncer:
         self.events_processor: ControleficheFeedEventsProcessor = ControleficheFeedEventsProcessor(
             postgis_connector=postgis_connector, eminfra_importer=eminfra_importer)
         self.color = colorama_table[ResourceEnum.controlefiches]
+        self.pipeline_state_client: PipelineStateClient = pipeline_state_client
 
     def sync(self, connection, stop_when_fully_synced: bool = False):
         while True:
             try:
+                if self.pipeline_state_client and self.pipeline_state_client.handle_pause_and_resume(color=self.color):
+                    continue
+
                 sync_paused_by_time = SyncTimer.calculate_sync_paused_by_time()
                 if sync_paused_by_time:
                     logging.info(f'{self.color}syncing is paused at this time. Trying again in 5 minutes')
@@ -50,6 +56,11 @@ class ControleficheSyncer:
                     eventsparams_to_process = self.events_collector.collect_starting_from_page(
                         current_page, completed_event_id, page_size, resource='controlefiches')
 
+                    if eventsparams_to_process is None:
+                        logging.error(f"{self.color}collect_starting_from_page returned None, retrying in 30 seconds")
+                        time.sleep(30)
+                        continue
+
                     total_events = sum(len(lists) for lists in eventsparams_to_process.event_dict.values())
                     if total_events == 0:
                         logging.info(
@@ -68,7 +79,8 @@ class ControleficheSyncer:
                 except Exception as err:
                     logging.error(err)
                     end = time.time()
-                    self.log_eventparams(eventsparams_to_process.event_dict, round(end - start, 2), self.color)
+                    if eventsparams_to_process is not None:
+                        self.log_eventparams(eventsparams_to_process.event_dict, round(end - start, 2), self.color)
                     time.sleep(30)
                     continue
 

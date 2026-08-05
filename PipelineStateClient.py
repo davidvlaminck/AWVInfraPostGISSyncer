@@ -37,7 +37,7 @@ class PipelineStateClient:
                     "SELECT phase, status, updated_at, message FROM pipeline_state WHERE id = 1"
                 ).fetchone()
                 return dict(row) if row else None
-        except Exception as exc:
+        except (sqlite3.Error, OSError) as exc:
             logging.error(f"Failed to read pipeline state from SQLite: {exc}")
             return None
 
@@ -93,7 +93,8 @@ class PipelineStateClient:
                     (phase, status, now, message),
                 )
                 conn.commit()
-        except Exception as exc:
+            logging.info(f"SQLite pipeline_state bijgewerkt: phase={phase}, status={status}, message={message}")
+        except (sqlite3.Error, OSError) as exc:
             logging.error(f"Failed to write pipeline state to SQLite: {exc}")
 
     def wait_for_resume(self) -> bool:

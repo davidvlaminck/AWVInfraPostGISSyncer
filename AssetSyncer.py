@@ -66,6 +66,11 @@ class AssetSyncer:
                     eventsparams_to_process = self.events_collector.collect_starting_from_page(
                         current_page, completed_event_id, page_size, resource='assets')
 
+                    if eventsparams_to_process is None:
+                        logging.error(f"{self.color}collect_starting_from_page returned None, retrying in 30 seconds")
+                        time.sleep(30)
+                        continue
+
                     total_events = sum(len(lists) for lists in eventsparams_to_process.event_dict.values())
                     if total_events == 0:
                         logging.info(
@@ -84,7 +89,8 @@ class AssetSyncer:
                 except Exception as err:
                     logging.error(err)
                     end = time.time()
-                    self.log_eventparams(eventsparams_to_process.event_dict, round(end - start, 2), self.color)
+                    if eventsparams_to_process is not None:
+                        self.log_eventparams(eventsparams_to_process.event_dict, round(end - start, 2), self.color)
                     time.sleep(30)
                     continue
 
