@@ -27,4 +27,4 @@ connection.commit()
 logging.info('Done! All views in asset_views have been recreated with safe casts.')
 logging.info('You can now run main_linux_update_daily_views.py to rebuild asset_daily_views.')
 
-connection.close()
+connector.kill_connection(connection)

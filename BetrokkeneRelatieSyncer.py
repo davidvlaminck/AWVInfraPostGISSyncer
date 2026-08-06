@@ -83,7 +83,12 @@ class BetrokkeneRelatieSyncer:
 
                 try:
                     self.events_processor.process_events(eventsparams_to_process, connection)
-                except AssetMissingError or AgentMissingError:
+                except ConnectionError:
+                    logging.info(self.color + "failed connection, retrying in 1 minute")
+                    connection.rollback()
+                    time.sleep(60)
+                    continue
+                except (AssetMissingError, AgentMissingError):
                     logging.warning(self.color + 'Tried to add betrokkenerelaties but a source or target is missing. '
                                     'Trying again in 60 seconds to allow other feeds to create the missing objects.')
                     time.sleep(60)
@@ -94,6 +99,7 @@ class BetrokkeneRelatieSyncer:
                     time.sleep(30)
             except ConnectionError:
                 logging.info(self.color + "failed connection, retrying in 1 minute")
+                connection.rollback()
                 time.sleep(60)
             except Exception as err:
                 logging.error(self.color + err)

@@ -32,5 +32,8 @@ if __name__ == '__main__':
     assets_syncer = SyncerFactory.get_syncer_by_feed_name('assets', eminfra_importer=eminfra_importer,
                                                           postgis_connector=syncer.connector)
     connection = syncer.connector.get_connection()
-    assets_syncer.update_view_tables(connection=connection, color=assets_syncer.color)
+    try:
+        assets_syncer.update_view_tables(connection=connection, color=assets_syncer.color)
+    finally:
+        syncer.connector.kill_connection(connection)
     # about 35 minutes runtime

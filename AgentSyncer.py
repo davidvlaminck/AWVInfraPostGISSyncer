@@ -86,6 +86,7 @@ class AgentSyncer:
                     time.sleep(30)
             except ConnectionError:
                 logging.info(f"{self.color}failed connection, retrying in 1 minute")
+                connection.rollback()
                 time.sleep(60)
             except Exception as exc:
                 logging.error(f'{self.color}{exc}')

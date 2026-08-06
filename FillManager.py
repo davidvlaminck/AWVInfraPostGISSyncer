@@ -116,31 +116,32 @@ class FillManager:
         logging.info(f'{color}Filling {resource.value} table')
         connection = self.connector.get_connection()
 
-        filler = FillerFactory.create_filler(eminfra_importer=self.eminfra_importer, resource=resource,
-                                             postgis_connector=self.connector, fill_manager=self)
-        while True:
-            try:
-                if filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection):
-                    break
-            except FillResetError:
-                return
-            except ConnectionError as exc:
-                logging.error(exc)
-                logging.info(f'{color}Connection error: trying again in 60 seconds...')
-                time.sleep(60)
-                continue
-            except urllib3.exceptions.ConnectionError as exc:
-                logging.error(exc)
-                logging.info(f'{color}Connection error: trying again in 60 seconds...')
-                time.sleep(60)
-                continue
-            except Exception as exc:
-                logging.error(f'{color}Unknown error. Hiding it!!')
-                logging.error(exc)
-                time.sleep(10)
-                continue
-
-        self.connector.kill_connection(connection)
+        try:
+            filler = FillerFactory.create_filler(eminfra_importer=self.eminfra_importer, resource=resource,
+                                                 postgis_connector=self.connector, fill_manager=self)
+            while True:
+                try:
+                    if filler.fill(pagingcursor=pagingcursor, page_size=page_size, connection=connection):
+                        break
+                except FillResetError:
+                    return
+                except ConnectionError as exc:
+                    logging.error(exc)
+                    logging.info(f'{color}Connection error: trying again in 60 seconds...')
+                    time.sleep(60)
+                    continue
+                except urllib3.exceptions.ConnectionError as exc:
+                    logging.error(exc)
+                    logging.info(f'{color}Connection error: trying again in 60 seconds...')
+                    time.sleep(60)
+                    continue
+                except Exception as exc:
+                    logging.error(f'{color}Unknown error. Hiding it!!')
+                    logging.error(exc)
+                    time.sleep(10)
+                    continue
+        finally:
+            self.connector.kill_connection(connection)
 
     def save_last_feedevent_to_params(self, page_size: int, feed: str):
         logging.info(f'Getting last page of current feed for {feed}')

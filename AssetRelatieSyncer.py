@@ -74,6 +74,7 @@ class AssetRelatieSyncer:
                         continue
                 except ConnectionError:
                     logging.info(f"{self.color}failed connection, retrying in 1 minute")
+                    connection.rollback()
                     time.sleep(60)
                     continue
                 except Exception as err:

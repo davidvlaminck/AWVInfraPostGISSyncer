@@ -94,7 +94,10 @@ class SyncManager:
                                                        postgis_connector=self.connector,
                                                        pipeline_state_client=self.pipeline_state_client)
         connection = self.connector.get_connection()
-        syncer.sync(connection=connection, stop_when_fully_synced=stop_when_fully_synced)
+        try:
+            syncer.sync(connection=connection, stop_when_fully_synced=stop_when_fully_synced)
+        finally:
+            self.connector.kill_connection(connection)
 
     def perform_multiprocessing_syncing(self, stop_when_fully_synced: bool):
         # use multithreading

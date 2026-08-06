@@ -31,13 +31,20 @@ class PipelineStateClient:
         if not self.is_enabled():
             return None
         try:
-            with self._connect() as conn:
-                conn.row_factory = sqlite3.Row
-                row = conn.execute(
-                    "SELECT phase, status, updated_at, message FROM pipeline_state WHERE id = 1"
-                ).fetchone()
-                return dict(row) if row else None
+            conn = self._connect()
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                "SELECT phase, status, updated_at, message FROM pipeline_state WHERE id = 1"
+            ).fetchone()
+            result = dict(row) if row else None
+            conn.close()
+            return result
         except (sqlite3.Error, OSError) as exc:
+            try:
+                if conn is not None:
+                    conn.close()
+            except:
+                pass
             logging.error(f"Failed to read pipeline state from SQLite: {exc}")
             return None
 
@@ -87,12 +94,13 @@ class PipelineStateClient:
             return
         try:
             now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-            with self._connect() as conn:
-                conn.execute(
-                    "UPDATE pipeline_state SET phase = ?, status = ?, updated_at = ?, message = ? WHERE id = 1",
-                    (phase, status, now, message),
-                )
-                conn.commit()
+            conn = self._connect()
+            conn.execute(
+                "UPDATE pipeline_state SET phase = ?, status = ?, updated_at = ?, message = ? WHERE id = 1",
+                (phase, status, now, message),
+            )
+            conn.commit()
+            conn.close()
             logging.info(f"SQLite pipeline_state bijgewerkt: phase={phase}, status={status}, message={message}")
         except (sqlite3.Error, OSError) as exc:
             logging.error(f"Failed to write pipeline state to SQLite: {exc}")

@@ -29,7 +29,7 @@ cursor = connection.cursor()
 cursor.execute("SELECT uuid, uri, geometrie FROM assettypes LIMIT 100")
 rows = cursor.fetchall()
 cursor.close()
-connection.close()
+connector.kill_connection(connection)
 
 uuids = [str(row[0]) for row in rows]
 

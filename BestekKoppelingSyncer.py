@@ -47,7 +47,7 @@ class BestekKoppelingSyncer:
             self.delete_temp_table_for_sync_bestekkoppelingen(connection=connection)
             self.postGIS_connector.update_params(params={'bestekkoppelingen_fill': False}, connection=connection)
 
-        connection.close()
+        self.postGIS_connector.kill_connection(connection)
 
     def get_all_bestekkoppelingen_by_asset_uuids_onderdelen(self, asset_uuids: [str]) -> Generator[tuple]:
         yield from self.eminfra_importer.get_all_bestekkoppelingen_from_webservice_by_asset_uuids_onderdelen(

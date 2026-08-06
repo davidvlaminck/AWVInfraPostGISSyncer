@@ -84,6 +84,7 @@ class AssetSyncer:
                         continue
                 except ConnectionError:
                     logging.info(f"{self.color}failed connection, retrying in 1 minute")
+                    connection.rollback()
                     time.sleep(60)
                     continue
                 except Exception as err:
@@ -122,13 +123,11 @@ class AssetSyncer:
                     continue
                 except ConnectionError:
                     logging.info(f"{self.color}failed connection, retrying in 1 minute")
-                    time.sleep(60)
-                except Exception as exc:
-                    logging.error(exc)
                     connection.rollback()
-                    time.sleep(30)
+                    time.sleep(60)
             except ConnectionError:
                 logging.info(f"{self.color}failed connection, retrying in 1 minute")
+                connection.rollback()
                 time.sleep(60)
             except Exception as exc:
                 logging.error(f'{self.color}{exc}')
