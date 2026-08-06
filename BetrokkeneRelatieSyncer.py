@@ -10,8 +10,7 @@ from BetrokkeneRelatiesUpdater import BetrokkeneRelatiesUpdater
 from EMInfraImporter import EMInfraImporter
 from Exceptions.AgentMissingError import AgentMissingError
 from Exceptions.AssetMissingError import AssetMissingError
-from Helpers import now_in_brussels
-from PipelineStateClient import PipelineStateClient
+from Helpers import handle_pipeline_pause, now_in_brussels
 from PostGISConnector import PostGISConnector
 from ResourceEnum import colorama_table, ResourceEnum
 from SyncTimer import SyncTimer
@@ -19,7 +18,7 @@ from SyncTimer import SyncTimer
 
 class BetrokkeneRelatieSyncer:
     def __init__(self, postgis_connector: PostGISConnector, eminfra_importer: EMInfraImporter,
-                 pipeline_state_client: PipelineStateClient = None):
+                 pipeline_state_db_path: str = None):
         self.postgis_connector: PostGISConnector = postgis_connector
         self.eminfra_importer: EMInfraImporter = eminfra_importer
         self.updater: BetrokkeneRelatiesUpdater = BetrokkeneRelatiesUpdater()
@@ -28,12 +27,12 @@ class BetrokkeneRelatieSyncer:
         self.events_processor: BetrokkeneRelatieFeedEventsProcessor = BetrokkeneRelatieFeedEventsProcessor(
             postgis_connector, eminfra_importer=eminfra_importer)
         self.color = colorama_table[ResourceEnum.betrokkenerelaties]
-        self.pipeline_state_client: PipelineStateClient = pipeline_state_client
+        self.pipeline_state_db_path: str = pipeline_state_db_path
 
     def sync(self, connection, stop_when_fully_synced: bool = False):
         while True:
             try:
-                if self.pipeline_state_client and self.pipeline_state_client.handle_pause_and_resume(color=self.color):
+                if handle_pipeline_pause(db_path=self.pipeline_state_db_path, color=self.color):
                     continue
 
                 sync_paused_by_time = SyncTimer.calculate_sync_paused_by_time()
