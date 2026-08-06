@@ -59,7 +59,8 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
                 if 'geo:DtcLog.geometrie' in geometrie_dict:
                     wkt_dict = geometrie_dict['geo:DtcLog.geometrie']
                     if len(wkt_dict.values()) > 1:
-                        raise NotImplementedError(f'geo:DtcLog.geometrie in dict of asset {uuid} has more than 1 geometry')
+                        asset_uuid = asset_dict['@id']
+                        raise NotImplementedError(f'geo:DtcLog.geometrie in dict of asset {asset_uuid} has more than 1 geometry')
 
                     if len(wkt_dict.values()) == 1:
                         geometrie = list(wkt_dict.values())[0]
