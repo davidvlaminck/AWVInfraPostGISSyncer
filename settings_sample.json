@@ -1,52 +1,63 @@
 {
-    "auth_options" : [
-        {
-            "type" : "cert",
-            "environment": "prd",
-            "cert_path" : "C:\\resources\\datamanager_eminfra_prd.awv.vlaanderen.be.crt",
-            "key_path" : "C:\\resources\\datamanager_eminfra_prd.awv.vlaanderen.be.key"
+    "authentication": {
+        "JWT": {
+            "prd": {
+                "client_id": "00000000-0000-0000-0000-000000000000",
+                "key_path": "path_to_key_prd_private.json"
+            },
+            "tei": {
+                "client_id": "00000000-0000-0000-0000-000000000000",
+                "key_path": "path_to_key_tei_private.json"
+            },
+            "dev": {
+                "client_id": "00000000-0000-0000-0000-000000000000",
+                "key_path": "path_to_key_dev_private.json"
+            },
+            "aim": {
+                "client_id": "00000000-0000-0000-0000-000000000000",
+                "key_path": "path_to_key_dev_private.json"
+            }
         },
-        {
-            "type" : "JWT",
-            "environment": "prd",
-            "client_id" : "0eef6a36-f985-412d-a9d9-d4e91bd85633",
-            "key_path" : "C:\\resources\\datamanager_prd_private.json"
-        },
-        {
-            "type" : "JWT",
-            "environment": "tei",
-            "client_id" : "ead845a1-0528-4eef-9895-832895d6c03e",
-            "key_path" : "C:\\resources\\datamanager_tei_private.json"
-        },
-        {
-            "type" : "JWT",
-            "environment": "dev",
-            "client_id" : "1fdf6f18-e333-4eff-acd3-d38d06bcea57",
-            "key_path" : "C:\\resources\\datamanager_dev_private.json"
+        "CERT": {
+            "prd": {
+                "cert_path": "path_to_crt_prd_private.crt",
+                "key_path": "path_to_key_prd_private.key"
+            },
+            "tei": {
+                "cert_path": "path_to_crt_tei_private.crt",
+                "key_path": "path_to_key_tei_private.key"
+            },
+            "dev": {
+                "cert_path": "path_to_crt_dev_private.crt",
+                "key_path": "path_to_key_dev_private.key"
+            },
+            "aim": {
+                "cert_path": "path_to_crt_dev_private.crt",
+                "key_path": "path_to_key_dev_private.key"
+            }
         }
-    ],
-    "databases" : {
-         "prd" : {
-             "database" : "",
-             "host": "",
-             "port": "",
-             "user": "",
-             "password": ""
-         },
-        "unittest" : {
-             "database" : "unittest",
-             "host": "localhost",
-             "port": "5432",
-             "user": "unittest",
-             "password": "unittest"
-         }
-     },
-     "time" : {
+    },
+    "databases": {
+        "prd": {
+            "database": "",
+            "host": "",
+            "port": "",
+            "user": "",
+            "password": ""
+        },
+        "unittest": {
+            "database": "unittest",
+            "host": "localhost",
+            "port": "5432",
+            "user": "unittest",
+            "password": "unittest"
+        }
+    },
+    "time" : {
          "start" : "03:00:00",
          "end" : "07:30:00"
      },
-     "pipeline_state": {
-         "enabled": true,
-         "db_path": "/home/davidlinux/PycharmProjects/RSA_Health/health.db"
-     }
+    "health_db": {
+        "path": "/opt/data-platform/RSA_Health/health.db"
+    }
 }

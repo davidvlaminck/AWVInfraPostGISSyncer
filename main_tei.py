@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 from EMInfraImporter import EMInfraImporter
 from PostGISConnector import PostGISConnector
@@ -13,13 +14,11 @@ if __name__ == '__main__':
         level=logging.INFO,
         datefmt='%Y-%m-%d %H:%M:%S')
 
-    settings_manager = SettingsManager(
-        settings_path='C:/resources/settings_AwvinfraPostGISSyncer.json')
+    settings_path = Path(__file__).parent.parent / 'config' / 'settings_postgis.json'
+    settings_manager = SettingsManager(settings_path)
     db_settings = settings_manager.settings['databases']['tei']
 
-    connector = PostGISConnector(host=db_settings['host'], port=db_settings['port'],
-                                 user=db_settings['user'], password=db_settings['password'],
-                                 database=db_settings['database'])
+    connector = PostGISConnector(**db_settings)
 
     requester = RequesterFactory.create_requester(settings=settings_manager.settings, auth_type='JWT', env='tei')
     request_handler = RequestHandler(requester)

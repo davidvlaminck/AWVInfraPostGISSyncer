@@ -8,6 +8,11 @@ from EventProcessors.AssetProcessors.AssetRelatiesGewijzigdProcessor import Asse
 from Exceptions.AssetMissingError import AssetMissingError
 from PostGISConnector import PostGISConnector
 from SettingsManager import SettingsManager
+settings_manager = SettingsManager(
+    settings_path='/home/davidlinux/PycharmProjects/AWVInfraPostGISSyncer/settings_sample.json')
+unittest_db_settings = settings_manager.settings['databases']['unittest']
+unittest_db_settings['database'] = 'unittests'
+
 
 
 class AssetRelatieProcessorTests(TestCase):

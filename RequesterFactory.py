@@ -1,21 +1,19 @@
-from typing import Dict
-
 import requests
 
 from CertRequester import CertRequester
-from JWTRequester import SingletonJWTRequester, JWTRequester
+from JWTRequester import JWTRequester, SingletonJWTRequester
 
 
 class RequesterFactory:
     @classmethod
-    def create_requester(cls, settings: Dict = None, auth_type: str = '', env: str = '',
+    def create_requester(cls, settings: dict, auth_type: str = '', env: str = '',
                          multiprocessing_safe: bool = False) -> requests.Session:
-        try:
-            auth_env = env
-            if auth_env == 'aim':
-                auth_env = 'dev'
-            auth_info = next(a for a in settings['auth_options'] if a['type'] == auth_type and a['environment'] == auth_env)
-        except StopIteration:
+        auth_env = env
+        if auth_env == 'aim':
+            auth_env = 'dev'
+
+        auth_info = settings.get('authentication', {}).get(auth_type, {}).get(auth_env, {})
+        if not auth_info:
             raise ValueError(f"Could not load the settings for {auth_type} {env}")
 
         first_part_url = ''
@@ -28,13 +26,13 @@ class RequesterFactory:
         elif env == 'aim':
             first_part_url = 'https://services-aim.apps-dev.mow.vlaanderen.be/'
 
-        if auth_info['type'] == 'JWT':
+        if auth_type == 'JWT':
             if multiprocessing_safe:
                 return SingletonJWTRequester(private_key_path=auth_info['key_path'], client_id=auth_info['client_id'],
                                              first_part_url=first_part_url)
             return JWTRequester(private_key_path=auth_info['key_path'], client_id=auth_info['client_id'],
                                 first_part_url=first_part_url)
-        if auth_info['type'] == 'cert':
+        if auth_type == 'cert':
             return CertRequester(cert_path=auth_info['cert_path'],
                                  key_path=auth_info['key_path'],
                                  first_part_url=first_part_url)

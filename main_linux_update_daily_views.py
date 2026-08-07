@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 from EMInfraImporter import EMInfraImporter
 from PostGISConnector import PostGISConnector
@@ -15,8 +16,8 @@ if __name__ == '__main__':
 
     environment = 'prd'
 
-    settings_manager = SettingsManager(
-        settings_path='/home/davidlinux/Documents/AWV/resources/settings_AwvinfraPostGISSyncer.json')
+    settings_path = Path(__file__).parent.parent / 'config' / 'settings_postgis.json'
+    settings_manager = SettingsManager(settings_path)
     db_settings = settings_manager.settings['databases'][environment]
 
     connector = PostGISConnector(**db_settings)

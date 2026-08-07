@@ -9,7 +9,6 @@ from AgentSyncer import AgentSyncer
 from AssetRelatieSyncer import AssetRelatieSyncer
 from AssetSyncer import AssetSyncer
 from BetrokkeneRelatieSyncer import BetrokkeneRelatieSyncer
-from ControleficheSyncer import ControleficheSyncer
 from EMInfraImporter import EMInfraImporter
 from FeedEventsCollector import FeedEventsCollector
 from FeedEventsProcessor import FeedEventsProcessor
@@ -57,8 +56,8 @@ class SyncManager:
             SyncTimer.sync_end = self.settings['time']['end']
 
         self.pipeline_state_db_path = None
-        if 'pipeline_state' in self.settings and self.settings['pipeline_state'].get('enabled'):
-            self.pipeline_state_db_path = self.settings['pipeline_state'].get('db_path')
+        if 'health_db' in self.settings:
+            self.pipeline_state_db_path = self.settings['health_db'].get('path')
 
     def start(self, stop_when_fully_synced: bool = False):
         while True:
