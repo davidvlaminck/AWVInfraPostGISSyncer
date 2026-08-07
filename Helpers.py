@@ -81,8 +81,10 @@ def handle_pipeline_pause(db_path: str, post_pause_callback=None, color: str = "
         logging.info(f"{color}postgis_sync pausing signaal ontvangen, synchronizen stoppen")
 
         enqueue_sqlite_job(
-            action="report_paused",
+            action="update_pipeline_state",
             payload={
+                "phase": "postgis_sync_paused",
+                "status": "completed",
                 "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "message": f"{color}PostGIS-sync gepauzeerd door pipeline signal",
             },
@@ -116,8 +118,10 @@ def handle_pipeline_pause(db_path: str, post_pause_callback=None, color: str = "
             time.sleep(30)
 
         enqueue_sqlite_job(
-            action="report_running",
+            action="update_pipeline_state",
             payload={
+                "phase": "postgis_sync_running",
+                "status": "running",
                 "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "message": f"{color}PostGIS-sync hervat door pipeline signal",
             },
