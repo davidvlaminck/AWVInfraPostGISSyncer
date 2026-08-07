@@ -1,0 +1,18 @@
+[Unit] 
+Description=Data import naar PostGIS
+After=network-online.target postgresql.service
+Wants=network-online.target 
+ 
+[Service] 
+Type=simple 
+User=deploy
+Group=deploy
+WorkingDirectory=/opt/data-platform/AWVInfraPostGISSyncer
+ExecStart=/home/deploy/.local/bin/uv run main_linux.py 
+StandardOutput=append:/opt/data-platform/logs/postgis_sync.log 
+StandardError=append:/opt/data-platform/logs/postgis_sync.log
+Restart=on-failure
+RestartSec=60
+ 
+[Install] 
+WantedBy=multi-user.target 
