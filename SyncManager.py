@@ -54,6 +54,7 @@ class SyncManager:
             # The configured time window now represents when syncing is paused.
             SyncTimer.sync_start = self.settings['time']['start']
             SyncTimer.sync_end = self.settings['time']['end']
+            SyncTimer.backup_time = self.settings['time'].get('backup', '06:00:00')
 
         self.pipeline_state_db_path = None
         if 'health_db' in self.settings:

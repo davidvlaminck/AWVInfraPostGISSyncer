@@ -6,6 +6,7 @@ from Helpers import now_in_brussels
 class SyncTimer:
     sync_start = None
     sync_end = None
+    backup_time = '06:00:00'
 
     @staticmethod
     def _to_seconds(time_string: str) -> int:

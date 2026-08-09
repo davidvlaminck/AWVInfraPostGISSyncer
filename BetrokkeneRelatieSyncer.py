@@ -32,12 +32,18 @@ class BetrokkeneRelatieSyncer:
     def sync(self, connection, stop_when_fully_synced: bool = False):
         while True:
             try:
-                if handle_pipeline_pause(db_path=self.pipeline_state_db_path, color=self.color):
+                in_pause_window = SyncTimer.calculate_sync_paused_by_time()
+                if handle_pipeline_pause(
+                        db_path=self.pipeline_state_db_path,
+                        color=self.color,
+                        in_pause_window=in_pause_window,
+                        backup_time=SyncTimer.backup_time):
                     continue
 
-                sync_paused_by_time = SyncTimer.calculate_sync_paused_by_time()
-                if sync_paused_by_time:
-                    logging.info(self.color + 'syncing is paused at this time. Trying again in 5 minutes')
+                if in_pause_window:
+                    logging.info(
+                        self.color + 'in pause window (03:00-07:30), waiting for pipeline pause signal...'
+                    )
                     time.sleep(300)
                     continue
 

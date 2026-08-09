@@ -62,7 +62,44 @@ def construct_naampad(input_dict: dict) -> str:
     return "/".join(naam_list)  # concatenate naampad, using "/" as a separator character
 
 
-def handle_pipeline_pause(db_path: str, post_pause_callback=None, color: str = "") -> bool:
+def _time_string_to_seconds(time_string: str) -> int:
+    parsed = time.strptime(time_string, "%H:%M:%S")
+    return parsed.tm_hour * 3600 + parsed.tm_min * 60 + parsed.tm_sec
+
+
+def _is_past_time(target_time: str, current_time: datetime) -> bool:
+    now_seconds = current_time.hour * 3600 + current_time.minute * 60 + current_time.second
+    return now_seconds >= _time_string_to_seconds(target_time)
+
+
+def _wait_for_resume(db_path: str, timeout_hours: int, color: str = "") -> bool:
+    logging.info(f"{color}wachten op postgis_sync resuming signaal (max. {timeout_hours} uur)")
+    start_time = time.time()
+    while True:
+        try:
+            conn = sqlite3.connect(db_path, timeout=30)
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                "SELECT phase, status FROM pipeline_state WHERE id = 1"
+            ).fetchone()
+            conn.close()
+
+            state = dict(row) if row else {}
+            if state.get("phase") == "postgis_sync_resuming" and state.get("status") == "running":
+                logging.info(f"{color}pipeline resume signal received, resuming sync")
+                return True
+        except (sqlite3.Error, OSError):
+            pass
+
+        if time.time() - start_time >= timeout_hours * 3600:
+            logging.warning(f"{color}{timeout_hours}h resume-timeout reached, forcing resume")
+            return False
+
+        time.sleep(30)
+
+
+def handle_pipeline_pause(db_path: str = None, post_pause_callback=None, color: str = "",
+                          in_pause_window: bool = False, backup_time: str = "06:00:00") -> bool:
     if not db_path:
         return False
 
@@ -75,10 +112,21 @@ def handle_pipeline_pause(db_path: str, post_pause_callback=None, color: str = "
         conn.close()
 
         state = dict(row) if row else {}
-        if state.get("phase") != "postgis_sync_pausing" or state.get("status") != "running":
+
+        external_pause = (state.get("phase") == "postgis_sync_pausing" and
+                          state.get("status") == "running")
+
+        backup_pause = False
+        if not external_pause and in_pause_window:
+            if _is_past_time(backup_time, now_in_brussels()):
+                backup_pause = True
+                logging.info(f"{color}no pause signal received by {backup_time}, triggering backup pause flow")
+
+        if not external_pause and not backup_pause:
             return False
 
-        logging.info(f"{color}postgis_sync pausing signaal ontvangen, synchronizen stoppen")
+        if external_pause:
+            logging.info(f"{color}pipeline pause signal received, transitioning to postgis_sync_paused")
 
         enqueue_sqlite_job(
             action="update_pipeline_state",
@@ -91,31 +139,14 @@ def handle_pipeline_pause(db_path: str, post_pause_callback=None, color: str = "
         )
 
         if post_pause_callback is not None:
-            logging.info(f"{color}extra views aanmaken tijdens pauze")
+            logging.info(f"{color}post-pause callback started (rebuilding daily views)")
             post_pause_callback()
+            logging.info(f"{color}post-pause callback completed")
 
-        logging.info(f"{color}wachten op postgis_sync resuming signaal (max. 3 uur)")
-        start_time = time.time()
-        while True:
-            try:
-                conn = sqlite3.connect(db_path, timeout=30)
-                conn.row_factory = sqlite3.Row
-                row = conn.execute(
-                    "SELECT phase, status FROM pipeline_state WHERE id = 1"
-                ).fetchone()
-                conn.close()
+        resumed = _wait_for_resume(db_path, timeout_hours=4, color=color)
 
-                state = dict(row) if row else {}
-                if state.get("phase") == "postgis_sync_resuming" and state.get("status") == "running":
-                    break
-            except (sqlite3.Error, OSError):
-                pass
-
-            if time.time() - start_time >= 3 * 3600:
-                logging.info(f"{color}3 uur gewacht zonder resume-signaal, hervat zonder status-update")
-                return True
-
-            time.sleep(30)
+        if not resumed:
+            logging.warning(f"{color}4h resume-timeout reached, forcing resume")
 
         enqueue_sqlite_job(
             action="update_pipeline_state",
@@ -123,7 +154,7 @@ def handle_pipeline_pause(db_path: str, post_pause_callback=None, color: str = "
                 "phase": "postgis_sync_running",
                 "status": "running",
                 "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-                "message": f"{color}PostGIS-sync hervat door pipeline signal",
+                "message": f"{color}PostGIS-sync hervat",
             },
         )
 
