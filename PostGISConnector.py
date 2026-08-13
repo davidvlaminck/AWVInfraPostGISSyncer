@@ -200,8 +200,13 @@ class PostGISConnector:
 
     def get_connection(self):
         connection = self.pool.getconn()
+        if connection.closed != 0:
+            connection = self.pool.getconn()
         connection.autocommit = False
         return connection
 
     def kill_connection(self, connection):
-        self.pool.putconn(connection)
+        if connection.closed != 0:
+            connection.close()
+        else:
+            self.pool.putconn(connection)
