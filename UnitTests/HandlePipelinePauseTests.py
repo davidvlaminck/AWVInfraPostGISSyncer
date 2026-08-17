@@ -10,6 +10,10 @@ from Helpers import handle_pipeline_pause, _is_past_time, _time_string_to_second
 from SyncTimer import SyncTimer
 
 
+def make_already_paused_row():
+    return {'phase': 'postgis_sync_paused', 'status': 'completed'}
+
+
 def make_paused_row():
     return {'phase': 'postgis_sync_pausing', 'status': 'running'}
 
@@ -69,6 +73,23 @@ class HandlePipelinePauseNoDbPathTests(TestCase):
     def test_returns_false_when_db_path_empty(self):
         result = handle_pipeline_pause(db_path='', color='', in_pause_window=True)
         self.assertFalse(result)
+
+
+class HandlePipelinePauseAlreadyPausedTests(TestCase):
+    @patch('Helpers.enqueue_sqlite_job')
+    @patch('Helpers.sqlite3.connect')
+    def test_returns_false_when_already_paused(self, mock_connect, mock_enqueue):
+        setup_mock_connect(mock_connect, make_already_paused_row())
+
+        result = handle_pipeline_pause(
+            db_path='/tmp/fake.db',
+            color='',
+            in_pause_window=True,
+            backup_time='06:00:00'
+        )
+
+        self.assertFalse(result)
+        mock_enqueue.assert_not_called()
 
 
 class HandlePipelinePauseNoSignalTests(TestCase):

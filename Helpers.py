@@ -113,6 +113,9 @@ def handle_pipeline_pause(db_path: str = None, post_pause_callback=None, color: 
 
         state = dict(row) if row else {}
 
+        if state.get("phase") == "postgis_sync_paused":
+            return False
+
         external_pause = (state.get("phase") == "postgis_sync_pausing" and
                           state.get("status") == "running")
 
