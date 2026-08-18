@@ -1,4 +1,6 @@
+import os
 import sqlite3
+import tempfile
 from datetime import datetime
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
@@ -6,7 +8,7 @@ from types import SimpleNamespace
 
 from zoneinfo import ZoneInfo
 
-from Helpers import handle_pipeline_pause, _is_past_time, _time_string_to_seconds
+from Helpers import handle_pipeline_pause, _is_past_time, _time_string_to_seconds, _has_paused_today, _mark_paused_today
 from SyncTimer import SyncTimer
 
 
@@ -92,6 +94,86 @@ class HandlePipelinePauseAlreadyPausedTests(TestCase):
         mock_enqueue.assert_not_called()
 
 
+class HandlePipelinePauseDailyGuardTests(TestCase):
+    @patch('Helpers.now_in_brussels')
+    def test_has_paused_today_true_when_marker_has_today(self, mock_now):
+        mock_now.return_value = datetime(2024, 1, 1, 12, 0, tzinfo=ZoneInfo('Europe/Brussels'))
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8') as f:
+            f.write('2024-01-01')
+            marker_path = f.name
+        try:
+            self.assertTrue(_has_paused_today(marker_path))
+        finally:
+            os.unlink(marker_path)
+
+    @patch('Helpers.now_in_brussels')
+    def test_has_paused_today_false_when_marker_has_yesterday(self, mock_now):
+        mock_now.return_value = datetime(2024, 1, 1, 12, 0, tzinfo=ZoneInfo('Europe/Brussels'))
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8') as f:
+            f.write('2023-12-31')
+            marker_path = f.name
+        try:
+            self.assertFalse(_has_paused_today(marker_path))
+        finally:
+            os.unlink(marker_path)
+
+    def test_has_paused_today_false_when_marker_missing(self):
+        marker_path = '/tmp/nonexistent_pause_marker_12345'
+        self.assertFalse(_has_paused_today(marker_path))
+
+    @patch('Helpers._wait_for_resume', return_value=True)
+    @patch('Helpers.enqueue_sqlite_job')
+    @patch('Helpers.sqlite3.connect')
+    @patch('Helpers.now_in_brussels')
+    def test_returns_false_when_already_paused_today(
+        self, mock_now, mock_connect, mock_enqueue, mock_wait
+    ):
+        mock_now.return_value = datetime(2024, 1, 1, 4, 0, 0, tzinfo=ZoneInfo('Europe/Brussels'))
+        setup_mock_connect(mock_connect, make_paused_row(), make_resumed_row())
+
+        db_path = '/tmp/fake.db'
+        marker_path = db_path + '.pause_date'
+        with open(marker_path, 'w', encoding='utf-8') as f:
+            f.write('2024-01-01')
+        try:
+            result = handle_pipeline_pause(
+                db_path=db_path,
+                color='',
+                in_pause_window=False
+            )
+            self.assertFalse(result)
+            mock_enqueue.assert_not_called()
+        finally:
+            if os.path.exists(marker_path):
+                os.unlink(marker_path)
+
+    @patch('Helpers._wait_for_resume', return_value=True)
+    @patch('Helpers.enqueue_sqlite_job')
+    @patch('Helpers.sqlite3.connect')
+    @patch('Helpers.now_in_brussels')
+    def test_proceeds_when_paused_yesterday(
+        self, mock_now, mock_connect, mock_enqueue, mock_wait
+    ):
+        mock_now.return_value = datetime(2024, 1, 2, 4, 0, 0, tzinfo=ZoneInfo('Europe/Brussels'))
+        setup_mock_connect(mock_connect, make_paused_row(), make_resumed_row())
+
+        db_path = '/tmp/fake.db'
+        marker_path = db_path + '.pause_date'
+        with open(marker_path, 'w', encoding='utf-8') as f:
+            f.write('2024-01-01')
+        try:
+            result = handle_pipeline_pause(
+                db_path=db_path,
+                color='',
+                in_pause_window=False
+            )
+            self.assertTrue(result)
+            self.assertEqual(mock_enqueue.call_count, 2)
+        finally:
+            if os.path.exists(marker_path):
+                os.unlink(marker_path)
+
+
 class HandlePipelinePauseNoSignalTests(TestCase):
     @patch('Helpers.enqueue_sqlite_job')
     @patch('Helpers.sqlite3.connect')
@@ -137,6 +219,11 @@ class HandlePipelinePauseNoSignalTests(TestCase):
 
 
 class HandlePipelineBackupPauseTests(TestCase):
+    def tearDown(self):
+        marker_path = '/tmp/fake.db.pause_date'
+        if os.path.exists(marker_path):
+            os.unlink(marker_path)
+
     @patch('Helpers._wait_for_resume', return_value=True)
     @patch('Helpers.enqueue_sqlite_job')
     @patch('Helpers.sqlite3.connect')
@@ -185,6 +272,11 @@ class HandlePipelineBackupPauseTests(TestCase):
 
 
 class HandlePipelinePauseExternalSignalTests(TestCase):
+    def tearDown(self):
+        marker_path = '/tmp/fake.db.pause_date'
+        if os.path.exists(marker_path):
+            os.unlink(marker_path)
+
     @patch('Helpers._wait_for_resume', return_value=True)
     @patch('Helpers.enqueue_sqlite_job')
     @patch('Helpers.sqlite3.connect')

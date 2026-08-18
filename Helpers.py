@@ -1,5 +1,7 @@
+import contextlib
 import itertools
 import logging
+import os
 import sqlite3
 import time
 from datetime import datetime, timezone
@@ -98,9 +100,33 @@ def _wait_for_resume(db_path: str, timeout_hours: int, color: str = "") -> bool:
         time.sleep(30)
 
 
+def _get_pause_marker_path(db_path: str) -> str:
+    return db_path + ".pause_date"
+
+
+def _has_paused_today(marker_path: str) -> bool:
+    if not os.path.exists(marker_path):
+        return False
+    try:
+        with open(marker_path, "r", encoding="utf-8") as f:
+            last_date = f.read().strip()
+        return last_date == now_in_brussels().date().isoformat()
+    except (OSError, ValueError):
+        return False
+
+
+def _mark_paused_today(marker_path: str) -> None:
+    with contextlib.suppress(OSError), open(marker_path, "w", encoding="utf-8") as f:
+        f.write(now_in_brussels().date().isoformat())
+
+
 def handle_pipeline_pause(db_path: str = None, post_pause_callback=None, color: str = "",
                           in_pause_window: bool = False, backup_time: str = "06:00:00") -> bool:
     if not db_path:
+        return False
+
+    marker_path = _get_pause_marker_path(db_path)
+    if _has_paused_today(marker_path):
         return False
 
     try:
@@ -140,6 +166,8 @@ def handle_pipeline_pause(db_path: str = None, post_pause_callback=None, color: 
                 "message": f"{color}PostGIS-sync gepauzeerd door pipeline signal",
             },
         )
+
+        _mark_paused_today(marker_path)
 
         if post_pause_callback is not None:
             logging.info(f"{color}post-pause callback started (rebuilding daily views)")
