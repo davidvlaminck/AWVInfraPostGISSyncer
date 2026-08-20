@@ -8,44 +8,15 @@ from types import SimpleNamespace
 
 from zoneinfo import ZoneInfo
 
-from Helpers import handle_pipeline_pause, _is_past_time, _time_string_to_seconds, _has_paused_today, _mark_paused_today
+from Helpers import (
+    _is_past_time,
+    _time_string_to_seconds,
+    _has_paused_today,
+    _mark_paused_today,
+    is_pipeline_paused,
+    update_daily_views,
+)
 from SyncTimer import SyncTimer
-
-
-def make_already_paused_row():
-    return {'phase': 'postgis_sync_paused', 'status': 'completed'}
-
-
-def make_paused_row():
-    return {'phase': 'postgis_sync_pausing', 'status': 'running'}
-
-
-def make_resumed_row():
-    return {'phase': 'postgis_sync_resuming', 'status': 'running'}
-
-
-def make_idle_row():
-    return None
-
-
-def setup_mock_connect(mock_connect, state_row, resume_row=None):
-    """Configure mock sqlite3.connect to return sequential state rows."""
-    call_count = [0]
-    all_rows = [state_row]
-    if resume_row is not None:
-        all_rows.append(resume_row)
-
-    def mock_connect_fn(*args, **kwargs):
-        conn = MagicMock()
-        conn.row_factory = sqlite3.Row
-        cursor = MagicMock()
-        idx = call_count[0] % len(all_rows)
-        cursor.fetchone.return_value = all_rows[idx]
-        conn.execute.return_value = cursor
-        call_count[0] += 1
-        return conn
-
-    mock_connect.side_effect = mock_connect_fn
 
 
 class TimeStringTests(TestCase):
@@ -67,34 +38,59 @@ class TimeStringTests(TestCase):
         self.assertEqual(SyncTimer.backup_time, '06:00:00')
 
 
-class HandlePipelinePauseNoDbPathTests(TestCase):
+class IsPipelinePausedTests(TestCase):
     def test_returns_false_when_no_db_path(self):
-        result = handle_pipeline_pause(db_path=None, color='', in_pause_window=True)
+        result = is_pipeline_paused(db_path=None)
         self.assertFalse(result)
 
     def test_returns_false_when_db_path_empty(self):
-        result = handle_pipeline_pause(db_path='', color='', in_pause_window=True)
+        result = is_pipeline_paused(db_path='')
         self.assertFalse(result)
 
-
-class HandlePipelinePauseAlreadyPausedTests(TestCase):
-    @patch('Helpers.enqueue_sqlite_job')
     @patch('Helpers.sqlite3.connect')
-    def test_returns_false_when_already_paused(self, mock_connect, mock_enqueue):
-        setup_mock_connect(mock_connect, make_already_paused_row())
+    def test_returns_true_when_phase_is_paused(self, mock_connect):
+        conn = MagicMock()
+        conn.row_factory = sqlite3.Row
+        cursor = MagicMock()
+        cursor.fetchone.return_value = {'phase': 'postgis_sync_paused', 'status': 'completed'}
+        conn.execute.return_value = cursor
+        mock_connect.return_value = conn
 
-        result = handle_pipeline_pause(
-            db_path='/tmp/fake.db',
-            color='',
-            in_pause_window=True,
-            backup_time='06:00:00'
-        )
+        result = is_pipeline_paused(db_path='/tmp/fake.db')
+        self.assertTrue(result)
 
+    @patch('Helpers.sqlite3.connect')
+    def test_returns_false_when_phase_is_running(self, mock_connect):
+        conn = MagicMock()
+        conn.row_factory = sqlite3.Row
+        cursor = MagicMock()
+        cursor.fetchone.return_value = {'phase': 'postgis_sync_running', 'status': 'running'}
+        conn.execute.return_value = cursor
+        mock_connect.return_value = conn
+
+        result = is_pipeline_paused(db_path='/tmp/fake.db')
         self.assertFalse(result)
-        mock_enqueue.assert_not_called()
+
+    @patch('Helpers.sqlite3.connect')
+    def test_returns_false_when_no_row(self, mock_connect):
+        conn = MagicMock()
+        conn.row_factory = sqlite3.Row
+        cursor = MagicMock()
+        cursor.fetchone.return_value = None
+        conn.execute.return_value = cursor
+        mock_connect.return_value = conn
+
+        result = is_pipeline_paused(db_path='/tmp/fake.db')
+        self.assertFalse(result)
+
+    @patch('Helpers.sqlite3.connect')
+    def test_returns_false_on_sqlite_error(self, mock_connect):
+        mock_connect.side_effect = sqlite3.Error("test error")
+        result = is_pipeline_paused(db_path='/tmp/fake.db')
+        self.assertFalse(result)
 
 
-class HandlePipelinePauseDailyGuardTests(TestCase):
+class DailyGuardTests(TestCase):
     @patch('Helpers.now_in_brussels')
     def test_has_paused_today_true_when_marker_has_today(self, mock_now):
         mock_now.return_value = datetime(2024, 1, 1, 12, 0, tzinfo=ZoneInfo('Europe/Brussels'))
@@ -121,222 +117,56 @@ class HandlePipelinePauseDailyGuardTests(TestCase):
         marker_path = '/tmp/nonexistent_pause_marker_12345'
         self.assertFalse(_has_paused_today(marker_path))
 
-    @patch('Helpers._wait_for_resume', return_value=True)
-    @patch('Helpers.enqueue_sqlite_job')
-    @patch('Helpers.sqlite3.connect')
-    @patch('Helpers.now_in_brussels')
-    def test_returns_false_when_already_paused_today(
-        self, mock_now, mock_connect, mock_enqueue, mock_wait
-    ):
-        mock_now.return_value = datetime(2024, 1, 1, 4, 0, 0, tzinfo=ZoneInfo('Europe/Brussels'))
-        setup_mock_connect(mock_connect, make_paused_row(), make_resumed_row())
 
-        db_path = '/tmp/fake.db'
-        marker_path = db_path + '.pause_date'
-        with open(marker_path, 'w', encoding='utf-8') as f:
-            f.write('2024-01-01')
-        try:
-            result = handle_pipeline_pause(
-                db_path=db_path,
-                color='',
-                in_pause_window=False
-            )
-            self.assertFalse(result)
-            mock_enqueue.assert_not_called()
-        finally:
-            if os.path.exists(marker_path):
-                os.unlink(marker_path)
+class UpdateDailyViewsTests(TestCase):
+    def test_returns_early_when_already_updated_today(self):
+        connector = MagicMock()
+        connector.get_params.return_value = {
+            'last_update_utc_views': datetime(2024, 1, 2, 0, 0, tzinfo=ZoneInfo('Europe/Brussels'))
+        }
+        connector.update_params = MagicMock()
 
-    @patch('Helpers._wait_for_resume', return_value=True)
-    @patch('Helpers.enqueue_sqlite_job')
-    @patch('Helpers.sqlite3.connect')
-    @patch('Helpers.now_in_brussels')
-    def test_proceeds_when_paused_yesterday(
-        self, mock_now, mock_connect, mock_enqueue, mock_wait
-    ):
-        mock_now.return_value = datetime(2024, 1, 2, 4, 0, 0, tzinfo=ZoneInfo('Europe/Brussels'))
-        setup_mock_connect(mock_connect, make_paused_row(), make_resumed_row())
+        with patch('Helpers.now_in_brussels', return_value=datetime(2024, 1, 2, 0, 30, tzinfo=ZoneInfo('Europe/Brussels'))):
+            update_daily_views(connector, color='')
 
-        db_path = '/tmp/fake.db'
-        marker_path = db_path + '.pause_date'
-        with open(marker_path, 'w', encoding='utf-8') as f:
-            f.write('2024-01-01')
-        try:
-            result = handle_pipeline_pause(
-                db_path=db_path,
-                color='',
-                in_pause_window=False
-            )
-            self.assertTrue(result)
-            self.assertEqual(mock_enqueue.call_count, 2)
-        finally:
-            if os.path.exists(marker_path):
-                os.unlink(marker_path)
+        connector.get_params.assert_called_once()
+        connector.update_params.assert_not_called()
 
+    def test_creates_view_tables_when_not_updated_today(self):
+        connector = MagicMock()
+        connection = MagicMock()
+        connector.get_connection.return_value = connection
+        connector.get_params.return_value = {
+            'last_update_utc_views': datetime(2024, 1, 1, 0, 0, tzinfo=ZoneInfo('Europe/Brussels'))
+        }
+        connector.update_params = MagicMock()
 
-class HandlePipelinePauseNoSignalTests(TestCase):
-    @patch('Helpers.enqueue_sqlite_job')
-    @patch('Helpers.sqlite3.connect')
-    @patch('Helpers.now_in_brussels')
-    def test_returns_false_when_no_signal_not_in_window(
-        self, mock_now, mock_connect, mock_enqueue
-    ):
-        setup_mock_connect(mock_connect, make_idle_row())
+        cursor = MagicMock()
+        cursor.fetchall.return_value = [('view1',), ('view2',)]
+        connection.cursor.return_value.__enter__ = MagicMock(return_value=cursor)
+        connection.cursor.return_value.__exit__ = MagicMock(return_value=False)
 
-        mock_now.return_value = datetime(2024, 1, 1, 10, 0, tzinfo=ZoneInfo('Europe/Brussels'))
+        with patch('Helpers.now_in_brussels', return_value=datetime(2024, 1, 2, 0, 30, tzinfo=ZoneInfo('Europe/Brussels'))):
+            update_daily_views(connector, color='')
 
-        result = handle_pipeline_pause(
-            db_path='/tmp/fake.db',
-            color='',
-            in_pause_window=False,
-            backup_time='06:00:00'
-        )
+        self.assertEqual(cursor.execute.call_count, 3)
+        connector.update_params.assert_called_once()
+        connector.kill_connection.assert_called_with(connection)
 
-        self.assertFalse(result)
-        mock_enqueue.assert_not_called()
+    def test_handles_error_gracefully(self):
+        connector = MagicMock()
+        connection = MagicMock()
+        connector.get_connection.return_value = connection
+        connector.get_params.return_value = {
+            'last_update_utc_views': datetime(2024, 1, 1, 0, 0, tzinfo=ZoneInfo('Europe/Brussels'))
+        }
+        connection.cursor.side_effect = Exception("DB error")
 
-    @patch('Helpers._wait_for_resume', return_value=True)
-    @patch('Helpers.enqueue_sqlite_job')
-    @patch('Helpers.sqlite3.connect')
-    @patch('Helpers.now_in_brussels')
-    def test_returns_false_when_in_window_but_not_past_backup_time(
-        self, mock_now, mock_connect, mock_enqueue, mock_wait
-    ):
-        setup_mock_connect(mock_connect, make_idle_row())
+        with patch('Helpers.now_in_brussels', return_value=datetime(2024, 1, 2, 0, 30, tzinfo=ZoneInfo('Europe/Brussels'))):
+            update_daily_views(connector, color='')
 
-        mock_now.return_value = datetime(2024, 1, 1, 3, 0, 0, tzinfo=ZoneInfo('Europe/Brussels'))
-
-        result = handle_pipeline_pause(
-            db_path='/tmp/fake.db',
-            color='',
-            in_pause_window=True,
-            backup_time='06:00:00'
-        )
-
-        self.assertFalse(result)
-        mock_enqueue.assert_not_called()
-        mock_wait.assert_not_called()
-
-
-class HandlePipelineBackupPauseTests(TestCase):
-    def tearDown(self):
-        marker_path = '/tmp/fake.db.pause_date'
-        if os.path.exists(marker_path):
-            os.unlink(marker_path)
-
-    @patch('Helpers._wait_for_resume', return_value=True)
-    @patch('Helpers.enqueue_sqlite_job')
-    @patch('Helpers.sqlite3.connect')
-    @patch('Helpers.now_in_brussels')
-    def test_backup_pause_triggers_at_backup_time(
-        self, mock_now, mock_connect, mock_enqueue, mock_wait
-    ):
-        setup_mock_connect(mock_connect, make_idle_row(), make_resumed_row())
-
-        mock_now.return_value = datetime(2024, 1, 1, 6, 1, 0, tzinfo=ZoneInfo('Europe/Brussels'))
-
-        callback_mock = MagicMock()
-        result = handle_pipeline_pause(
-            db_path='/tmp/fake.db',
-            post_pause_callback=callback_mock,
-            color='',
-            in_pause_window=True,
-            backup_time='06:00:00'
-        )
-
-        self.assertTrue(result)
-        callback_mock.assert_called_once()
-        self.assertEqual(mock_enqueue.call_count, 2)
-        mock_wait.assert_called_once()
-
-    @patch('Helpers._wait_for_resume', return_value=False)
-    @patch('Helpers.enqueue_sqlite_job')
-    @patch('Helpers.sqlite3.connect')
-    @patch('Helpers.now_in_brussels')
-    def test_backup_pause_timeout_forces_resume(
-        self, mock_now, mock_connect, mock_enqueue, mock_wait
-    ):
-        setup_mock_connect(mock_connect, make_idle_row())
-
-        mock_now.return_value = datetime(2024, 1, 1, 7, 0, 0, tzinfo=ZoneInfo('Europe/Brussels'))
-
-        result = handle_pipeline_pause(
-            db_path='/tmp/fake.db',
-            color='',
-            in_pause_window=True,
-            backup_time='06:00:00'
-        )
-
-        self.assertTrue(result)
-        self.assertEqual(mock_enqueue.call_count, 2)
-
-
-class HandlePipelinePauseExternalSignalTests(TestCase):
-    def tearDown(self):
-        marker_path = '/tmp/fake.db.pause_date'
-        if os.path.exists(marker_path):
-            os.unlink(marker_path)
-
-    @patch('Helpers._wait_for_resume', return_value=True)
-    @patch('Helpers.enqueue_sqlite_job')
-    @patch('Helpers.sqlite3.connect')
-    def test_external_signal_triggers_pause(
-        self, mock_connect, mock_enqueue, mock_wait
-    ):
-        setup_mock_connect(mock_connect, make_paused_row(), make_resumed_row())
-
-        callback_mock = MagicMock()
-        result = handle_pipeline_pause(
-            db_path='/tmp/fake.db',
-            post_pause_callback=callback_mock,
-            color='',
-            in_pause_window=False
-        )
-
-        self.assertTrue(result)
-        callback_mock.assert_called_once()
-        self.assertEqual(mock_enqueue.call_count, 2)
-        mock_wait.assert_called_once_with('/tmp/fake.db', timeout_hours=4, color='')
-
-    @patch('Helpers._wait_for_resume', return_value=False)
-    @patch('Helpers.enqueue_sqlite_job')
-    @patch('Helpers.sqlite3.connect')
-    @patch('Helpers.now_in_brussels')
-    def test_external_signal_with_backup_time_not_reached(
-        self, mock_now, mock_connect, mock_enqueue, mock_wait
-    ):
-        setup_mock_connect(mock_connect, make_paused_row())
-
-        mock_now.return_value = datetime(2024, 1, 1, 3, 0, 0, tzinfo=ZoneInfo('Europe/Brussels'))
-
-        result = handle_pipeline_pause(
-            db_path='/tmp/fake.db',
-            color='',
-            in_pause_window=True,
-            backup_time='06:00:00'
-        )
-
-        self.assertTrue(result)
-        self.assertEqual(mock_enqueue.call_count, 2)
-        mock_wait.assert_called_once()
-
-    @patch('Helpers._wait_for_resume', return_value=True)
-    @patch('Helpers.enqueue_sqlite_job')
-    @patch('Helpers.sqlite3.connect')
-    def test_external_signal_without_callback(
-        self, mock_connect, mock_enqueue, mock_wait
-    ):
-        setup_mock_connect(mock_connect, make_paused_row(), make_resumed_row())
-
-        result = handle_pipeline_pause(
-            db_path='/tmp/fake.db',
-            color='',
-            in_pause_window=False
-        )
-
-        self.assertTrue(result)
-        self.assertEqual(mock_enqueue.call_count, 2)
-        mock_wait.assert_called_once()
+        connection.rollback.assert_called_once()
+        connector.kill_connection.assert_called_with(connection)
 
 
 class SyncerPauseFlowTests(TestCase):
@@ -357,35 +187,34 @@ class SyncerPauseFlowTests(TestCase):
         syncer.events_processor.process_events = MagicMock()
         return syncer
 
-    @patch('AgentSyncer.handle_pipeline_pause', return_value=False)
+    @patch('AgentSyncer.is_pipeline_paused', return_value=False)
     @patch('AgentSyncer.time.sleep')
     @patch.object(SyncTimer, 'calculate_sync_paused_by_time', side_effect=[True, False])
-    def test_pause_window_waits_then_syncs(self, mock_calc, mock_sleep, mock_hpp):
+    def test_pause_window_waits_then_syncs(self, mock_calc, mock_sleep, mock_ipp):
         syncer = self._make_agent_syncer()
         syncer.sync(connection=MagicMock(), stop_when_fully_synced=True)
 
         mock_sleep.assert_any_call(300)
         syncer.events_collector.collect_starting_from_page.assert_called_once()
         syncer.events_processor.process_events.assert_not_called()
-        self.assertEqual(mock_hpp.call_args_list[0].kwargs['in_pause_window'], True)
-        self.assertEqual(mock_hpp.call_args_list[0].kwargs['backup_time'], '06:00:00')
-        self.assertEqual(mock_hpp.call_args_list[1].kwargs['in_pause_window'], False)
+        self.assertEqual(mock_ipp.call_count, 2)
 
-    @patch('AgentSyncer.handle_pipeline_pause', return_value=False)
+    @patch('AgentSyncer.is_pipeline_paused', return_value=False)
     @patch('AgentSyncer.time.sleep')
     @patch.object(SyncTimer, 'calculate_sync_paused_by_time', return_value=False)
-    def test_not_in_window_proceeds_to_sync(self, mock_calc, mock_sleep, mock_hpp):
+    def test_not_in_window_proceeds_to_sync(self, mock_calc, mock_sleep, mock_ipp):
         syncer = self._make_agent_syncer()
         syncer.sync(connection=MagicMock(), stop_when_fully_synced=True)
         mock_sleep.assert_not_called()
         syncer.events_collector.collect_starting_from_page.assert_called_once()
 
-    @patch('AgentSyncer.handle_pipeline_pause', side_effect=[True, False])
+    @patch('AgentSyncer.is_pipeline_paused', side_effect=[True, False, False])
     @patch('AgentSyncer.time.sleep')
     @patch.object(SyncTimer, 'calculate_sync_paused_by_time', side_effect=[True, False])
-    def test_pause_then_resume_proceeds_to_sync(self, mock_calc, mock_sleep, mock_hpp):
+    def test_pause_then_resume_proceeds_to_sync(self, mock_calc, mock_sleep, mock_ipp):
         syncer = self._make_agent_syncer()
         syncer.sync(connection=MagicMock(), stop_when_fully_synced=True)
-        self.assertEqual(mock_hpp.call_count, 2)
-        mock_sleep.assert_not_called()
+        self.assertEqual(mock_ipp.call_count, 3)
+        mock_sleep.assert_any_call(60)
+        mock_sleep.assert_any_call(300)
         syncer.events_collector.collect_starting_from_page.assert_called_once()

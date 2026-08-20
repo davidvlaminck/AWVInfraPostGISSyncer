@@ -35,7 +35,6 @@ def ichunked(seq, chunksize):
     it = iter(seq)
     while True:
 
-
         try:
             yield chain([next(it)], islice(it, chunksize - 1))
         except StopIteration:
@@ -74,10 +73,12 @@ def _is_past_time(target_time: str, current_time: datetime) -> bool:
     return now_seconds >= _time_string_to_seconds(target_time)
 
 
-def _wait_for_resume(db_path: str, timeout_hours: int, color: str = "") -> bool:
+def _wait_for_resume(db_path: str, timeout_hours: int, color: str = "", stop_event=None) -> bool:
     logging.info(f"{color}wachten op postgis_sync resuming signaal (max. {timeout_hours} uur)")
     start_time = time.time()
     while True:
+        if stop_event is not None and stop_event.is_set():
+            return False
         try:
             conn = sqlite3.connect(db_path, timeout=30)
             conn.row_factory = sqlite3.Row
@@ -97,7 +98,11 @@ def _wait_for_resume(db_path: str, timeout_hours: int, color: str = "") -> bool:
             logging.warning(f"{color}{timeout_hours}h resume-timeout reached, forcing resume")
             return False
 
-        time.sleep(30)
+        if stop_event is not None:
+            if stop_event.wait(30):
+                return False
+        else:
+            time.sleep(30)
 
 
 def _get_pause_marker_path(db_path: str) -> str:
@@ -120,76 +125,54 @@ def _mark_paused_today(marker_path: str) -> None:
         f.write(now_in_brussels().date().isoformat())
 
 
-def handle_pipeline_pause(db_path: str = None, post_pause_callback=None, color: str = "",
-                          in_pause_window: bool = False, backup_time: str = "06:00:00") -> bool:
+def is_pipeline_paused(db_path: str) -> bool:
     if not db_path:
         return False
-
-    marker_path = _get_pause_marker_path(db_path)
-    if _has_paused_today(marker_path):
-        return False
-
     try:
-        conn = sqlite3.connect(db_path, timeout=30)
+        conn = sqlite3.connect(db_path, timeout=10)
         conn.row_factory = sqlite3.Row
         row = conn.execute(
             "SELECT phase, status FROM pipeline_state WHERE id = 1"
         ).fetchone()
         conn.close()
+        if row:
+            state = dict(row)
+            return state.get("phase") == "postgis_sync_paused"
+    except (sqlite3.Error, OSError):
+        pass
+    return False
 
-        state = dict(row) if row else {}
 
-        if state.get("phase") == "postgis_sync_paused":
-            return False
+def update_daily_views(connector, color: str = ""):
+    connection = None
+    try:
+        connection = connector.get_connection()
+        params = connector.get_params(connection)
+        last_update_views_date = params['last_update_utc_views'].date()
+        today_date = now_in_brussels().date()
 
-        external_pause = (state.get("phase") == "postgis_sync_pausing" and
-                          state.get("status") == "running")
+        if today_date <= last_update_views_date:
+            return
 
-        backup_pause = False
-        if not external_pause and in_pause_window:
-            if _is_past_time(backup_time, now_in_brussels()):
-                backup_pause = True
-                logging.info(f"{color}no pause signal received by {backup_time}, triggering backup pause flow")
+        select_view_names_query = "select viewname from pg_catalog.pg_views where schemaname = 'asset_views'"
+        with connection.cursor() as cursor:
+            cursor.execute(select_view_names_query)
 
-        if not external_pause and not backup_pause:
-            return False
+            for view_name in cursor.fetchall():
+                view_name = view_name[0]
+                logging.info(f'{color}creating fixed table for {view_name}')
+                view_query = f"DROP TABLE IF EXISTS asset_daily_views.{view_name}; " \
+                             f"CREATE TABLE asset_daily_views.{view_name} AS SELECT * FROM asset_views.{view_name};"
+                cursor.execute(view_query)
+                connection.commit()
 
-        if external_pause:
-            logging.info(f"{color}pipeline pause signal received, transitioning to postgis_sync_paused")
-
-        enqueue_sqlite_job(
-            action="update_pipeline_state",
-            payload={
-                "phase": "postgis_sync_paused",
-                "status": "completed",
-                "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-                "message": f"{color}PostGIS-sync gepauzeerd door pipeline signal",
-            },
-        )
-
-        _mark_paused_today(marker_path)
-
-        if post_pause_callback is not None:
-            logging.info(f"{color}post-pause callback started (rebuilding daily views)")
-            post_pause_callback()
-            logging.info(f"{color}post-pause callback completed")
-
-        resumed = _wait_for_resume(db_path, timeout_hours=4, color=color)
-
-        if not resumed:
-            logging.warning(f"{color}4h resume-timeout reached, forcing resume")
-
-        enqueue_sqlite_job(
-            action="update_pipeline_state",
-            payload={
-                "phase": "postgis_sync_running",
-                "status": "running",
-                "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-                "message": f"{color}PostGIS-sync hervat",
-            },
-        )
-
-        return True
-    except (sqlite3.Error, OSError) as exc:
-        logging.error(f"Failed to read pipeline state from SQLite: {exc}")
-        return False
+        connector.update_params(params={'last_update_utc_views': now_in_brussels()},
+                               connection=connection)
+    except Exception as exc:
+        logging.error(f"{color}Could not create view tables")
+        logging.error(exc)
+        if connection:
+            connection.rollback()
+    finally:
+        if connection:
+            connector.kill_connection(connection)

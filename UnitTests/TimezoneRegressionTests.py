@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 
 from AgentSyncer import AgentSyncer
 from AssetSyncer import AssetSyncer
-from Helpers import BRUSSELS_TZ
+from Helpers import BRUSSELS_TZ, update_daily_views
 from PostGISConnector import PostGISConnector
 from SyncTimer import SyncTimer
 
@@ -65,8 +65,8 @@ class TimezoneRegressionTests(TestCase):
         syncer = AssetSyncer(postgis_connector=connector, eminfra_importer=MagicMock())
         connection = MagicMock()
 
-        with patch('AssetSyncer.now_in_brussels', return_value=datetime(2024, 1, 1, 0, 30, tzinfo=ZoneInfo('Europe/Brussels'))):
-            syncer.update_view_tables(connection=connection, color='')
+        with patch('Helpers.now_in_brussels', return_value=datetime(2024, 1, 1, 0, 30, tzinfo=ZoneInfo('Europe/Brussels'))):
+            update_daily_views(connector, color='')
 
         connector.update_params.assert_not_called()
         connection.cursor.assert_not_called()

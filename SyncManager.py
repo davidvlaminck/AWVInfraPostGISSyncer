@@ -13,6 +13,7 @@ from EMInfraImporter import EMInfraImporter
 from FeedEventsCollector import FeedEventsCollector
 from FeedEventsProcessor import FeedEventsProcessor
 from FillManager import FillManager
+from PauseManager import PauseManager
 from PostGISConnector import PostGISConnector
 from RequestHandler import RequestHandler
 from SyncTimer import SyncTimer
@@ -61,6 +62,16 @@ class SyncManager:
             self.pipeline_state_db_path = self.settings['health_db'].get('path')
 
     def start(self, stop_when_fully_synced: bool = False):
+        if self.pipeline_state_db_path and not getattr(self, '_pause_manager_started', False):
+            self._pause_manager = PauseManager(
+                db_path=self.pipeline_state_db_path,
+                connector=self.connector,
+                color='',
+                backup_time=SyncTimer.backup_time,
+            )
+            self._pause_manager.start()
+            self._pause_manager_started = True
+
         while True:
             try:
                 params = self.connector.get_params(self.connector.main_connection)
