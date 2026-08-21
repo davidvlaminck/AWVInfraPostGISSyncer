@@ -8,8 +8,7 @@ from datetime import datetime, timezone
 from itertools import chain, islice
 from zoneinfo import ZoneInfo
 
-from sqlite_queue_client import enqueue_sqlite_job
-
+from pipeline_state import PipelineState
 
 BRUSSELS_TZ = ZoneInfo('Europe/Brussels')
 
@@ -80,19 +79,18 @@ def _wait_for_resume(db_path: str, timeout_hours: int, color: str = "", stop_eve
         if stop_event is not None and stop_event.is_set():
             return False
         try:
-            conn = sqlite3.connect(db_path, timeout=30)
-            conn.row_factory = sqlite3.Row
-            row = conn.execute(
-                "SELECT phase, status FROM pipeline_state WHERE id = 1"
-            ).fetchone()
-            conn.close()
-
-            state = dict(row) if row else {}
-            if state.get("phase") == "postgis_sync_resuming" and state.get("status") == "running":
+            pipeline = PipelineState(db_path)
+            state = pipeline.get()
+            if state and state.get("phase") == "postgis_sync_resuming" and state.get("status") == "running":
                 logging.info(f"{color}pipeline resume signal received, resuming sync")
                 return True
         except (sqlite3.Error, OSError):
             pass
+
+        now_local = now_in_brussels()
+        if now_local.hour >= 8:
+            logging.warning(f"{color}08:00 local time reached, forcing resume")
+            return False
 
         if time.time() - start_time >= timeout_hours * 3600:
             logging.warning(f"{color}{timeout_hours}h resume-timeout reached, forcing resume")
@@ -129,15 +127,10 @@ def is_pipeline_paused(db_path: str) -> bool:
     if not db_path:
         return False
     try:
-        conn = sqlite3.connect(db_path, timeout=10)
-        conn.row_factory = sqlite3.Row
-        row = conn.execute(
-            "SELECT phase, status FROM pipeline_state WHERE id = 1"
-        ).fetchone()
-        conn.close()
-        if row:
-            state = dict(row)
-            return state.get("phase") == "postgis_sync_paused"
+        pipeline = PipelineState(db_path)
+        state = pipeline.get()
+        if state:
+            return state.get("phase") in ("postgis_sync_paused", "postgis_sync_pausing")
     except (sqlite3.Error, OSError):
         pass
     return False

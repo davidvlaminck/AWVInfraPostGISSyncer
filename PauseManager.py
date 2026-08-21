@@ -12,7 +12,7 @@ from Helpers import (
     now_in_brussels,
     update_daily_views,
 )
-from sqlite_queue_client import enqueue_sqlite_job
+from pipeline_state import PipelineState, enqueue_sqlite_job
 from SyncTimer import SyncTimer
 
 
@@ -46,13 +46,9 @@ class PauseManager:
         if not self.db_path:
             return None
         try:
-            conn = sqlite3.connect(self.db_path, timeout=10)
-            conn.row_factory = sqlite3.Row
-            row = conn.execute(
-                "SELECT phase, status FROM pipeline_state WHERE id = 1"
-            ).fetchone()
-            conn.close()
-            return dict(row) if row else {}
+            pipeline = PipelineState(self.db_path)
+            state = pipeline.get()
+            return state if state else {}
         except (sqlite3.Error, OSError):
             return None
 
@@ -69,13 +65,14 @@ class PauseManager:
             )
             if not resumed:
                 logging.warning(f"{self.color}4h resume-timeout reached, forcing resume")
+            message = f"{self.color}PostGIS-sync hervat" if resumed else f"{self.color}PostGIS-sync hervat (time-out)"
             enqueue_sqlite_job(
                 action="update_pipeline_state",
                 payload={
                     "phase": "postgis_sync_running",
                     "status": "running",
                     "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-                    "message": f"{self.color}PostGIS-sync hervat",
+                    "message": message,
                 },
             )
             return
@@ -126,12 +123,13 @@ class PauseManager:
         if not resumed:
             logging.warning(f"{self.color}4h resume-timeout reached, forcing resume")
 
+        message = f"{self.color}PostGIS-sync hervat" if resumed else f"{self.color}PostGIS-sync hervat (time-out)"
         enqueue_sqlite_job(
             action="update_pipeline_state",
             payload={
                 "phase": "postgis_sync_running",
                 "status": "running",
                 "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-                "message": f"{self.color}PostGIS-sync hervat",
+                "message": message,
             },
         )
