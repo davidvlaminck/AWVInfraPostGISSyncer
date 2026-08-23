@@ -1,8 +1,10 @@
 import concurrent
 import logging
+import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+import psycopg2
 import requests
 
 from AgentSyncer import AgentSyncer
@@ -72,6 +74,9 @@ class SyncManager:
             self._pause_manager.start()
             self._pause_manager_started = True
 
+        db_error_count = 0
+        max_db_errors = 10
+
         while True:
             try:
                 params = self.connector.get_params(self.connector.main_connection)
@@ -87,10 +92,19 @@ class SyncManager:
                     self.perform_multiprocessing_syncing(stop_when_fully_synced=stop_when_fully_synced)
                     if stop_when_fully_synced:
                         break
+                db_error_count = 0
             except requests.exceptions.ConnectionError as exc:
                 logging.error(exc)
                 logging.info("failed connection, retrying in 30 seconds")
                 self.connector.main_connection.rollback()
+                time.sleep(30)
+            except psycopg2.OperationalError as exc:
+                db_error_count += 1
+                logging.error(f"Database connection error ({db_error_count}/{max_db_errors}): {exc}")
+                self.connector.main_connection.rollback()
+                if db_error_count >= max_db_errors:
+                    logging.critical("Too many consecutive database errors, exiting to allow restart")
+                    os._exit(1)
                 time.sleep(30)
             except Exception as exc:
                 logging.error(exc)
