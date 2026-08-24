@@ -96,18 +96,28 @@ class SyncManager:
             except requests.exceptions.ConnectionError as exc:
                 logging.error(exc)
                 logging.info("failed connection, retrying in 30 seconds")
-                self.connector.main_connection.rollback()
+                try:
+                    self.connector.main_connection.rollback()
+                except Exception:
+                    pass
                 time.sleep(30)
             except psycopg2.OperationalError as exc:
                 db_error_count += 1
                 logging.error(f"Database connection error ({db_error_count}/{max_db_errors}): {exc}")
-                self.connector.main_connection.rollback()
+                try:
+                    self.connector.main_connection.rollback()
+                except Exception:
+                    pass
                 if db_error_count >= max_db_errors:
                     logging.critical("Too many consecutive database errors, exiting to allow restart")
                     os._exit(1)
                 time.sleep(30)
             except Exception as exc:
                 logging.error(exc)
+                try:
+                    self.connector.main_connection.rollback()
+                except Exception:
+                    pass
                 time.sleep(10)
 
     def start_sync_by_feed(self, feed, stop_when_fully_synced: bool = False):

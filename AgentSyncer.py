@@ -29,6 +29,10 @@ class AgentSyncer:
         while True:
             try:
                 if is_pipeline_paused(self.pipeline_state_db_path):
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(60)
                     continue
 
@@ -37,6 +41,10 @@ class AgentSyncer:
                     logging.info(
                         f'{self.color}in pause window (03:00-07:30), waiting for pipeline pause signal...'
                     )
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(300)
                     continue
 
@@ -71,12 +79,18 @@ class AgentSyncer:
                     self.log_eventparams(eventsparams_to_process.event_dict, round(end - start, 2), color=self.color)
                 except ConnectionError:
                     logging.info(f"{self.color}failed connection, retrying in 1 minute")
-                    connection.rollback()
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(60)
                     continue
                 except Exception as exc:
                     logging.error(f'{self.color}{exc}')
-                    connection.rollback()
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(30)
                     continue
 
@@ -84,14 +98,24 @@ class AgentSyncer:
                     self.events_processor.process_events(eventsparams_to_process, connection)
                 except Exception as exc:
                     logging.error(f'{self.color}{exc}')
-                    connection.rollback()
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(30)
             except ConnectionError:
                 logging.info(f"{self.color}failed connection, retrying in 1 minute")
-                connection.rollback()
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
                 time.sleep(60)
             except Exception as exc:
                 logging.error(f'{self.color}{exc}')
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
                 time.sleep(30)
 
     @staticmethod

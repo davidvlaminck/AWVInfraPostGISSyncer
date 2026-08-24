@@ -34,6 +34,10 @@ class AssetRelatieSyncer:
         while True:
             try:
                 if is_pipeline_paused(self.pipeline_state_db_path):
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(60)
                     continue
 
@@ -42,6 +46,10 @@ class AssetRelatieSyncer:
                     logging.info(
                         f'{self.color}in pause window (03:00-07:30), waiting for pipeline pause signal...'
                     )
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(300)
                     continue
 
@@ -76,7 +84,10 @@ class AssetRelatieSyncer:
                         continue
                 except ConnectionError:
                     logging.info(f"{self.color}failed connection, retrying in 1 minute")
-                    connection.rollback()
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(60)
                     continue
                 except Exception as err:
@@ -84,6 +95,10 @@ class AssetRelatieSyncer:
                     end = time.time()
                     if eventsparams_to_process is not None:
                         self.log_eventparams(eventsparams_to_process.event_dict, round(end - start, 2), self.color)
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(30)
                     continue
 
@@ -92,21 +107,39 @@ class AssetRelatieSyncer:
                 except AssetMissingError:
                     logging.warning(f"{self.color}Tried to add assetrelaties but a source or target is missing. "
                                     f"Trying again in 60 seconds to allow other feeds to create the missing objects.")
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(60)
                     continue
                 except RelatieTypeMissingError:
-                    connection.rollback()
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     self.fill_resource(ResourceEnum.relatietypes)
                     continue
                 except Exception as exc:
                     logging.error(exc)
-                    connection.rollback()
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(30)
             except ConnectionError:
                 logging.info(f"{self.color}failed connection, retrying in 1 minute")
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
                 time.sleep(60)
             except Exception as err:
                 logging.error(self.color + err)
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
                 time.sleep(30)
 
 

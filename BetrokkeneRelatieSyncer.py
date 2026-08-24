@@ -33,6 +33,10 @@ class BetrokkeneRelatieSyncer:
         while True:
             try:
                 if is_pipeline_paused(self.pipeline_state_db_path):
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(60)
                     continue
 
@@ -41,6 +45,10 @@ class BetrokkeneRelatieSyncer:
                     logging.info(
                         self.color + 'in pause window (03:00-07:30), waiting for pipeline pause signal...'
                     )
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(300)
                     continue
 
@@ -73,6 +81,10 @@ class BetrokkeneRelatieSyncer:
                         continue
                 except ConnectionError:
                     logging.info(self.color + "failed connection, retrying in 1 minute")
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(60)
                     continue
                 except Exception as err:
@@ -80,6 +92,10 @@ class BetrokkeneRelatieSyncer:
                     end = time.time()
                     if eventsparams_to_process is not None:
                         self.log_eventparams(eventsparams_to_process.event_dict, round(end - start, 2), self.color)
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(30)
                     continue
 
@@ -87,24 +103,41 @@ class BetrokkeneRelatieSyncer:
                     self.events_processor.process_events(eventsparams_to_process, connection)
                 except ConnectionError:
                     logging.info(self.color + "failed connection, retrying in 1 minute")
-                    connection.rollback()
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(60)
                     continue
                 except (AssetMissingError, AgentMissingError):
                     logging.warning(self.color + 'Tried to add betrokkenerelaties but a source or target is missing. '
                                     'Trying again in 60 seconds to allow other feeds to create the missing objects.')
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(60)
                     continue
                 except Exception as exc:
                     logging.error(exc)
-                    connection.rollback()
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(30)
             except ConnectionError:
                 logging.info(self.color + "failed connection, retrying in 1 minute")
-                connection.rollback()
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
                 time.sleep(60)
             except Exception as err:
                 logging.error(self.color + err)
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
                 time.sleep(30)
 
     @staticmethod

@@ -204,6 +204,11 @@ class PostGISConnector:
             connection = self.pool.getconn()
             if connection.closed == 0:
                 connection.autocommit = False
+                try:
+                    connection.rollback()
+                except Error:
+                    self.pool.putconn(connection, close=True)
+                    continue
                 return connection
             self.pool.putconn(connection, close=True)
         raise psycopg2.OperationalError("Could not obtain a healthy connection from the pool")
@@ -212,6 +217,11 @@ class PostGISConnector:
         if connection.closed != 0:
             self.pool.putconn(connection, close=True)
         else:
+            try:
+                connection.rollback()
+            except Error:
+                self.pool.putconn(connection, close=True)
+                return
             self.pool.putconn(connection)
 
     @property
@@ -221,6 +231,13 @@ class PostGISConnector:
                 self._main_connection = self.pool.getconn()
             if self._main_connection.closed == 0:
                 self._main_connection.autocommit = False
+                try:
+                    self._main_connection.rollback()
+                except Error:
+                    self.pool.putconn(self._main_connection, close=True)
+                    self._main_connection = None
+                    continue
                 return self._main_connection
             self.pool.putconn(self._main_connection, close=True)
+            self._main_connection = None
         raise psycopg2.OperationalError("Could not obtain a healthy main_connection from the pool")

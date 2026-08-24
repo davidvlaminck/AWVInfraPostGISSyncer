@@ -33,6 +33,10 @@ class ControleficheSyncer:
         while True:
             try:
                 if is_pipeline_paused(self.pipeline_state_db_path):
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(60)
                     continue
 
@@ -41,6 +45,10 @@ class ControleficheSyncer:
                     logging.info(
                         f'{self.color}in pause window (03:00-07:30), waiting for pipeline pause signal...'
                     )
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(300)
                     continue
                 params = self.postgis_connector.get_params(connection)
@@ -76,6 +84,10 @@ class ControleficheSyncer:
                         continue
                 except ConnectionError:
                     logging.info(f"{self.color}failed connection, retrying in 1 minute")
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(60)
                     continue
                 except Exception as err:
@@ -83,29 +95,54 @@ class ControleficheSyncer:
                     end = time.time()
                     if eventsparams_to_process is not None:
                         self.log_eventparams(eventsparams_to_process.event_dict, round(end - start, 2), self.color)
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(30)
                     continue
 
                 try:
                     self.events_processor.process_events(eventsparams_to_process, connection)
                 except AssetTypeMissingError:
-                    connection.rollback()
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     self.fill_resource(ResourceEnum.assettypes)
                 except AttribuutMissingError:
-                    connection.rollback()
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     self.fill_resource(ResourceEnum.assettypes)
                 except ConnectionError:
                     logging.info(f"{self.color}failed connection, retrying in 1 minute")
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(60)
                 except Exception as exc:
                     logging.error(exc)
-                    connection.rollback()
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(30)
             except ConnectionError:
                 logging.info(f"{self.color}failed connection, retrying in 1 minute")
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
                 time.sleep(60)
             except Exception as exc:
                 logging.error(f'{self.color}{exc}')
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
                 time.sleep(30)
 
     def sync_by_uuids(self, uuids: [str], connection):

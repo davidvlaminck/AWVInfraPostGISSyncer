@@ -38,6 +38,10 @@ class AssetSyncer:
         while True:
             try:
                 if is_pipeline_paused(self.pipeline_state_db_path):
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(60)
                     continue
 
@@ -46,6 +50,10 @@ class AssetSyncer:
                     logging.info(
                         f'{self.color}in pause window (03:00-07:30), waiting for pipeline pause signal...'
                     )
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
                     time.sleep(300)
                     continue
                 params = self.postgis_connector.get_params(connection)
@@ -124,10 +132,17 @@ class AssetSyncer:
                     time.sleep(60)
             except ConnectionError:
                 logging.info(f"{self.color}failed connection, retrying in 1 minute")
-                connection.rollback()
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
                 time.sleep(60)
             except Exception as exc:
                 logging.error(f'{self.color}{exc}')
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
                 time.sleep(30)
 
     def sync_by_uuids(self, uuids: [str], connection):

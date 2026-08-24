@@ -90,7 +90,10 @@ class FillManager:
                 time.sleep(60)
             except Exception as exc:
                 logging.error(exc)
-                self.connector.main_connection.rollback()
+                try:
+                    self.connector.main_connection.rollback()
+                except Exception:
+                    pass
                 raise exc
 
         logging.info('Done with filling')
