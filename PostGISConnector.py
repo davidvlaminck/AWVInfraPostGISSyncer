@@ -14,8 +14,26 @@ class PostGISConnector:
     def __init__(self, host, port, user, password, database: str = 'awvinfra'):
         self.pool = ThreadedConnectionPool(minconn=5, maxconn=20, user=user, password=password, host=host, port=port,
                                            database=database)
-        self._main_connection = self.pool.getconn()
-        self._main_connection.autocommit = False
+        self._main_connection = None
+        for _ in range(3):
+            conn = self.pool.getconn()
+            if conn.closed != 0:
+                self.pool.putconn(conn, close=True)
+                continue
+            try:
+                conn.rollback()
+            except Error:
+                self.pool.putconn(conn, close=True)
+                continue
+            try:
+                conn.autocommit = False
+            except Error:
+                self.pool.putconn(conn, close=True)
+                continue
+            self._main_connection = conn
+            break
+        if self._main_connection is None:
+            raise psycopg2.OperationalError("Could not obtain a healthy main_connection from the pool")
         self.db = database
         self.param_type_map = {
             'fresh_start': 'bool',
@@ -203,9 +221,13 @@ class PostGISConnector:
         for _ in range(3):
             connection = self.pool.getconn()
             if connection.closed == 0:
-                connection.autocommit = False
                 try:
                     connection.rollback()
+                except Error:
+                    self.pool.putconn(connection, close=True)
+                    continue
+                try:
+                    connection.autocommit = False
                 except Error:
                     self.pool.putconn(connection, close=True)
                     continue
@@ -230,9 +252,14 @@ class PostGISConnector:
             if self._main_connection is None or self._main_connection.closed != 0:
                 self._main_connection = self.pool.getconn()
             if self._main_connection.closed == 0:
-                self._main_connection.autocommit = False
                 try:
                     self._main_connection.rollback()
+                except Error:
+                    self.pool.putconn(self._main_connection, close=True)
+                    self._main_connection = None
+                    continue
+                try:
+                    self._main_connection.autocommit = False
                 except Error:
                     self.pool.putconn(self._main_connection, close=True)
                     self._main_connection = None

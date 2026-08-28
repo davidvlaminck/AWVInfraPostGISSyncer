@@ -1,4 +1,5 @@
 import json
+import logging
 
 
 class SettingsManager:
@@ -8,8 +9,13 @@ class SettingsManager:
             self.load_settings(settings_path)
 
     def load_settings(self, settings_path):
-        with open(settings_path) as settings_file:
-            self.settings = json.load(settings_file)
+        try:
+            with open(settings_path) as settings_file:
+                self.settings = json.load(settings_file)
+        except FileNotFoundError:
+            logging.error(f"Settings file not found: {settings_path}. "
+                          f"Create it based on settings_sample.json in the project root.")
+            raise
 
     def get_auth_settings(self, auth_type: str, environment: str) -> dict:
         auth_section = self.settings.get('authentication', {})
