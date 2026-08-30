@@ -52,6 +52,43 @@ class PauseManager:
         except (sqlite3.Error, OSError):
             return None
 
+    def _signal_pipeline_state(self, phase: str, status: str, message: str):
+        enqueue_sqlite_job(
+            action="update_pipeline_state",
+            payload={
+                "phase": phase,
+                "status": status,
+                "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                "message": message,
+            },
+        )
+
+    def _handle_resume(self, resumed: bool):
+        if self._stop_event.is_set():
+            logging.error(f"{self.color}resume aborted (stop event set)")
+            self._signal_pipeline_state(
+                "postgis_sync_running", "failed",
+                f"{self.color}PostGIS-sync hervat mislukt (stop event)",
+            )
+            return
+
+        if not resumed:
+            logging.warning(f"{self.color}4h resume-timeout reached, forcing resume")
+
+        message = f"{self.color}PostGIS-sync hervat" if resumed else f"{self.color}PostGIS-sync hervat (time-out)"
+        self._signal_pipeline_state("postgis_sync_running", "running", message)
+
+        settle_seconds = 60
+        logging.info(f"{self.color}wachten op sync om zich te vestigen na resume ({settle_seconds}s)")
+        if self._stop_event.wait(settle_seconds):
+            logging.info(f"{self.color}stop event set tijdens vestigen, completed niet gezet")
+            return
+
+        self._signal_pipeline_state(
+            "postgis_sync_running", "completed",
+            f"{self.color}PostGIS-sync hervat en voltooid",
+        )
+
     def _check_and_handle_pause(self):
         state = self._read_state()
         if not state:
@@ -63,18 +100,7 @@ class PauseManager:
                 self.db_path, timeout_hours=4, color=self.color,
                 stop_event=self._stop_event
             )
-            if not resumed:
-                logging.warning(f"{self.color}4h resume-timeout reached, forcing resume")
-            message = f"{self.color}PostGIS-sync hervat" if resumed else f"{self.color}PostGIS-sync hervat (time-out)"
-            enqueue_sqlite_job(
-                action="update_pipeline_state",
-                payload={
-                    "phase": "postgis_sync_running",
-                    "status": "running",
-                    "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-                    "message": message,
-                },
-            )
+            self._handle_resume(resumed)
             return
 
         marker_path = _get_pause_marker_path(self.db_path)
@@ -119,17 +145,4 @@ class PauseManager:
             self.db_path, timeout_hours=4, color=self.color,
             stop_event=self._stop_event
         )
-
-        if not resumed:
-            logging.warning(f"{self.color}4h resume-timeout reached, forcing resume")
-
-        message = f"{self.color}PostGIS-sync hervat" if resumed else f"{self.color}PostGIS-sync hervat (time-out)"
-        enqueue_sqlite_job(
-            action="update_pipeline_state",
-            payload={
-                "phase": "postgis_sync_running",
-                "status": "running",
-                "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-                "message": message,
-            },
-        )
+        self._handle_resume(resumed)
