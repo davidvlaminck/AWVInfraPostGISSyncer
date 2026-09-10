@@ -49,6 +49,9 @@ CREATE TABLE IF NOT EXISTS public.assets
     CONSTRAINT assets_pkey PRIMARY KEY (uuid)
 );
 
+CREATE INDEX assets_assettype_idx ON assets (assettype);
+CREATE INDEX assets_actief_idx ON assets (actief);
+
 -- Table: public.assettypes
 
 DROP TABLE IF EXISTS public.assettypes CASCADE;
@@ -183,6 +186,7 @@ CREATE TABLE IF NOT EXISTS public.bestekkoppelingen
 
 CREATE INDEX koppelingen_bestekUuid_idx ON bestekkoppelingen (bestekUuid);
 CREATE INDEX koppelingen_assetUuid_idx ON bestekkoppelingen (assetUuid);
+CREATE INDEX koppelingen_koppelingstatus_idx ON bestekkoppelingen (koppelingstatus);
 
 ALTER TABLE IF EXISTS public.bestekkoppelingen
     ADD CONSTRAINT bestekkoppelingen_bestekken_fkey
@@ -244,6 +248,7 @@ ADD CONSTRAINT unique_locatie_assetUuid
 UNIQUE USING INDEX locatie_assetUuid;
 
 CREATE INDEX idx_locatie_geometrie ON public.locatie USING GIST (geometry);
+CREATE INDEX idx_locatie_ident8 ON public.locatie (ident8);
 
 -- Table: public.geometrie
 
@@ -312,6 +317,8 @@ ALTER TABLE IF EXISTS public.vplan_koppelingen
     ON UPDATE NO ACTION
     ON DELETE NO ACTION
     NOT VALID;
+
+CREATE INDEX vplan_koppelingen_assetuuid_idx ON vplan_koppelingen (assetuuid);
 
 -- Table: public.toezichtgroepen
 
