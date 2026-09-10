@@ -159,6 +159,7 @@ ALTER TABLE IF EXISTS public.attribuutWaarden
 
 CREATE INDEX attribuutWaarden_assetUuid_idx ON attribuutWaarden (assetUuid);
 CREATE INDEX attribuutWaarden_attribuutUuid_idx ON attribuutWaarden (attribuutUuid);
+CREATE INDEX attribuutWaarden_asset_attr_idx ON attribuutWaarden (assetUuid, attribuutUuid);
 
 -- Table: public.bestekken
 
@@ -249,6 +250,7 @@ UNIQUE USING INDEX locatie_assetUuid;
 
 CREATE INDEX idx_locatie_geometrie ON public.locatie USING GIST (geometry);
 CREATE INDEX idx_locatie_ident8 ON public.locatie (ident8);
+CREATE INDEX idx_locatie_xy ON public.locatie (x, y);
 
 -- Table: public.geometrie
 
