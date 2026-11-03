@@ -12,8 +12,8 @@ This plan outlines the necessary improvements to increase the maintainability, s
 
 | Issue | Affected Files | Fix | Notes |
 | :-- | :-- | :-- | :-- |
-| **SQL Injection Risk** | `PostGISConnector.py`, `AssetUpdater.py`, and any file using f-strings for SQL | Use parameterized queries (`cursor.execute(query, params)`). Isolate any dynamic DDL (e.g. `DROP VIEW`) from data queries. | This is the highest priority, as the current `'` escaping is incredibly brittle. |
-| **Fragile Syncer Timing** | `SyncerFactory.py` (lines 29-43) | Remove `time.sleep(1/2/3/4)` or make them configurable via `settings.json` with explicit reasoning. | These hardcoded delays are undocumented and will break if feed order changes. | 
+| **SQL Injection Risk** | `PostGISConnector.py`, `AssetUpdater.py`, and any file using f-strings for SQL | Use psycopg2 parameterized queries with `%s` placeholders (`cursor.execute(query, params)`). Parameterize **all data queries** that take values. Only dynamic DDL (e.g. `DROP VIEW` queries built from `information_schema.views`) may use string formatting, and must be strictly separated from data queries. | This is the highest priority, as the current `'` escaping is incredibly brittle. All `INSERT`, `UPDATE`, `DELETE`, `SELECT` with values must go through parameterization. |
+| **Fragile Syncer Timing** | `SyncManager.py` (`SyncerFactory.get_syncer_by_feed_name`) | Replace hardcoded `time.sleep(1/2/3/4)` with deterministic index-based staggering. Sort syncers by a stable key (feed name/key) and apply `delay * index` before starting each syncer. Keep the staggered-start idea (to avoid all threads failing/outputting at the same time), but make it deterministic and based on ordering rather than arbitrary magic numbers. The base delay should be configurable if needed, but the mechanism must be order-based. | Current feeds are `['assets', 'agents', 'assetrelaties', 'betrokkenerelaties']`. Do not rely on insertion order; sort explicitly. | 
 
 
 ---
@@ -23,11 +23,11 @@ This plan outlines the necessary improvements to increase the maintainability, s
 
 | Issue | Affected Files | Fix | Notes |
 | :-- | :-- | :-- | :-- |
-| **Massive If/Else Chains** | `EMInfraImporter.py` (50-77, 79-129), `EventProcessorFactory.py` (64-178) | Replace with declarative registries (e.g `RESOURCE_IMPORT_STRATEGIES`) and strategy classes. | Greatly improves extensibility and testability. |
-| **God Class** | `EMInfraImporter.py` (424 lines, 50+ methods) | Split into `ApiRequestBuilder`, `OsloSearchPagingStrategy`/`NonOsloSearchPagingStrategy`, and `ResourceImporter`. | Separates concerns (request construction, pagination, and resource specific logic). |
-| **Duplicated Orchestration Logic** | `FillManager.py`, `SyncManager.py` | Extract a shared `PipelineManager` base class or pipeline strategy. | Consolidate threading, retry loops, rollbacks, error handling and state checks. |
-| **Inconsistent State Management** | `EMInfraImporter.py` (`paging_cursors`), `PostGISConnector.py` (`params` table) | Make the DB `params` table the single source of truth. Never store cursors solely in memory. | Prevents desync on crashes/restarts. |
-| **Connection Management** | `PostGISConnector.py` (`get_connection()`, `kill_connection()`, `main_connection`) | Utilize `psycopg2.ThreadedConnectionPool` with a recovery/dead-connection handling decorator. | Removes duplicated health check and retry logic. |
+| **Massive If/Else Chains** | `EMInfraImporter.py` (50-77, 79-129), `EventProcessorFactory.py` (64-178) | Replace with declarative registries (e.g `RESOURCE_IMPORT_STRATEGIES`) and strategy classes/factories. | Greatly improves extensibility and testability. Keep behavior identical. |
+| **God Class** | `EMInfraImporter.py` (424 lines, 50+ methods) | Split into `ApiRequestBuilder`, `OsloSearchPagingStrategy`/`NonOsloSearchPagingStrategy`, and `ResourceImporter`. Extract request construction, pagination logic (both Oslo cursor-based and non-Oslo offset/cursor), and resource-specific import methods into their respective classes. | Separates concerns cleanly. Do this in small PRs with tests before moving to package reorganization. |
+| **Duplicated Orchestration Logic** | `FillManager.py`, `SyncManager.py` | Extract a shared `PipelineManager` base class using **ABC (inheritance)**. Move common logic (ThreadPoolExecutor orchestration, connection retry loops, rollback/error handling, param/state checks, pause handling) into the base class. Have `FillManager` and `SyncManager` inherit from it. | Prefer inheritance over composition for this shared pipeline behavior. |
+| **Inconsistent State Management** | `EMInfraImporter.py` (`paging_cursors`), `PostGISConnector.py` (`params` table) | Make the DB `params` table the **single source of truth**. Remove in-memory-only cursor persistence from `EMInfraImporter`. All cursor reads/writes must go through `PostGISConnector.params` (using the existing `param_type_map` entries like `*_cursor`). | Prevents desync on crashes/restarts. Migrate incrementally. |
+| **Connection Management** | `PostGISConnector.py` (`get_connection()`, `kill_connection()`, `main_connection`, pool usage) | Adopt `psycopg2.pool.ThreadedConnectionPool` as the foundation. Refactor to use it cleanly with proper dead-connection detection, rollback on bad connections, and recovery logic. Keep the existing behavior of returning healthy connections but remove duplicated health-check/retry logic. | The codebase already uses `ThreadedConnectionPool` - consolidate and harden it. |
 
 
 ---
@@ -37,9 +37,9 @@ This plan outlines the necessary improvements to increase the maintainability, s
 
 | Issue | Affected Files | Fix | Notes |
 | :-- | :-- | :-- | :-- |
-| **Project Structure** | Entire root directory (60+ files, no `__init__.py`, PascalCase modules) | Reorganize into packages (`api/`, `db/`, `events/`, `fill/`, `sync/`, `utils/`, `config/`). Convert to snake_case, fix imports and remove CWD/sys.path hacks. | This is disruptive, so do it towards the middle of the migration. |
-| **Type Hint Inaccuracies** | `EMInfraImporter.py` and others returning generators | Correct annotations to `Iterator[...]` or `Generator[dict, None, None]` (e.g. `import_assets_from_webservice_by_uuids`). | Critical for static analysis and IDE support. |
-| **DRY Violations** | `EMInfraImporter.py` (`get_distinct_set_from_list_of_relations` used 5x), hardcoded Kenmerk UUIDs (e.g lines ~330-401) | Move deduplication to the API layer, and extract UUIDs to `constants.py` or a `KenmerkEnum`. | Quick wins to reduce noise. |
+| **Project Structure** | Entire root directory (60+ files, no `__init__.py`, PascalCase modules) | Reorganize into packages (`api/`, `db/`, `events/`, `fill/`, `sync/`, `utils/`, `config/`). Convert modules to snake_case where appropriate, add `__init__.py` files, fix imports, and remove CWD/sys.path hacks. **Keep all `main_*.py` entrypoints at the root** for compatibility. Support backward compatibility during transition where needed. | Disruptive - do after class extraction (step 4) to minimize move-related conflicts. Update entrypoints last. |
+| **Type Hint Inaccuracies** | `EMInfraImporter.py` and others returning generators | Fix generator/iterator annotations to `Iterator[...]` or `Generator[dict, None, None]` as appropriate (e.g. `import_assets_from_webservice_by_uuids`, methods yielding from `get_objects_from_*`). | Fix during refactoring as we touch files. |
+| **DRY Violations** | `EMInfraImporter.py` (`get_distinct_set_from_list_of_relations` used ~5x), hardcoded Kenmerk UUIDs (~lines 330-411) | Move deduplication logic to the API layer where it belongs. Extract all hardcoded Kenmerk UUIDs to `constants.py` as **module-level constants** (not enums). | Quick wins. Keep naming consistent with existing constant style. |
 
 
 ---
@@ -49,7 +49,7 @@ This plan outlines the necessary improvements to increase the maintainability, s
 
 | Issue | Affected Files | Fix | Notes |
 | :-- | :-- | :-- | :-- |
-| **Lack of Test Coverage** | `UnitTests/` | Leverage the existing DI where possible, make strategies/factories mockable, and add unit tests for the newly extracted classes. | Tests currently rely on a unittest DB schema, decoupling from this will be vital for CI. |
+| **Lack of Test Coverage** | `UnitTests/` | Leverage existing DI where possible, make strategies/factories/mockable. Write **unit tests with mocks** (preferred over relying solely on the existing unittest DB schema). Add unit tests for newly extracted classes (ApiRequestBuilder, paging strategies, ResourceImporter, PipelineManager, registries). Decouple from the unittest DB schema where practical for CI. | Keep integration tests where they add value, but default to unit tests with mocks for new components. |
 
 
 ---
@@ -57,16 +57,16 @@ This plan outlines the necessary improvements to increase the maintainability, s
 
 ## Suggested Migration Order (Low Risk → High Impact)
 
-1. [ ] **Extract Constants** - Move hardcoded Kenmerk UUIDs to `constants.py`/`enums.py`. (Zero logic change, easy to verify)
-2. [ ] **Registry for Event Processors** - Replace the `if/elif` chain in `EventProcessorFactory.py` with a registry dict. 
-3. [ ] **Parameterize SQL** - Audit and parameterize all SQL queries, starting with `PostGISConnector.py`. Add tests around query building where possible.
-4. [ ] **Split `EMInfraImporter`** - Extract `ApiRequestBuilder` and paging strategies first, then move resource imports to `ResourceImporter`. This will be the largest refactor, do in small PRs.
-5. [ ] **Reorganize Packages** - Move files to their new packages, add `__init__.py`, and fix imports. Do after class extraction to minimize move-related conflicts.
-6. [ ] **Extract `PipelineManager`** - Consolidate `FillManager` and `SyncManager` to use the new base class.
-7. [ ] **Unify Cursor Persistence** - Migrate `paging_cursors` to be read/written through `PostGISConnector.params` exclusively.
-8. [ ] **Improve Connection Pooling** - Swap to `ThreadedConnectionPool` with dead connection recovery.
-9. [ ] **Type Hints & Static Analysis** - Fix generator annotations and run `mypy` to catch any regressions from prior changes.
-10. [ ] **Expand Test Coverage** - Add unit tests for all extracted components, focusing on critical paths (paging, imports and syncing). 
+1. [ ] **Extract Constants** - Move hardcoded Kenmerk UUIDs from `EMInfraImporter.py` to `constants.py` as module-level constants. (Zero logic change, easy to verify)
+2. [ ] **Registry for Event Processors** - Replace the large `if/elif` chains in `EventProcessorFactory.py` with registry dicts/mappings. Preserve all existing behavior including `pass` cases. 
+3. [ ] **Parameterize SQL** - Audit and parameterize **all data queries** using psycopg2 `%s` placeholders. Start with `PostGISConnector.py` (`update_params`, `create_params`, `delete_params`, etc.). Isolate dynamic DDL (e.g. DROP VIEW from `information_schema`) separately. Add tests around query building where possible.
+4. [ ] **Split `EMInfraImporter`** - Extract `ApiRequestBuilder` and paging strategies (`OsloSearchPagingStrategy`, `NonOsloSearchPagingStrategy`) first, then move resource-specific imports to `ResourceImporter`. Fix type hints to `Iterator`/`Generator` as you go. Test behavior before proceeding.
+5. [ ] **Reorganize Packages** - Move files to their new packages (`api/`, `db/`, `events/`, `fill/`, `sync/`, `utils/`, `config/`), add `__init__.py`, convert to snake_case where appropriate, fix imports and remove CWD/sys.path hacks. **Keep `main_*.py` entrypoints at root**. Update entrypoints last.
+6. [ ] **Extract `PipelineManager`** - Create ABC base class `PipelineManager` with common orchestration logic. Refactor `FillManager` and `SyncManager` to inherit from it. Consolidate threading, retry loops, rollbacks, error handling, and state checks.
+7. [ ] **Unify Cursor Persistence** - Migrate all `paging_cursors` usage to go through `PostGISConnector.params` exclusively. Remove in-memory cursor storage from `EMInfraImporter`. Ensure cursors are read/written via the params mechanism with correct types.
+8. [ ] **Improve Connection Pooling** - Harden usage of `psycopg2.pool.ThreadedConnectionPool` with proper dead-connection recovery, rollback handling, and cleanup. Remove duplicated health-check logic.
+9. [ ] **Type Hints & Static Analysis** - Fix remaining generator/iterator type hints and run `mypy` to catch regressions from prior changes.
+10. [ ] **Expand Test Coverage** - Add unit tests with mocks for all extracted components (strategies, factories, pipeline base, request builder). Focus on critical paths (paging, imports, syncing). 
 
 
 --- 
@@ -74,5 +74,8 @@ This plan outlines the necessary improvements to increase the maintainability, s
 ## Notes
 
 - **Migrate incrementally.** Avoid massive, all-encompassing PRs. Each item should be verifiable and, where possible, backwards compatible.
-- **Test before splitting.** Add integration tests for `EMInfraImporter` and the pipelines prior to extracting them to catch any behavioral changes.
-- **Watch entrypoints.** CLI entrypoints (`main*.py`) should be updated last during the package reorganization to avoid breaking execution.
+- **Test before splitting.** Add/increase test coverage for `EMInfraImporter` and the pipelines before extracting them to catch any behavioral changes.
+- **Watch entrypoints.** CLI entrypoints (`main*.py`) must remain at root during and after reorganization. Update them last.
+- **Deterministic staggering.** For SyncerFactory, sort syncers explicitly and use index-based delays to preserve the "stagger start times" behavior without hardcoded per-feed magic numbers.
+- **SQL safety.** Use psycopg2 `%s` style everywhere for data values. Never interpolate user/data values with f-strings.
+- **Single source of truth.** DB params table is authoritative for cursors and state - no in-memory divergence. 
