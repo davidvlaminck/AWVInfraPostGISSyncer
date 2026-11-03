@@ -1,12 +1,13 @@
 import time
 
 from Helpers import now_in_brussels
+from constants import DEFAULT_BACKUP_TIME
 
 
 class SyncTimer:
     sync_start = None
     sync_end = None
-    backup_time = '06:00:00'
+    backup_time = DEFAULT_BACKUP_TIME
 
     @staticmethod
     def _to_seconds(time_string: str) -> int:

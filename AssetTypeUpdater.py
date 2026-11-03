@@ -5,6 +5,7 @@ from typing import Iterator
 from EMInfraImporter import EMInfraImporter
 from Helpers import peek_generator, turn_list_of_lists_into_string
 from PostGISConnector import PostGISConnector
+from constants import DUMMY_ASSETTYPE_UUID
 
 
 class AssetTypeUpdater:
@@ -338,7 +339,7 @@ class AssetTypeUpdater:
         for assettype_record in assettypes_with_geometrie:
             counter += 1
             type_uuid = assettype_record[0]
-            if type_uuid == 'b0fa91d4-d061-479c-a23d-f9244a86c4c2':  # DUMMY
+            if type_uuid == DUMMY_ASSETTYPE_UUID:  # DUMMY
                 continue
             type_uri = assettype_record[1]
             has_geometry = assettype_record[2]

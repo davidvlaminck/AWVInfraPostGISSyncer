@@ -8,6 +8,7 @@ from Exceptions.AssetMissingError import AssetMissingError
 from Exceptions.RelatieTypeMissingError import RelatieTypeMissingError
 from Helpers import peek_generator, turn_list_of_lists_into_string
 from ResourceEnum import colorama_table, ResourceEnum
+from constants import ASSETRELATIE_URL_PREFIX, ASSET_URL_PREFIX
 
 
 class AssetRelatiesUpdater:
@@ -22,9 +23,9 @@ class AssetRelatiesUpdater:
         for assetrelatie_dict in object_generator:
             counter += 1
             record_array = [
-                f"'{assetrelatie_dict['@id'].replace('https://data.awvvlaanderen.be/id/assetrelatie/', '')[:36]}'",
-                f"'{assetrelatie_dict['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[:36]}'",
-                f"'{assetrelatie_dict['RelatieObject.doel']['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[:36]}'"]
+                f"'{assetrelatie_dict['@id'].replace(ASSETRELATIE_URL_PREFIX, '')[:36]}'",
+                f"'{assetrelatie_dict['RelatieObject.bron']['@id'].replace(ASSET_URL_PREFIX, '')[:36]}'",
+                f"'{assetrelatie_dict['RelatieObject.doel']['@id'].replace(ASSET_URL_PREFIX, '')[:36]}'"]
 
             if 'RelatieObject.typeURI' in assetrelatie_dict:
                 record_array.append(f"'{assetrelatie_dict['RelatieObject.typeURI']}'")

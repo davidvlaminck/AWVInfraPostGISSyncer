@@ -13,6 +13,7 @@ from EventProcessors.AssetProcessors.VplanGewijzigdProcessor import VplanGewijzi
 from EventProcessors.AssetProcessors.WeglocatieGewijzigdProcessor import WeglocatieGewijzigdProcessor
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
 from Helpers import peek_generator
+from constants import ASSET_URL_PREFIX
 
 
 class AssetUpdater:

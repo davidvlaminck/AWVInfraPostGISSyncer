@@ -2,6 +2,7 @@ import requests
 
 from CertRequester import CertRequester
 from JWTRequester import JWTRequester, SingletonJWTRequester
+from constants import ENV_URL_MAP
 
 
 class RequesterFactory:
@@ -16,15 +17,7 @@ class RequesterFactory:
         if not auth_info:
             raise ValueError(f"Could not load the settings for {auth_type} {env}")
 
-        first_part_url = ''
-        if env == 'prd':
-            first_part_url = 'https://services.apps.mow.vlaanderen.be/'
-        elif env == 'tei':
-            first_part_url = 'https://services.apps-tei.mow.vlaanderen.be/'
-        elif env == 'dev':
-            first_part_url = 'https://services.apps-dev.mow.vlaanderen.be/'
-        elif env == 'aim':
-            first_part_url = 'https://services-aim.apps-dev.mow.vlaanderen.be/'
+        first_part_url = ENV_URL_MAP.get(env, '')
 
         if auth_type == 'JWT':
             if multiprocessing_safe:

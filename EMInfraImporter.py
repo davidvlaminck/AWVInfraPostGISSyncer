@@ -6,6 +6,16 @@ from typing import Iterator
 from RequestHandler import RequestHandler
 from ResourceEnum import ResourceEnum
 from ZoekParameterPayload import ZoekParameterPayload
+from constants import (
+    KENMERK_VPLANNEN,
+    KENMERK_ELEK_AANSLUITING,
+    KENMERK_BESTEK,
+    KENMERK_GEVOED_DOOR,
+    KENMERK_TOEZICHT,
+    KENMERK_BEHEERDER,
+    KENMERK_LOCATIE,
+    KENMERK_GEOMETRIE,
+)
 
 
 class EMInfraImporter:
@@ -327,18 +337,18 @@ class EMInfraImporter:
     def get_all_vplankoppelingen_from_webservice_by_asset_uuids(self, asset_uuids: [str]) -> Generator[tuple]:
         for asset_uuid in asset_uuids:
             yield asset_uuid, self.get_objects_from_non_oslo_endpoint(
-                url_part=f'installaties/{asset_uuid}/kenmerken/9f12fd85-d4ae-4adc-952f-5fa6e9d0ffb7/vplannen',
+                url_part=f'installaties/{asset_uuid}/kenmerken/{KENMERK_VPLANNEN}/vplannen',
                 request_type='GET')
 
     def get_all_elek_aansluitingen_from_webservice_by_asset_uuids(self, asset_uuids: [str]) -> Generator[tuple]:
         for asset_uuid in asset_uuids:
             yield asset_uuid, self.get_objects_from_non_oslo_endpoint(
-                url_part=f'installaties/{asset_uuid}/kenmerken/87dff279-4162-4031-ba30-fb7ffd9c014b',
+                url_part=f'installaties/{asset_uuid}/kenmerken/{KENMERK_ELEK_AANSLUITING}',
                 request_type='GET')
 
     def get_all_bestekkoppelingen_from_webservice_by_asset_uuids_installaties(self, asset_uuids: [str]) -> Generator[tuple]:
         zoek_params = ZoekParameterPayload()
-        zoek_params.expansions = {'fields': ['kenmerk:ee2e627e-bb79-47aa-956a-ea167d20acbd']}
+        zoek_params.expansions = [{'fields': [f'kenmerk:{KENMERK_BESTEK}']}]
         zoek_params.add_term(property='id', value=list(asset_uuids), operator='IN')
         for kenmerk_object in self.get_objects_from_non_oslo_endpoint(url_part='installaties/search',
                                                                       request_type='POST', zoek_payload=zoek_params):
@@ -350,7 +360,7 @@ class EMInfraImporter:
 
     def get_all_bestekkoppelingen_from_webservice_by_asset_uuids_onderdelen(self, asset_uuids: [str]) -> Generator[tuple]:
         zoek_params = ZoekParameterPayload()
-        zoek_params.expansions = {'fields': ['kenmerk:ee2e627e-bb79-47aa-956a-ea167d20acbd']}
+        zoek_params.expansions = [{'fields': [f'kenmerk:{KENMERK_BESTEK}']}]
         zoek_params.add_term(property='id', value=list(asset_uuids), operator='IN')
         for kenmerk_object in self.get_objects_from_non_oslo_endpoint(url_part='onderdelen/search',
                                                                       request_type='POST', zoek_payload=zoek_params):
@@ -370,31 +380,31 @@ class EMInfraImporter:
 
     def get_assettypes_with_kenmerk_gevoed_door_by_uuids(self, assettype_uuids: [str]):
         yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
-                                                                 kenmerk='c60b07d2-5570-4363-ab6a-d6fba49ef2ca')
+                                                                 kenmerk=KENMERK_GEVOED_DOOR)
 
     def get_assettypes_with_kenmerk_toezicht_by_uuids(self, assettype_uuids: [str]):
         yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
-                                                                 kenmerk='f0166ba2-757c-4cf3-bf71-2e4fdff43fa3')
+                                                                 kenmerk=KENMERK_TOEZICHT)
 
     def get_assettypes_with_kenmerk_beheerder_by_uuids(self, assettype_uuids: [str]):
         yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
-                                                                 kenmerk='d911dc02-f214-4f64-9c46-720dbdeb0d02')
+                                                                 kenmerk=KENMERK_BEHEERDER)
 
     def get_assettypes_with_kenmerk_locatie_by_uuids(self, assettype_uuids: [str]):
         yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
-                                                                 kenmerk='80052ed4-2f91-400c-8cba-57624653db11')
+                                                                 kenmerk=KENMERK_LOCATIE)
 
     def get_assettypes_with_kenmerk_geometrie_by_uuids(self, assettype_uuids: [str]):
         yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
-                                                                 kenmerk='aabe29e0-9303-45f1-839e-159d70ec2859')
+                                                                 kenmerk=KENMERK_GEOMETRIE)
 
     def get_assettypes_with_kenmerk_bestek_by_uuids(self, assettype_uuids: [str]):
         yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
-                                                                 kenmerk='ee2e627e-bb79-47aa-956a-ea167d20acbd')
+                                                                 kenmerk=KENMERK_BESTEK)
 
     def get_assettypes_with_kenmerk_elek_aansluiting_by_uuids(self, assettype_uuids: [str]):
         yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,
-                                                                 kenmerk='87dff279-4162-4031-ba30-fb7ffd9c014b')
+                                                                 kenmerk=KENMERK_ELEK_AANSLUITING)
 
     def get_assettypes_with_kenmerk_vplan_by_uuids(self, assettype_uuids: [str]):
         yield from self.get_assettypes_with_kenmerk_and_by_uuids(assettype_uuids,

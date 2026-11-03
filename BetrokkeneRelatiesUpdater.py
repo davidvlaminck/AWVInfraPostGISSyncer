@@ -9,6 +9,12 @@ from Exceptions.AgentMissingError import AgentMissingError
 from Exceptions.AssetMissingError import AssetMissingError
 from Helpers import peek_generator, turn_list_of_lists_into_string
 from ResourceEnum import colorama_table, ResourceEnum
+from constants import (
+    ASSETRELATIE_URL_PREFIX,
+    ASSET_URL_PREFIX,
+    BETROKKENHEID_ROL_PREFIX,
+    AGENT_TYPE_URI,
+)
 
 
 class BetrokkeneRelatiesUpdater:
@@ -24,21 +30,21 @@ class BetrokkeneRelatiesUpdater:
             counter += 1
 
             record_array = [
-                f"'{betrokkenerelatie_dict['@id'].replace('https://data.awvvlaanderen.be/id/assetrelatie/', '')[0:36]}'",
-                f"'{betrokkenerelatie_dict['RelatieObject.doel']['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]}'",
-                f"'{betrokkenerelatie_dict['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]}'"]
+                f"'{betrokkenerelatie_dict['@id'].replace(ASSETRELATIE_URL_PREFIX, '')[0:36]}'",
+                f"'{betrokkenerelatie_dict['RelatieObject.doel']['@id'].replace(ASSET_URL_PREFIX, '')[0:36]}'",
+                f"'{betrokkenerelatie_dict['RelatieObject.bron']['@id'].replace(ASSET_URL_PREFIX, '')[0:36]}'"]
 
             if 'HeeftBetrokkene.rol' in betrokkenerelatie_dict:
-                record_array.append(f"'{betrokkenerelatie_dict['HeeftBetrokkene.rol'].replace('https://wegenenverkeer.data.vlaanderen.be/id/concept/KlBetrokkenheidRol/','')}'")
+                record_array.append(f"'{betrokkenerelatie_dict['HeeftBetrokkene.rol'].replace(BETROKKENHEID_ROL_PREFIX,'')}'")
             else:
                 record_array.append("NULL")
 
-            if betrokkenerelatie_dict['RelatieObject.bron']['@type'] == 'http://purl.org/dc/terms/Agent':
-                record_array.append(f"'{betrokkenerelatie_dict['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36]}'")
+            if betrokkenerelatie_dict['RelatieObject.bron']['@type'] == AGENT_TYPE_URI:
+                record_array.append(f"'{betrokkenerelatie_dict['RelatieObject.bron']['@id'].replace(ASSET_URL_PREFIX,'')[0:36]}'")
                 record_array.append("NULL")
             else:
                 record_array.append("NULL")
-                record_array.append(f"'{betrokkenerelatie_dict['RelatieObject.bron']['@id'].replace('https://data.awvvlaanderen.be/id/asset/','')[0:36]}'")
+                record_array.append(f"'{betrokkenerelatie_dict['RelatieObject.bron']['@id'].replace(ASSET_URL_PREFIX,'')[0:36]}'")
 
             if 'AIMDBStatus.isActief' in betrokkenerelatie_dict:
                 record_array.append(f"{betrokkenerelatie_dict['AIMDBStatus.isActief']}")
