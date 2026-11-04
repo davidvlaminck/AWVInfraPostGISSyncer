@@ -60,9 +60,12 @@ This plan outlines the necessary improvements to increase the maintainability, s
 1. [x] **Extract Constants** - Move hardcoded Kenmerk UUIDs from `EMInfraImporter.py` to `constants.py` as module-level constants. (Zero logic change, easy to verify)
 2. [x] **Registry for Event Processors** - Replace the large `if/elif` chains in `EventProcessorFactory.py` with registry dicts/mappings. Preserve all existing behavior including `pass` cases. 
 3. [x] **Parameterize SQL (PostGISConnector params)** - `update_params`, `create_params`, `delete_params` parameterized.
-3a. [ ] **Parameterize SQL (AssetUpdater)** - parameterize data queries in `AssetUpdater.py`.
+3a. [x] **Parameterize SQL (AssetUpdater)** - parameterize data queries in `AssetUpdater.py`.
 3a1. [x] update_vplan_of_synced_assets SELECT parameterized
-3a2. [ ] perform_insert_update_from_values bulk VALUES parameterized
+3a2. [x] perform_insert_update_from_values bulk VALUES parameterized
+3a2a. [x] append_values returns tuple instead of string
+3a2b. [x] insert query parameterized via execute_values
+3a2c. [x] update query parameterized
 3b. [ ] **Parameterize SQL (other updaters/importers)** - audit remaining files using f-strings for SQL.
 3b1. [ ] AssetTypeUpdater.py, AssetUpdater.py (bulk VALUES)
 3b2. [ ] BetrokkeneRelatiesUpdater.py, BestekUpdater.py, RelatieTypeUpdater.py, ToezichtgroepUpdater.py, AssetRelatiesUpdater.py

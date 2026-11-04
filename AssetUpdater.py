@@ -34,9 +34,9 @@ class AssetUpdater:
         if not asset_uuids:
             return 0
 
-        values = ''
+        values = []
         for asset_uuid, asset_dict in asset_dicts_dict.items():
-            values = AssetUpdater.append_values(asset_dict, asset_uuid, values)
+            values.append(AssetUpdater.append_values(asset_dict, asset_uuid))
 
         AssetUpdater.perform_insert_update_from_values(connection, insert_only, values)
 
@@ -66,7 +66,7 @@ class AssetUpdater:
             asset_uuid = asset_dict['@id'].split('/')[-1][:36]
             asset_uuids.append(asset_uuid)
 
-            values = AssetUpdater.append_values(asset_dict, asset_uuid, values)
+            values.append(AssetUpdater.append_values(asset_dict, asset_uuid))
         return counter, values
 
     @staticmethod
@@ -93,9 +93,10 @@ class AssetUpdater:
 
     @staticmethod
     def perform_insert_update_from_values(connection, insert_only, values):
-        insert_query = f"""
+        from psycopg2.extras import execute_values
+        insert_query = """
 WITH s (uuid, assetTypeUri, actief, toestand, naampad, naam, commentaar) 
-    AS (VALUES {values[:-1]}),
+    AS (VALUES %s),
 t AS (
     SELECT s.uuid::uuid AS uuid, assettypes.uuid as assettype, s.actief, toestand, naampad, s.naam, commentaar
     FROM s
@@ -109,11 +110,9 @@ INSERT INTO public.assets (uuid, assettype, actief, toestand, naampad, naam, com
 SELECT to_insert.uuid, to_insert.assettype, to_insert.actief, to_insert.toestand, to_insert.naampad, to_insert.naam, 
     to_insert.commentaar
 FROM to_insert;"""
-        update_query = ''
-        if not insert_only:
-            update_query = f"""
+        update_query = """
 WITH s (uuid, assetTypeUri, actief, toestand, naampad, naam, commentaar)  
-    AS (VALUES {values[:-1]}),
+    AS (VALUES %s),
 t AS (
     SELECT s.uuid::uuid AS uuid, assettypes.uuid as assettype, s.actief, toestand, naampad, s.naam, commentaar
     FROM s
@@ -131,9 +130,9 @@ WHERE to_update.uuid = assets.uuid;"""
 
         try:
             with connection.cursor() as cursor:
-                cursor.execute(insert_query)
+                execute_values(cursor, insert_query, values)
                 if not insert_only:
-                    cursor.execute(update_query)
+                    execute_values(cursor, update_query, values)
         except psycopg2.errors.NotNullViolation as exc:
             first_line = exc.args[0].split('\n')[0]
             if 'null value in column "assettype"' in first_line and 'violates not-null constraint' in first_line:
@@ -148,7 +147,7 @@ WHERE to_update.uuid = assets.uuid;"""
             raise exc
 
     @staticmethod
-    def append_values(asset_dict, asset_uuid, values):
+    def append_values(asset_dict, asset_uuid):
         if 'AIMDBStatus.isActief' in asset_dict:
             actief = asset_dict['AIMDBStatus.isActief']
         else:
@@ -159,20 +158,13 @@ WHERE to_update.uuid = assets.uuid;"""
                 'https://wegenenverkeer.data.vlaanderen.be/id/concept/KlAIMToestand/', '')
         naampad = None
         if 'NaampadObject.naampad' in asset_dict:
-            naampad = asset_dict['NaampadObject.naampad'].replace("'", "''")
+            naampad = asset_dict['NaampadObject.naampad']
         naam = None
         if 'AIMNaamObject.naam' in asset_dict:
-            naam = asset_dict['AIMNaamObject.naam'].replace("'", "''")
+            naam = asset_dict['AIMNaamObject.naam']
         elif 'AbstracteAanvullendeGeometrie.naam' in asset_dict:
-            naam = asset_dict['AbstracteAanvullendeGeometrie.naam'].replace("'", "''")
+            naam = asset_dict['AbstracteAanvullendeGeometrie.naam']
         commentaar = None
         if 'AIMObject.notitie' in asset_dict:
-            commentaar = asset_dict['AIMObject.notitie'].replace("'", "''").replace("\n", " ")
-        values += f"('{asset_uuid}','{asset_dict['@type']}',{actief},"
-        for attribute in [toestand, naampad, naam, commentaar]:
-            if attribute is None or attribute == '':
-                values += 'NULL,'
-            else:
-                values += f"'{attribute}',"
-        values = f'{values[:-1]}),'
-        return values
+            commentaar = asset_dict['AIMObject.notitie'].replace('\\n', ' ')
+        return (asset_uuid, asset_dict['@type'], actief, toestand, naampad, naam, commentaar)
