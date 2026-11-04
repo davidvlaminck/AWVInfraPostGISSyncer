@@ -142,8 +142,8 @@ class AssetTypeUpdater:
                     self.sync_attribuut_and_koppeling(assettype_uuid=assettype_uuid, attribuut=attribuut, cursor=cursor,
                                                       force_update=force_update)
 
-            finish_assettype_query = f"UPDATE public.assettypes SET attributen = TRUE WHERE uuid = '{assettype_uuid}'::uuid;"
-            cursor.execute(finish_assettype_query)
+            finish_assettype_query = "UPDATE public.assettypes SET attributen = TRUE WHERE uuid = %s::uuid;"
+            cursor.execute(finish_assettype_query, (assettype_uuid,))
 
     def update_assettypes_with_bestek(self, connection):
         select_query = 'SELECT uuid FROM public.assettypes WHERE bestek is NULL'
@@ -453,8 +453,8 @@ CREATE VIEW asset_views.{view_name} AS
 
     def sync_attribuut_and_koppeling(self, assettype_uuid, attribuut, cursor, force_update: bool):
         attribuut_uuid = attribuut['eigenschap']['uuid']
-        get_attribuut_query = f"""SELECT uuid FROM attributen WHERE uuid = '{attribuut_uuid}'::uuid;"""
-        cursor.execute(get_attribuut_query)
+        get_attribuut_query = "SELECT uuid FROM attributen WHERE uuid = %s::uuid;"
+        cursor.execute(get_attribuut_query, (attribuut_uuid,))
         attribuut_existing_uuid = cursor.fetchone()
         if attribuut_existing_uuid is None:
             self.insert_attribuut(attribuut, cursor)

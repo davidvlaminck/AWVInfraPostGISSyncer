@@ -21,7 +21,7 @@ class CommentaarGewijzigdProcessor(SpecificEventProcessor):
 
     @staticmethod
     def create_values_string_from_dicts(assets_dicts):
-        values = ''
+        values = []
         counter = 0
         for asset_dict in assets_dicts:
             counter += 1
@@ -30,21 +30,15 @@ class CommentaarGewijzigdProcessor(SpecificEventProcessor):
             notitie = None
             if 'AIMObject.notitie' in asset_dict:
                 notitie = asset_dict['AIMObject.notitie']
-            values += f"('{uuid}',"
-
-            if notitie is None:
-                values += 'NULL'
-            else:
-                notitie = notitie.replace("'", "''")
-                values += f"'{notitie}'"
-            values = values + '),'
+            values.append((uuid, notitie))
         return values, counter
 
     @staticmethod
     def perform_update_with_values(connection, values):
-        update_query = f"""
+        from psycopg2.extras import execute_values
+        update_query = """
         WITH s (uuid, commentaar)  
-            AS (VALUES {values[:-1]}),
+            AS (VALUES %s),
         to_update AS (
             SELECT uuid::uuid AS uuid, commentaar FROM s)
         UPDATE assets 
@@ -52,4 +46,4 @@ class CommentaarGewijzigdProcessor(SpecificEventProcessor):
         FROM to_update 
         WHERE to_update.uuid = assets.uuid;"""
         with connection.cursor() as cursor:
-            cursor.execute(update_query)
+            execute_values(cursor, update_query, values)

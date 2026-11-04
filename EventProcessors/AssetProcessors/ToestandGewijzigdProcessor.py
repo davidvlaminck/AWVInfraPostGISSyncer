@@ -21,7 +21,7 @@ class ToestandGewijzigdProcessor(SpecificEventProcessor):
 
     @staticmethod
     def create_values_string_from_dicts(assets_dicts):
-        values = ''
+        values = []
         counter = 0
         for asset_dict in assets_dicts:
             counter += 1
@@ -31,20 +31,15 @@ class ToestandGewijzigdProcessor(SpecificEventProcessor):
             if 'AIMToestand.toestand' in asset_dict:
                 toestand = asset_dict['AIMToestand.toestand'].replace(
                     'https://wegenenverkeer.data.vlaanderen.be/id/concept/KlAIMToestand/', '')
-            values += f"('{uuid}',"
-
-            if toestand is None:
-                values += 'NULL'
-            else:
-                values += f"'{toestand}'"
-            values = values + '),'
+            values.append((uuid, toestand))
         return values, counter
 
     @staticmethod
     def perform_update_with_values(connection, values):
-        update_query = f"""
+        from psycopg2.extras import execute_values
+        update_query = """
         WITH s (uuid, toestand)  
-            AS (VALUES {values[:-1]}),
+            AS (VALUES %s),
         to_update AS (
             SELECT uuid::uuid AS uuid, toestand FROM s)
         UPDATE assets 
@@ -53,4 +48,4 @@ class ToestandGewijzigdProcessor(SpecificEventProcessor):
         WHERE to_update.uuid = assets.uuid;"""
 
         with connection.cursor() as cursor:
-            cursor.execute(update_query)
+            execute_values(cursor, update_query, values)

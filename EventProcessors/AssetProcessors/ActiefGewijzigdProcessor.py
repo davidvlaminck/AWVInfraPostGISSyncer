@@ -22,26 +22,26 @@ class ActiefGewijzigdProcessor(SpecificEventProcessor):
 
     @staticmethod
     def create_values_string_from_dicts(assets_dicts):
-        values = ''
+        values = []
         counter = 0
         for asset_dict in assets_dicts:
             counter += 1
             uuid = asset_dict['@id'].replace('https://data.awvvlaanderen.be/id/asset/', '')[0:36]
             actief = asset_dict.get('AIMDBStatus.isActief', True)
-            values += f"('{uuid}',{actief}),"
-
+            values.append((uuid, actief))
         return values, counter
 
     @staticmethod
     def perform_update_with_values(connection, values):
+        from psycopg2.extras import execute_values
         with connection.cursor() as cursor:
-            update_query = f"""
+            update_query = """
             WITH s (uuid, actief)  
-                AS (VALUES {values[:-1]}),
+                AS (VALUES %s),
             to_update AS (
                 SELECT uuid::uuid AS uuid, actief FROM s)
             UPDATE assets 
             SET actief = to_update.actief
             FROM to_update 
             WHERE to_update.uuid = assets.uuid;"""
-            cursor.execute(update_query)
+            execute_values(cursor, update_query, values)

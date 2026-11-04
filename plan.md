@@ -67,11 +67,34 @@ This plan outlines the necessary improvements to increase the maintainability, s
 3a2b. [x] insert query parameterized via execute_values
 3a2c. [x] update query parameterized
 3b. [ ] **Parameterize SQL (other updaters/importers)** - audit remaining files using f-strings for SQL.
-3b1. [ ] AssetTypeUpdater.py, AssetUpdater.py (bulk VALUES)
+3b1. [x] AssetTypeUpdater.py, AssetUpdater.py (bulk VALUES)
 3b2. [ ] BetrokkeneRelatiesUpdater.py, BestekUpdater.py, RelatieTypeUpdater.py, ToezichtgroepUpdater.py, AssetRelatiesUpdater.py
+3b2a. [ ] BetrokkeneRelatiesUpdater.py
+3b2b. [ ] BestekUpdater.py
+3b2c. [ ] RelatieTypeUpdater.py
+3b2d. [ ] ToezichtgroepUpdater.py
+3b2e. [ ] AssetRelatiesUpdater.py
 3b3. [ ] BeheerderUpdater.py, IdentiteitUpdater.py, ControleficheUpdater.py, AgentUpdater.py
+3b3a. [ ] BeheerderUpdater.py
+3b3b. [ ] IdentiteitUpdater.py
+3b3c. [ ] ControleficheUpdater.py
+3b3d. [ ] AgentUpdater.py
 3b4. [ ] EventProcessors Asset processors (GeometrieOrLocatie, Toestand, Commentaar, Weglocatie, Actief, Attributen, Bestek, Vplan, Naam, Toezicht, Schadebeheerder)
+3b4a. [ ] GeometrieOrLocatieGewijzigdProcessor.py
+3b4b. [x] ToestandGewijzigdProcessor.py
+3b4c. [x] CommentaarGewijzigdProcessor.py
+3b4d. [ ] WeglocatieGewijzigdProcessor.py
+3b4e. [x] ActiefGewijzigdProcessor.py
+3b4f. [ ] AttributenGewijzigdProcessor.py
+3b4g. [ ] BestekGewijzigdProcessor.py
+3b4h. [x] VplanGewijzigdProcessor.py
+3b4i. [ ] NaamGewijzigdProcessor.py
+3b4j. [ ] ToezichtGewijzigdProcessor.py
+3b4k. [ ] SchadebeheerderGewijzigdProcessor.py
 3b5. [ ] EventProcessors Agent/Betrokkene/Assetrelatie processors
+3b5a. [ ] Agent processors
+3b5b. [ ] Betrokkene processors
+3b5c. [ ] Assetrelatie processors
 3b6. [ ] BestekKoppelingSyncer.py
 4. [ ] **Split `EMInfraImporter`** - Extract `ApiRequestBuilder` and paging strategies (`OsloSearchPagingStrategy`, `NonOsloSearchPagingStrategy`) first, then move resource-specific imports to `ResourceImporter`. Fix type hints to `Iterator`/`Generator` as you go. Test behavior before proceeding.
 5. [ ] **Reorganize Packages** - Move files to their new packages (`api/`, `db/`, `events/`, `fill/`, `sync/`, `utils/`, `config/`), add `__init__.py`, convert to snake_case where appropriate, fix imports and remove CWD/sys.path hacks. **Keep `main_*.py` entrypoints at root**. Update entrypoints last.

@@ -27,9 +27,9 @@ class VplanGewijzigdProcessor(SpecificEventProcessor):
 
     @staticmethod
     def update_vplankoppelingen_by_asset_uuid(connection, asset_uuid, vplankoppeling_list):
-        delete_query = f"DELETE FROM public.vplan_koppelingen WHERE assetUuid = '{asset_uuid}';"
+        delete_query = "DELETE FROM public.vplan_koppelingen WHERE assetUuid = %s;"
         with connection.cursor() as cursor:
-            cursor.execute(delete_query)
+            cursor.execute(delete_query, (asset_uuid,))
             if len(vplankoppeling_list) == 0 or 'vplanRef' not in vplankoppeling_list[0]:
                 return
 
