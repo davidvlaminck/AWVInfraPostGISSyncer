@@ -295,6 +295,4 @@ class GeometrieOrLocatieGewijzigdProcessor(SpecificEventProcessor):
         if len(uuids) == 0:
             return
 
-        values = "'" + "','".join(uuids) + "'"
-        update_query = f"""DELETE FROM geometrie WHERE assetUuid IN ({values})"""
-        cursor.execute(update_query)
+        cursor.execute("DELETE FROM geometrie WHERE assetUuid = ANY(%s)", (uuids,))

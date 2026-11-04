@@ -132,10 +132,7 @@ class WeglocatieGewijzigdProcessor(SpecificEventProcessor):
         if len(uuids) == 0:
             return
 
-        values = "'" + "','".join(uuids) + "'"
-        update_query = f"""DELETE FROM weglocatie_wegsegmenten WHERE assetUuid IN ({values});"""
-        cursor.execute(update_query)
-        update_query = f"""DELETE FROM weglocatie_aanduidingen WHERE assetUuid IN ({values});"""
-        cursor.execute(update_query)
-        update_query = f"""DELETE FROM weglocaties WHERE assetUuid IN ({values});"""
-        cursor.execute(update_query)
+        values = uuids
+        cursor.execute("DELETE FROM weglocatie_wegsegmenten WHERE assetUuid = ANY(%s)", (values,))
+        cursor.execute("DELETE FROM weglocatie_aanduidingen WHERE assetUuid = ANY(%s)", (values,))
+        cursor.execute("DELETE FROM weglocaties WHERE assetUuid = ANY(%s)", (values,))

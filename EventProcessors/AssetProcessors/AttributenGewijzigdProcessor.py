@@ -39,10 +39,9 @@ class AttributenGewijzigdProcessor(SpecificEventProcessor):
     def remove_existing_attributes(asset_uuids: [str], connection):
         if len(asset_uuids) == 0:
             return
-        delete_query = "DELETE FROM public.attribuutWaarden WHERE assetUuid IN ('" + "','".join(asset_uuids) + "');"
-
+        delete_query = "DELETE FROM public.attribuutWaarden WHERE assetUuid = ANY(%s)"
         with connection.cursor() as cursor:
-            cursor.execute(delete_query)
+            cursor.execute(delete_query, (asset_uuids,))
 
     @staticmethod
     def create_values_string_from_dicts(assets_dicts: [Dict]):

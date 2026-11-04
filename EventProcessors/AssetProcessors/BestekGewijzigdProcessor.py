@@ -32,10 +32,9 @@ class BestekGewijzigdProcessor(SpecificEventProcessor):
             return 0
 
         asset_uuids = list(asset_dicts_dict.keys())
-        delete_query = "DELETE FROM public.bestekkoppelingen WHERE assetUuid IN (VALUES ('" + "'::uuid),('".join(
-            asset_uuids) + "'::uuid));"
+        delete_query = "DELETE FROM public.bestekkoppelingen WHERE assetUuid = ANY(%s)"
         with connection.cursor() as cursor:
-            cursor.execute(delete_query)
+            cursor.execute(delete_query, (asset_uuids,))
 
             for asset_uuid, asset_dict in asset_dicts_dict.items():
                 values = ''
