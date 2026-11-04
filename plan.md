@@ -57,7 +57,7 @@ This plan outlines the necessary improvements to increase the maintainability, s
 
 ## Suggested Migration Order (Low Risk → High Impact)
 
-1. [ ] **Extract Constants** - Move hardcoded Kenmerk UUIDs from `EMInfraImporter.py` to `constants.py` as module-level constants. (Zero logic change, easy to verify)
+1. [x] **Extract Constants** - Move hardcoded Kenmerk UUIDs from `EMInfraImporter.py` to `constants.py` as module-level constants. (Zero logic change, easy to verify)
 2. [ ] **Registry for Event Processors** - Replace the large `if/elif` chains in `EventProcessorFactory.py` with registry dicts/mappings. Preserve all existing behavior including `pass` cases. 
 3. [ ] **Parameterize SQL** - Audit and parameterize **all data queries** using psycopg2 `%s` placeholders. Start with `PostGISConnector.py` (`update_params`, `create_params`, `delete_params`, etc.). Isolate dynamic DDL (e.g. DROP VIEW from `information_schema`) separately. Add tests around query building where possible.
 4. [ ] **Split `EMInfraImporter`** - Extract `ApiRequestBuilder` and paging strategies (`OsloSearchPagingStrategy`, `NonOsloSearchPagingStrategy`) first, then move resource-specific imports to `ResourceImporter`. Fix type hints to `Iterator`/`Generator` as you go. Test behavior before proceeding.
