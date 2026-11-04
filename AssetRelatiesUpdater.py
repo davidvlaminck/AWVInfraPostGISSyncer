@@ -6,7 +6,7 @@ import psycopg2
 
 from Exceptions.AssetMissingError import AssetMissingError
 from Exceptions.RelatieTypeMissingError import RelatieTypeMissingError
-from Helpers import peek_generator, turn_list_of_lists_into_string
+from Helpers import peek_generator
 from ResourceEnum import colorama_table, ResourceEnum
 from constants import ASSETRELATIE_URL_PREFIX, ASSET_URL_PREFIX
 
@@ -23,45 +23,40 @@ class AssetRelatiesUpdater:
         for assetrelatie_dict in object_generator:
             counter += 1
             record_array = [
-                f"'{assetrelatie_dict['@id'].replace(ASSETRELATIE_URL_PREFIX, '')[:36]}'",
-                f"'{assetrelatie_dict['RelatieObject.bron']['@id'].replace(ASSET_URL_PREFIX, '')[:36]}'",
-                f"'{assetrelatie_dict['RelatieObject.doel']['@id'].replace(ASSET_URL_PREFIX, '')[:36]}'"]
+                assetrelatie_dict['@id'].replace(ASSETRELATIE_URL_PREFIX, '')[:36],
+                assetrelatie_dict['RelatieObject.bron']['@id'].replace(ASSET_URL_PREFIX, '')[:36],
+                assetrelatie_dict['RelatieObject.doel']['@id'].replace(ASSET_URL_PREFIX, '')[:36]]
 
             if 'RelatieObject.typeURI' in assetrelatie_dict:
-                record_array.append(f"'{assetrelatie_dict['RelatieObject.typeURI']}'")
+                record_array.append(assetrelatie_dict['RelatieObject.typeURI'])
             else:
-                record_array.append(f"'{assetrelatie_dict['@type']}'")
+                record_array.append(assetrelatie_dict['@type'])
 
             if 'AIMDBStatus.isActief' in assetrelatie_dict:
-                record_array.append(f"{assetrelatie_dict['AIMDBStatus.isActief']}")
+                record_array.append(assetrelatie_dict['AIMDBStatus.isActief'])
             else:
-                record_array.append("TRUE")
+                record_array.append(True)
 
             attributen_dict = assetrelatie_dict.copy()
             for key in ['@type', '@id', "RelatieObject.doel", "RelatieObject.assetId", "AIMDBStatus.isActief",
                         "RelatieObject.bronAssetId", "RelatieObject.doelAssetId", "RelatieObject.typeURI",
                         "RelatieObject.bron"]:
                 attributen_dict.pop(key, None)
-            attributen = json.dumps(attributen_dict).replace("'", "''")
+            attributen = json.dumps(attributen_dict)
             if attributen == '{}':
-                attributen = ''
+                attributen = None
 
-            if attributen == '':
-                record_array.append("NULL")
-            else:
-                record_array.append(f"'{attributen}'")
+            record_array.append(attributen)
 
             values_array.append(record_array)
 
         if len(values_array) == 0:
             return 0
 
-        values_string = turn_list_of_lists_into_string(values_array)
-
         if safe_insert:
-            insert_query = f"""
+            insert_query = """
             WITH s (uuid, bronUuid, doelUuid, relatieTypeUri, actief, attributen) 
-                AS (VALUES {values_string}),
+                AS (VALUES %s),
             to_insert AS (
                 SELECT s.uuid::uuid AS uuid, bronUuid::uuid AS bronUuid, doelUuid::uuid AS doelUuid, 
                     relatietypes.uuid as relatietype, s.actief, attributen::json as attributen
@@ -73,9 +68,9 @@ class AssetRelatiesUpdater:
             SELECT to_insert.uuid, to_insert.bronUuid, to_insert.doelUuid, to_insert.relatietype, to_insert.actief, to_insert.attributen
             FROM to_insert;"""
         else:
-            insert_query = f"""
+            insert_query = """
             WITH s (uuid, bronUuid, doelUuid, relatieTypeUri, actief, attributen) 
-                AS (VALUES {values_string}),
+                AS (VALUES %s),
             to_insert AS (
                 SELECT s.uuid::uuid AS uuid, s.bronUuid::uuid AS bronUuid, s.doelUuid::uuid AS doelUuid, 
                     relatietypes.uuid as relatietype, s.actief, s.attributen::json as attributen
@@ -88,8 +83,9 @@ class AssetRelatiesUpdater:
             FROM to_insert;"""
 
         try:
+            from psycopg2.extras import execute_values
             with connection.cursor() as cursor:
-                cursor.execute(insert_query)
+                execute_values(cursor, insert_query, values_array)
         except psycopg2.errors.ForeignKeyViolation as exc:
             first_line = exc.args[0].split('\n')[0]
             if first_line == 'insert or update on table "assetrelaties" violates foreign key constraint "assetrelaties_bronuuid_fkey"':

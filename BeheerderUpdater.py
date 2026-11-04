@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Iterator
 
-from Helpers import peek_generator, turn_list_of_lists_into_string
+from Helpers import peek_generator
 
 
 class BeheerderUpdater:
@@ -13,10 +13,10 @@ class BeheerderUpdater:
 
         values_array = []
         for beheerder_dict in object_generator:
-            record_array = [f"'{beheerder_dict['uuid']}'"]
+            record_array = [beheerder_dict['uuid']]
 
-            beheerder_naam = beheerder_dict.get('naam', '').replace("'", "''")
-            beheerder_referentie = beheerder_dict.get('referentie', '').replace("'", "''")
+            beheerder_naam = beheerder_dict.get('naam', '')
+            beheerder_referentie = beheerder_dict.get('referentie', '')
             beheerder_type = beheerder_dict.get('_type', '')
             beheerder_actief = True
             actief_interval = beheerder_dict['actiefInterval']
@@ -33,19 +33,14 @@ class BeheerderUpdater:
                             beheerder_actief = False
 
             for val in [beheerder_naam, beheerder_referentie, beheerder_type]:
-                if val == '':
-                    record_array.append('NULL')
-                else:
-                    record_array.append(f"'{val}'")
+                record_array.append(val if val != '' else None)
 
-            record_array.append(f"{beheerder_actief}")
+            record_array.append(beheerder_actief)
             values_array.append(record_array)
 
-        values_string = turn_list_of_lists_into_string(values_array)
-
-        insert_query = f"""
+        insert_query = """
     WITH s (uuid, naam, referentie, typeBeheerder, actief) 
-        AS (VALUES {values_string}),
+        AS (VALUES %s),
     t AS (
         SELECT uuid::uuid AS uuid, naam, referentie, typeBeheerder, actief
         FROM s),
@@ -58,9 +53,9 @@ class BeheerderUpdater:
     SELECT to_insert.uuid, to_insert.naam, to_insert.referentie, to_insert.typeBeheerder, to_insert.actief
     FROM to_insert;"""
 
-        update_query = f"""
+        update_query = """
     WITH s (uuid, naam, referentie, typeBeheerder, actief) 
-        AS (VALUES {values_string}),
+        AS (VALUES %s),
     t AS (
         SELECT uuid::uuid AS uuid, naam, referentie, typeBeheerder, actief
         FROM s),
@@ -75,8 +70,9 @@ class BeheerderUpdater:
     FROM to_update 
     WHERE to_update.uuid = beheerders.uuid;"""
 
+        from psycopg2.extras import execute_values
         cursor = connection.cursor()
-        cursor.execute(insert_query)
+        execute_values(cursor, insert_query, values_array)
 
         cursor = connection.cursor()
-        cursor.execute(update_query)
+        execute_values(cursor, update_query, values_array)

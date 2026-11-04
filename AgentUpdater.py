@@ -1,7 +1,7 @@
 import json
 from typing import Iterator
 
-from Helpers import peek_generator, turn_list_of_lists_into_string
+from Helpers import peek_generator
 
 
 class AgentUpdater:
@@ -13,39 +13,34 @@ class AgentUpdater:
             return 0
 
         values_array = []
-
         counter = 0
         for agent_dict in object_generator:
             counter += 1
-            record_array = [f"'{agent_dict['@id'].split('/')[-1][0:36]}'"]
+            record_array = [agent_dict['@id'].split('/')[-1][0:36]]
 
-            agent_name = agent_dict['purl:Agent.naam'].replace("'", "''")
-            record_array.append(f"'{agent_name}'")
+            agent_name = agent_dict['purl:Agent.naam']
+            record_array.append(agent_name)
 
-            record_array.append(f"{agent_dict.get('AIMDBStatus.isActief', True)}")
+            record_array.append(agent_dict.get('AIMDBStatus.isActief', True))
 
-            contact_info_value = 'NULL'
+            contact_info_value = None
             if 'purl:Agent.contactinfo' in agent_dict:
                 contact_info = agent_dict['purl:Agent.contactinfo']
-                contact_info_value = "'" + json.dumps(contact_info).replace("'", "''") + "'"
+                contact_info_value = json.dumps(contact_info)
 
-            record_array.append(f"{contact_info_value}")
+            record_array.append(contact_info_value)
 
-            ovo_code = agent_dict.get('tz:Agent.ovoCode', 'NULL')
-            if ovo_code != 'NULL':
-                ovo_code = "'" + ovo_code + "'"
-            record_array.append(f"{ovo_code}")
+            ovo_code = agent_dict.get('tz:Agent.ovoCode', None)
+            record_array.append(ovo_code)
 
             values_array.append(record_array)
 
         if len(values_array) == 0:
             return 0
 
-        values_string = turn_list_of_lists_into_string(values_array)
-
-        insert_query = f"""
+        insert_query = """
         WITH s (uuid, naam, actief, contact_info, ovo_code) 
-            AS (VALUES {values_string}),
+            AS (VALUES %s),
         t AS (
             SELECT uuid::uuid AS uuid, naam, actief, contact_info::json AS contact_info, ovo_code
             FROM s),
@@ -60,9 +55,9 @@ class AgentUpdater:
 
         update_query = ''
         if not insert_only:
-            update_query = f"""
+            update_query = """
             WITH s (uuid, naam, actief, contact_info, ovo_code) 
-                AS (VALUES {values_string}),
+                AS (VALUES %s),
             t AS (
                 SELECT uuid::uuid AS uuid, naam, actief, contact_info::json AS contact_info, ovo_code
                 FROM s),
@@ -70,18 +65,19 @@ class AgentUpdater:
                 SELECT t.* 
                 FROM t
                     LEFT JOIN public.agents AS agents ON agents.uuid = t.uuid 
-                WHERE agents.uuid IS NOT NULL)
+                    WHERE agents.uuid IS NOT NULL)
             UPDATE agents 
             SET naam = to_update.naam, actief = to_update.actief, contact_info = to_update.contact_info, 
                 ovo_code = to_update.ovo_code
             FROM to_update 
             WHERE to_update.uuid = agents.uuid;"""
 
+        from psycopg2.extras import execute_values
         with connection.cursor() as cursor:
-            cursor.execute(insert_query)
+            execute_values(cursor, insert_query, values_array)
 
         if not insert_only:
             with connection.cursor() as cursor:
-                cursor.execute(update_query)
+                execute_values(cursor, update_query, values_array)
 
         return counter

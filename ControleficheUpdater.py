@@ -6,7 +6,7 @@ import psycopg2
 from EMInfraImporter import EMInfraImporter
 from EventProcessors.AssetProcessors.AttributenGewijzigdProcessor import AttributenGewijzigdProcessor
 from Exceptions.AssetTypeMissingError import AssetTypeMissingError
-from Helpers import peek_generator, turn_list_of_lists_into_string
+from Helpers import peek_generator
 
 
 class ControleficheUpdater:
@@ -19,13 +19,13 @@ class ControleficheUpdater:
 
         counter = 0
         controlefiche_dict = {}
-        counter, values_string = ControleficheUpdater.fill_values_from_object_generator(
+        counter, values_array = ControleficheUpdater.fill_values_from_object_generator(
             controlefiche_dict=controlefiche_dict, counter=counter, object_generator=object_generator)
 
         if not controlefiche_dict:
             return 0
 
-        ControleficheUpdater.perform_insert_update_from_values(connection, insert_only, values_string)
+        ControleficheUpdater.perform_insert_update_from_values(connection, insert_only, values_array)
 
         AttributenGewijzigdProcessor.process_dicts(connection=connection, asset_uuids=list(controlefiche_dict.keys()),
                                                    asset_dicts=list(controlefiche_dict.values()))
@@ -50,21 +50,18 @@ class ControleficheUpdater:
 
             counter += 1
             controlefiche_dict[controlefiche_uuid] = cf_dict
-            record_array = [f"'{controlefiche_uuid}'",
-                            f"'{cf_dict['@type']}'",
-                            'TRUE']
+            record_array = [controlefiche_uuid, cf_dict['@type'], True]
 
             values_array.append(record_array)
 
-        values_string = turn_list_of_lists_into_string(values_array)
-
-        return counter, values_string
+        return counter, values_array
 
     @staticmethod
-    def perform_insert_update_from_values(connection, insert_only, values_string):
-        insert_query = f"""
+    def perform_insert_update_from_values(connection, insert_only, values_array):
+        from psycopg2.extras import execute_values
+        insert_query = """
 WITH s (uuid, assetTypeUri, actief) 
-    AS (VALUES {values_string}),
+    AS (VALUES %s),
 t AS (
     SELECT s.uuid::uuid AS uuid, assettypes.uuid as assettype, s.actief
     FROM s
@@ -79,9 +76,9 @@ SELECT to_insert.uuid, to_insert.assettype, to_insert.actief
 FROM to_insert;"""
         update_query = ''
         if not insert_only:
-            update_query = f"""
+            update_query = """
 WITH s (uuid, assetTypeUri, actief)  
-    AS (VALUES {values_string}),
+    AS (VALUES %s),
 t AS (
     SELECT s.uuid::uuid AS uuid, assettypes.uuid as assettype, s.actief
     FROM s
@@ -98,9 +95,9 @@ WHERE to_update.uuid = assets.uuid;"""
 
         try:
             with connection.cursor() as cursor:
-                cursor.execute(insert_query)
+                execute_values(cursor, insert_query, values_array)
                 if not insert_only:
-                    cursor.execute(update_query)
+                    execute_values(cursor, update_query, values_array)
         except psycopg2.errors.NotNullViolation as exc:
             first_line = exc.args[0].split('\n')[0]
             if 'null value in column "assettype"' in first_line and 'violates not-null constraint' in first_line:

@@ -73,12 +73,12 @@ This plan outlines the necessary improvements to increase the maintainability, s
 3b2b. [x] BestekUpdater.py
 3b2c. [x] RelatieTypeUpdater.py
 3b2d. [x] ToezichtgroepUpdater.py
-3b2e. [ ] AssetRelatiesUpdater.py
+3b2e. [x] AssetRelatiesUpdater.py
 3b3. [ ] BeheerderUpdater.py, IdentiteitUpdater.py, ControleficheUpdater.py, AgentUpdater.py
-3b3a. [ ] BeheerderUpdater.py
-3b3b. [ ] IdentiteitUpdater.py
-3b3c. [ ] ControleficheUpdater.py
-3b3d. [ ] AgentUpdater.py
+3b3a. [x] BeheerderUpdater.py
+3b3b. [x] IdentiteitUpdater.py
+3b3c. [x] ControleficheUpdater.py
+3b3d. [x] AgentUpdater.py
 3b4. [ ] EventProcessors Asset processors (GeometrieOrLocatie, Toestand, Commentaar, Weglocatie, Actief, Attributen, Bestek, Vplan, Naam, Toezicht, Schadebeheerder)
 3b4a. [x] GeometrieOrLocatieGewijzigdProcessor.py
 3b4b. [x] ToestandGewijzigdProcessor.py

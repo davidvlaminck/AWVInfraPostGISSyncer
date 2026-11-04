@@ -1,6 +1,6 @@
 from typing import Iterator
 
-from Helpers import peek_generator, turn_list_of_lists_into_string
+from Helpers import peek_generator
 
 
 class IdentiteitUpdater:
@@ -12,32 +12,27 @@ class IdentiteitUpdater:
 
         values_array = []
         for identiteit_dict in object_generator:
-            record_array = [f"'{identiteit_dict['uuid']}'"]
+            record_array = [identiteit_dict['uuid']]
 
-            identiteit_naam = identiteit_dict.get('naam', '').replace("'", "''")
-            identiteit_voornaam = identiteit_dict.get('voornaam', '').replace("'", "''")
-            identiteit_gebruikersnaam = identiteit_dict.get('gebruikersnaam', '').replace("'", "''")
+            identiteit_naam = identiteit_dict.get('naam', '')
+            identiteit_voornaam = identiteit_dict.get('voornaam', '')
+            identiteit_gebruikersnaam = identiteit_dict.get('gebruikersnaam', '')
             identiteit_type = identiteit_dict.get('_type', '')
             identiteit_vo_id = identiteit_dict.get('voId', '')
             identiteit_bron = identiteit_dict.get('bron', '')
 
             for val in [identiteit_naam, identiteit_voornaam, identiteit_gebruikersnaam, identiteit_type,
                         identiteit_vo_id, identiteit_bron]:
-                if val == '':
-                    record_array.append('NULL')
-                else:
-                    record_array.append(f"'{val}'")
+                record_array.append(val if val != '' else None)
 
-            record_array.append(f"{identiteit_dict['actief']}")
-            record_array.append(f"{identiteit_dict['systeem']}")
+            record_array.append(identiteit_dict['actief'])
+            record_array.append(identiteit_dict['systeem'])
 
             values_array.append(record_array)
 
-        values_string = turn_list_of_lists_into_string(values_array)
-
-        insert_query = f"""
+        insert_query = """
 WITH s (uuid, naam, voornaam, gebruikersnaam, typeIdentiteit, voId, bron, actief, systeem) 
-    AS (VALUES {values_string}),
+    AS (VALUES %s),
 t AS (
     SELECT uuid::uuid AS uuid, naam, voornaam, gebruikersnaam, typeIdentiteit, voId, bron, actief, systeem
     FROM s),
@@ -51,9 +46,9 @@ SELECT to_insert.uuid, to_insert.naam, to_insert.voornaam, to_insert.gebruikersn
     to_insert.voId, to_insert.bron, to_insert.actief, to_insert.systeem
 FROM to_insert;"""
 
-        update_query = f"""
+        update_query = """
 WITH s (uuid, naam, voornaam, gebruikersnaam, typeIdentiteit, voId, bron, actief, systeem) 
-    AS (VALUES {values_string}),
+    AS (VALUES %s),
 t AS (
     SELECT uuid::uuid AS uuid, naam, voornaam, gebruikersnaam, typeIdentiteit, voId, bron, actief, systeem
     FROM s),
@@ -64,13 +59,14 @@ to_update AS (
     WHERE identiteiten.uuid IS NOT NULL)
 UPDATE identiteiten 
 SET naam = to_update.naam, voornaam = to_update.voornaam, gebruikersnaam = to_update.gebruikersnaam, 
-    typeIdentiteit = to_update.typeIdentiteit, voId = to_update.voId, bron = to_update.bron, actief = to_update.actief, 
-    systeem = to_update.systeem
+    typeIdentiteit = to_update.typeIdentiteit, voId = to_update.voId, bron = to_update.bron, 
+    actief = to_update.actief, systeem = to_update.systeem
 FROM to_update 
 WHERE to_update.uuid = identiteiten.uuid;"""
 
+        from psycopg2.extras import execute_values
         cursor = connection.cursor()
-        cursor.execute(insert_query)
+        execute_values(cursor, insert_query, values_array)
 
         cursor = connection.cursor()
-        cursor.execute(update_query)
+        execute_values(cursor, update_query, values_array)
