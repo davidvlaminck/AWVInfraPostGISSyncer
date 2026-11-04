@@ -7,7 +7,7 @@ import psycopg2
 
 from Exceptions.AgentMissingError import AgentMissingError
 from Exceptions.AssetMissingError import AssetMissingError
-from Helpers import peek_generator, turn_list_of_lists_into_string
+from Helpers import peek_generator
 from ResourceEnum import colorama_table, ResourceEnum
 from constants import (
     ASSETRELATIE_URL_PREFIX,
@@ -30,56 +30,47 @@ class BetrokkeneRelatiesUpdater:
             counter += 1
 
             record_array = [
-                f"'{betrokkenerelatie_dict['@id'].replace(ASSETRELATIE_URL_PREFIX, '')[0:36]}'",
-                f"'{betrokkenerelatie_dict['RelatieObject.doel']['@id'].replace(ASSET_URL_PREFIX, '')[0:36]}'",
-                f"'{betrokkenerelatie_dict['RelatieObject.bron']['@id'].replace(ASSET_URL_PREFIX, '')[0:36]}'"]
+                betrokkenerelatie_dict['@id'].replace(ASSETRELATIE_URL_PREFIX, '')[0:36],
+                betrokkenerelatie_dict['RelatieObject.doel']['@id'].replace(ASSET_URL_PREFIX, '')[0:36],
+                betrokkenerelatie_dict['RelatieObject.bron']['@id'].replace(ASSET_URL_PREFIX, '')[0:36]]
 
             if 'HeeftBetrokkene.rol' in betrokkenerelatie_dict:
-                record_array.append(f"'{betrokkenerelatie_dict['HeeftBetrokkene.rol'].replace(BETROKKENHEID_ROL_PREFIX,'')}'")
+                record_array.append(betrokkenerelatie_dict['HeeftBetrokkene.rol'].replace(BETROKKENHEID_ROL_PREFIX,''))
             else:
-                record_array.append("NULL")
+                record_array.append(None)
 
             if betrokkenerelatie_dict['RelatieObject.bron']['@type'] == AGENT_TYPE_URI:
-                record_array.append(f"'{betrokkenerelatie_dict['RelatieObject.bron']['@id'].replace(ASSET_URL_PREFIX,'')[0:36]}'")
-                record_array.append("NULL")
+                record_array.append(betrokkenerelatie_dict['RelatieObject.bron']['@id'].replace(ASSET_URL_PREFIX,'')[0:36])
+                record_array.append(None)
             else:
-                record_array.append("NULL")
-                record_array.append(f"'{betrokkenerelatie_dict['RelatieObject.bron']['@id'].replace(ASSET_URL_PREFIX,'')[0:36]}'")
+                record_array.append(None)
+                record_array.append(betrokkenerelatie_dict['RelatieObject.bron']['@id'].replace(ASSET_URL_PREFIX,'')[0:36])
 
             if 'AIMDBStatus.isActief' in betrokkenerelatie_dict:
-                record_array.append(f"{betrokkenerelatie_dict['AIMDBStatus.isActief']}")
+                record_array.append(betrokkenerelatie_dict['AIMDBStatus.isActief'])
             else:
-                record_array.append("TRUE")
+                record_array.append(True)
 
-            contact_info_value = 'NULL'
+            contact_info_value = None
             if 'HeeftBetrokkene.specifiekeContactinfo' in betrokkenerelatie_dict:
                 contact_info = betrokkenerelatie_dict['HeeftBetrokkene.specifiekeContactinfo']
-                contact_info_value = "'" + json.dumps(contact_info).replace("'", "''") + "'"
+                contact_info_value = json.dumps(contact_info)
             record_array.append(contact_info_value)
 
             start_datum = betrokkenerelatie_dict.get('HeeftBetrokkene.datumAanvang', None)
             eind_datum = betrokkenerelatie_dict.get('HeeftBetrokkene.datumEinde', None)
 
-            if start_datum is None or start_datum == '':
-                record_array.append("NULL")
-            else:
-                record_array.append(f"'{start_datum}'")
-
-            if eind_datum is None or eind_datum == '':
-                record_array.append("NULL")
-            else:
-                record_array.append(f"'{eind_datum}'")
+            record_array.append(start_datum)
+            record_array.append(eind_datum)
 
             values_array.append(record_array)
 
         if len(values_array) == 0:
             return 0
 
-        values_string = turn_list_of_lists_into_string(values_array)
-
-        insert_query = f"""
+        insert_query = """
         WITH s (uuid, doelUuid, bronUuid, rol, bronAgentUuid, bronAssetUuid, actief, contact_info, startDatum, 
-            eindDatum) AS (VALUES {values_string}),
+            eindDatum) AS (VALUES %s),
         to_insert AS (
             SELECT uuid::uuid AS uuid, doelUuid::uuid AS doelUuid, bronUuid::uuid AS bronUuid, rol, 
                 bronAgentUuid::uuid AS bronAgentUuid, bronAssetUuid::uuid AS bronAssetUuid, actief, 
@@ -93,9 +84,9 @@ class BetrokkeneRelatiesUpdater:
         FROM to_insert;"""
 
         if safe_insert:
-            insert_query = f"""
+            insert_query = """
             WITH s (uuid, doelUuid, bronUuid, rol, bronAgentUuid, bronAssetUuid, actief, contact_info, startDatum, 
-                eindDatum) AS (VALUES {values_string}),
+                eindDatum) AS (VALUES %s),
             t AS (
                 SELECT uuid::uuid AS uuid, doelUuid::uuid AS doelUuid, bronUuid::uuid AS bronUuid, rol, 
                     bronAgentUuid::uuid AS bronAgentUuid, bronAssetUuid::uuid AS bronAssetUuid, actief, 
@@ -115,8 +106,9 @@ class BetrokkeneRelatiesUpdater:
             ;"""
 
         try:
+            from psycopg2.extras import execute_values
             with connection.cursor() as cursor:
-                cursor.execute(insert_query)
+                execute_values(cursor, insert_query, values_array)
         except psycopg2.Error as exc:
             first_line = exc.args[0].split('\n')[0]
             if first_line in ['insert or update on table "betrokkenerelaties" violates foreign key constraint "betrokkenerelaties_agents_fkey"',

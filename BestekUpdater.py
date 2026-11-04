@@ -1,7 +1,7 @@
 import logging
 from typing import Iterator
 
-from Helpers import peek_generator, turn_list_of_lists_into_string
+from Helpers import peek_generator
 from ResourceEnum import colorama_table, ResourceEnum
 
 
@@ -16,36 +16,31 @@ class BestekUpdater:
 
         for bestek_dict in object_generator:
             try:
-                record_array = [f"'{bestek_dict['uuid']}'"]
+                record_array = [bestek_dict['uuid']]
 
                 eDeltaDossiernummer = bestek_dict.get('eDeltaDossiernummer', None)
                 if eDeltaDossiernummer is None and 'nummer' in bestek_dict:
                     eDeltaDossiernummer = bestek_dict['nummer']
-                record_array.append(f"'{eDeltaDossiernummer}'")
+                record_array.append(eDeltaDossiernummer)
 
                 eDeltaBesteknummer = bestek_dict.get('eDeltaBesteknummer', None)
                 if eDeltaBesteknummer is None and 'nummer' in bestek_dict:
                     eDeltaBesteknummer = bestek_dict['nummer']
-                record_array.append(f"'{eDeltaBesteknummer}'")
+                record_array.append(eDeltaBesteknummer)
 
                 aannemerNaam = None
                 if 'aannemerNaam' in bestek_dict:
-                    aannemerNaam = bestek_dict['aannemerNaam'].replace("'", "''")
-                if aannemerNaam is not None:
-                    record_array.append(f"'{aannemerNaam}'")
-                else:
-                    record_array.append("NULL")
+                    aannemerNaam = bestek_dict['aannemerNaam']
+                record_array.append(aannemerNaam)
 
                 values_array.append(record_array)
             except KeyError as exc:
                 logging.error(colorama_table[ResourceEnum.bestekken] + f'Could not create a bestek from the following respoonse:\n{bestek_dict}\nError:{exc}')
                 raise exc
 
-        values_string = turn_list_of_lists_into_string(values_array)
-
-        insert_query = f"""
+        insert_query = """
         WITH s (uuid, eDeltaDossiernummer, eDeltaBesteknummer, aannemerNaam) 
-            AS (VALUES {values_string}),
+            AS (VALUES %s),
         t AS (
             SELECT uuid::uuid AS uuid, eDeltaDossiernummer, eDeltaBesteknummer, aannemerNaam
             FROM s),
@@ -58,9 +53,9 @@ class BestekUpdater:
         SELECT to_insert.uuid, to_insert.eDeltaDossiernummer, to_insert.eDeltaBesteknummer, to_insert.aannemerNaam
         FROM to_insert;"""
 
-        update_query = f"""
+        update_query = """
         WITH s (uuid, eDeltaDossiernummer, eDeltaBesteknummer, aannemerNaam) 
-            AS (VALUES {values_string}),
+            AS (VALUES %s),
         t AS (
             SELECT uuid::uuid AS uuid, eDeltaDossiernummer, eDeltaBesteknummer, aannemerNaam
             FROM s),
@@ -75,8 +70,9 @@ class BestekUpdater:
         FROM to_update 
         WHERE to_update.uuid = bestekken.uuid;"""
 
+        from psycopg2.extras import execute_values
         cursor = connection.cursor()
-        cursor.execute(insert_query)
+        execute_values(cursor, insert_query, values_array)
 
         cursor = connection.cursor()
-        cursor.execute(update_query)
+        execute_values(cursor, update_query, values_array)

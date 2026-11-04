@@ -1,6 +1,6 @@
 from typing import Iterator
 
-from Helpers import peek_generator, turn_list_of_lists_into_string
+from Helpers import peek_generator
 
 
 class RelatieTypeUpdater:
@@ -12,30 +12,24 @@ class RelatieTypeUpdater:
 
         values_array = []
         for relatietype_dict in object_generator:
-            record_array = [f"'{relatietype_dict['uuid']}'",
-                            f"'{relatietype_dict['naam']}'"]
+            record_array = [relatietype_dict['uuid'], relatietype_dict['naam']]
 
             label = relatietype_dict.get('label', '')
-            definitie = relatietype_dict.get('definitie', '').replace("'", "''")
+            definitie = relatietype_dict.get('definitie', '')
             uri = relatietype_dict.get('uri', '')
 
             nullables_values = [uri, label, definitie]
             for nullable_value in nullables_values:
-                if nullable_value != '':
-                    record_array.append(f"'{nullable_value}'")
-                else:
-                    record_array.append("NULL")
+                record_array.append(nullable_value if nullable_value != '' else None)
 
-            record_array.append(f"{relatietype_dict['actief']}")
-            record_array.append(f"{relatietype_dict['gericht']}")
+            record_array.append(relatietype_dict['actief'])
+            record_array.append(relatietype_dict['gericht'])
 
             values_array.append(record_array)
 
-        values_string = turn_list_of_lists_into_string(values_array)
-
-        insert_query = f"""
+        insert_query = """
 WITH s (uuid, naam, uri, label, definitie, actief, gericht) 
-    AS (VALUES {values_string}),
+    AS (VALUES %s),
 t AS (
     SELECT uuid::uuid AS uuid, naam, uri, label, definitie, actief, gericht
     FROM s),
@@ -48,9 +42,9 @@ INSERT INTO public.relatietypes (uuid, naam, uri, label, definitie, actief, geri
 SELECT to_insert.uuid, to_insert.naam, to_insert.uri, to_insert.label, to_insert.definitie, to_insert.actief, to_insert.gericht
 FROM to_insert;"""
 
-        update_query = f"""
+        update_query = """
 WITH s (uuid, naam, uri, label, definitie, actief, gericht)
-    AS (VALUES {values_string}),
+    AS (VALUES %s),
 t AS (
     SELECT uuid::uuid AS uuid, naam, uri, label, definitie, actief, gericht
     FROM s),
@@ -65,8 +59,9 @@ SET naam = to_update.naam, uri = to_update.uri, label = to_update.label, definit
 FROM to_update 
 WHERE to_update.uuid = relatietypes.uuid;"""
 
+        from psycopg2.extras import execute_values
         cursor = connection.cursor()
-        cursor.execute(insert_query)
+        execute_values(cursor, insert_query, values_array)
 
         cursor = connection.cursor()
-        cursor.execute(update_query)
+        execute_values(cursor, update_query, values_array)

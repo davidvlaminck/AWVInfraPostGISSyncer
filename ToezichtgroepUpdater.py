@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Iterator
 
-from Helpers import peek_generator, turn_list_of_lists_into_string
+from Helpers import peek_generator
 
 
 class ToezichtgroepUpdater:
@@ -13,14 +13,10 @@ class ToezichtgroepUpdater:
 
         values_array = []
         for toezichtgroep_dict in object_generator:
-            record_array = [f"'{toezichtgroep_dict['uuid']}'"]
+            record_array = [toezichtgroep_dict['uuid']]
 
-            toezichtgroep_naam = toezichtgroep_dict['naam'].replace("'", "''")
-            record_array.append(f"'{toezichtgroep_naam}'")
-            toezichtgroep_ref = toezichtgroep_dict['referentie'].replace("'", "''")
-            record_array.extend(
-                (f"'{toezichtgroep_ref}'", f"'{toezichtgroep_dict['_type']}'")
-            )
+            record_array.append(toezichtgroep_dict['naam'])
+            record_array.extend((toezichtgroep_dict['referentie'], toezichtgroep_dict['_type']))
             toezichtgroep_actief = True
             if 'actiefInterval' not in toezichtgroep_dict:
                 toezichtgroep_actief = False
@@ -37,15 +33,13 @@ class ToezichtgroepUpdater:
                         if tot_date < datetime.now():
                             toezichtgroep_actief = False
 
-            record_array.append(f"{toezichtgroep_actief}")
+            record_array.append(toezichtgroep_actief)
 
             values_array.append(record_array)
 
-        values_string = turn_list_of_lists_into_string(values_array)
-
-        insert_query = f"""
+        insert_query = """
 WITH s (uuid, naam, referentie, typeGroep, actief) 
-    AS (VALUES {values_string}),
+    AS (VALUES %s),
 t AS (
     SELECT uuid::uuid AS uuid, naam, referentie, typeGroep, actief
     FROM s),
@@ -58,9 +52,9 @@ INSERT INTO public.toezichtgroepen (uuid, naam, referentie, typeGroep, actief)
 SELECT to_insert.uuid, to_insert.naam, to_insert.referentie, to_insert.typeGroep, to_insert.actief
 FROM to_insert;"""
 
-        update_query = f"""
+        update_query = """
 WITH s (uuid, naam, referentie, typeGroep, actief) 
-    AS (VALUES {values_string}),
+    AS (VALUES %s),
 t AS (
     SELECT uuid::uuid AS uuid, naam, referentie, typeGroep, actief
     FROM s),
@@ -74,8 +68,9 @@ SET naam = to_update.naam, referentie = to_update.referentie, typeGroep = to_upd
 FROM to_update 
 WHERE to_update.uuid = toezichtgroepen.uuid;"""
 
+        from psycopg2.extras import execute_values
         cursor = connection.cursor()
-        cursor.execute(insert_query)
+        execute_values(cursor, insert_query, values_array)
 
         cursor = connection.cursor()
-        cursor.execute(update_query)
+        execute_values(cursor, update_query, values_array)

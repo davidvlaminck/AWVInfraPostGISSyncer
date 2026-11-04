@@ -69,10 +69,10 @@ This plan outlines the necessary improvements to increase the maintainability, s
 3b. [ ] **Parameterize SQL (other updaters/importers)** - audit remaining files using f-strings for SQL.
 3b1. [x] AssetTypeUpdater.py, AssetUpdater.py (bulk VALUES)
 3b2. [ ] BetrokkeneRelatiesUpdater.py, BestekUpdater.py, RelatieTypeUpdater.py, ToezichtgroepUpdater.py, AssetRelatiesUpdater.py
-3b2a. [ ] BetrokkeneRelatiesUpdater.py
-3b2b. [ ] BestekUpdater.py
-3b2c. [ ] RelatieTypeUpdater.py
-3b2d. [ ] ToezichtgroepUpdater.py
+3b2a. [x] BetrokkeneRelatiesUpdater.py
+3b2b. [x] BestekUpdater.py
+3b2c. [x] RelatieTypeUpdater.py
+3b2d. [x] ToezichtgroepUpdater.py
 3b2e. [ ] AssetRelatiesUpdater.py
 3b3. [ ] BeheerderUpdater.py, IdentiteitUpdater.py, ControleficheUpdater.py, AgentUpdater.py
 3b3a. [ ] BeheerderUpdater.py
@@ -80,15 +80,15 @@ This plan outlines the necessary improvements to increase the maintainability, s
 3b3c. [ ] ControleficheUpdater.py
 3b3d. [ ] AgentUpdater.py
 3b4. [ ] EventProcessors Asset processors (GeometrieOrLocatie, Toestand, Commentaar, Weglocatie, Actief, Attributen, Bestek, Vplan, Naam, Toezicht, Schadebeheerder)
-3b4a. [ ] GeometrieOrLocatieGewijzigdProcessor.py
+3b4a. [x] GeometrieOrLocatieGewijzigdProcessor.py
 3b4b. [x] ToestandGewijzigdProcessor.py
 3b4c. [x] CommentaarGewijzigdProcessor.py
-3b4d. [ ] WeglocatieGewijzigdProcessor.py
+3b4d. [x] WeglocatieGewijzigdProcessor.py
 3b4e. [x] ActiefGewijzigdProcessor.py
-3b4f. [ ] AttributenGewijzigdProcessor.py
-3b4g. [ ] BestekGewijzigdProcessor.py
+3b4f. [x] AttributenGewijzigdProcessor.py
+3b4g. [x] BestekGewijzigdProcessor.py
 3b4h. [x] VplanGewijzigdProcessor.py
-3b4i. [ ] NaamGewijzigdProcessor.py
+3b4i. [x] NaamGewijzigdProcessor.py
 3b4j. [ ] ToezichtGewijzigdProcessor.py
 3b4k. [ ] SchadebeheerderGewijzigdProcessor.py
 3b5. [ ] EventProcessors Agent/Betrokkene/Assetrelatie processors
