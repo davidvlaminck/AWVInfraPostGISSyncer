@@ -80,14 +80,13 @@ class AssetUpdater:
 
     @staticmethod
     def update_vplan_of_synced_assets(connection, asset_uuids, eminfra_importer):
-        joined_uuids = "','".join(asset_uuids)
-        select_assets_for_vplan_query = f"""SELECT assets.uuid 
+        select_assets_for_vplan_query = """SELECT assets.uuid 
                 FROM assets 
                     LEFT JOIN assettypes ON assets.assettype = assettypes.uuid
-                WHERE assets.uuid IN ('{joined_uuids}')
+                WHERE assets.uuid = ANY(%s)
                 AND vplan = TRUE;"""
         with connection.cursor() as cursor:
-            cursor.execute(select_assets_for_vplan_query)
+            cursor.execute(select_assets_for_vplan_query, (asset_uuids,))
             assets_for_vplan = list(map(lambda x: x[0], cursor.fetchall()))
             vplan_processor = VplanGewijzigdProcessor(eminfra_importer=eminfra_importer)
             vplan_processor.process(uuids=assets_for_vplan, connection=connection)

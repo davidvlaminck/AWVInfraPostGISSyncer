@@ -58,8 +58,18 @@ This plan outlines the necessary improvements to increase the maintainability, s
 ## Suggested Migration Order (Low Risk → High Impact)
 
 1. [x] **Extract Constants** - Move hardcoded Kenmerk UUIDs from `EMInfraImporter.py` to `constants.py` as module-level constants. (Zero logic change, easy to verify)
-2. [ ] **Registry for Event Processors** - Replace the large `if/elif` chains in `EventProcessorFactory.py` with registry dicts/mappings. Preserve all existing behavior including `pass` cases. 
-3. [ ] **Parameterize SQL** - Audit and parameterize **all data queries** using psycopg2 `%s` placeholders. Start with `PostGISConnector.py` (`update_params`, `create_params`, `delete_params`, etc.). Isolate dynamic DDL (e.g. DROP VIEW from `information_schema`) separately. Add tests around query building where possible.
+2. [x] **Registry for Event Processors** - Replace the large `if/elif` chains in `EventProcessorFactory.py` with registry dicts/mappings. Preserve all existing behavior including `pass` cases. 
+3. [x] **Parameterize SQL (PostGISConnector params)** - `update_params`, `create_params`, `delete_params` parameterized.
+3a. [ ] **Parameterize SQL (AssetUpdater)** - parameterize data queries in `AssetUpdater.py`.
+3a1. [x] update_vplan_of_synced_assets SELECT parameterized
+3a2. [ ] perform_insert_update_from_values bulk VALUES parameterized
+3b. [ ] **Parameterize SQL (other updaters/importers)** - audit remaining files using f-strings for SQL.
+3b1. [ ] AssetTypeUpdater.py, AssetUpdater.py (bulk VALUES)
+3b2. [ ] BetrokkeneRelatiesUpdater.py, BestekUpdater.py, RelatieTypeUpdater.py, ToezichtgroepUpdater.py, AssetRelatiesUpdater.py
+3b3. [ ] BeheerderUpdater.py, IdentiteitUpdater.py, ControleficheUpdater.py, AgentUpdater.py
+3b4. [ ] EventProcessors Asset processors (GeometrieOrLocatie, Toestand, Commentaar, Weglocatie, Actief, Attributen, Bestek, Vplan, Naam, Toezicht, Schadebeheerder)
+3b5. [ ] EventProcessors Agent/Betrokkene/Assetrelatie processors
+3b6. [ ] BestekKoppelingSyncer.py
 4. [ ] **Split `EMInfraImporter`** - Extract `ApiRequestBuilder` and paging strategies (`OsloSearchPagingStrategy`, `NonOsloSearchPagingStrategy`) first, then move resource-specific imports to `ResourceImporter`. Fix type hints to `Iterator`/`Generator` as you go. Test behavior before proceeding.
 5. [ ] **Reorganize Packages** - Move files to their new packages (`api/`, `db/`, `events/`, `fill/`, `sync/`, `utils/`, `config/`), add `__init__.py`, convert to snake_case where appropriate, fix imports and remove CWD/sys.path hacks. **Keep `main_*.py` entrypoints at root**. Update entrypoints last.
 6. [ ] **Extract `PipelineManager`** - Create ABC base class `PipelineManager` with common orchestration logic. Refactor `FillManager` and `SyncManager` to inherit from it. Consolidate threading, retry loops, rollbacks, error handling, and state checks.

@@ -142,26 +142,19 @@ class PostGISConnector:
                 raise error
 
     def update_params(self, params: dict, connection):
-        query = ''
+        cursor = connection.cursor()
         for key_name, value in params.items():
             param_type = self.param_type_map[key_name]
-            if value is None:
-                query += f"UPDATE public.params SET value_{param_type} = NULL WHERE key_name = '{key_name}';"
-            elif param_type in ['int', 'bool']:
-                query += f"UPDATE public.params SET value_{param_type} = {value} WHERE key_name = '{key_name}';"
-            else:
-                query += f"UPDATE public.params SET value_{param_type} = '{value}' WHERE key_name = '{key_name}';"
-
-        cursor = connection.cursor()
-        cursor.execute(query)
+            col = f'value_{param_type}'
+            cursor.execute(f'UPDATE public.params SET {col} = %s WHERE key_name = %s', (value, key_name))
         connection.commit()
         cursor.close()
 
     @staticmethod
     def delete_params(params: dict, connection):
-        query = f"""DELETE FROM public.params WHERE key_name in ('{"','".join(params.keys())}');"""
+        keys = list(params.keys())
         cursor = connection.cursor()
-        cursor.execute(query)
+        cursor.execute('DELETE FROM public.params WHERE key_name = ANY(%s)', (keys,))
         connection.commit()
         cursor.close()
 
@@ -169,32 +162,16 @@ class PostGISConnector:
         if len(params.keys()) == 0:
             return
         cursor = connection.cursor()
-        query = f"""SELECT key_name FROM public.params WHERE key_name IN ('{"','".join(params.keys())}');"""
-        cursor.execute(query)
-        existing_keys = cursor.fetchall()
-        if len(existing_keys) == 0:
-            existing_keys = []
-        else:
-            existing_keys = list(map(lambda x: x[0], existing_keys))
+        keys = list(params.keys())
+        cursor.execute('SELECT key_name FROM public.params WHERE key_name = ANY(%s)', (keys,))
+        existing_keys = [row[0] for row in cursor.fetchall()]
 
-        query = ''
         for key_name, value in params.items():
             if key_name in existing_keys:
                 continue
             param_type = self.param_type_map[key_name]
-            if value is None:
-                query += f"""INSERT INTO public.params(key_name, value_{param_type})
-                             VALUES ('{key_name}', NULL);"""
-            elif param_type in ['int', 'bool']:
-                query += f"""INSERT INTO public.params(key_name, value_{param_type})
-                             VALUES ('{key_name}', {value});"""
-            else:
-                query += f"""INSERT INTO public.params(key_name, value_{param_type})
-                                             VALUES ('{key_name}', '{value}');"""
-
-        if query == '':
-            return
-        cursor.execute(query)
+            col = f'value_{param_type}'
+            cursor.execute(f'INSERT INTO public.params(key_name, {col}) VALUES (%s, %s)', (key_name, value))
         connection.commit()
         cursor.close()
 
